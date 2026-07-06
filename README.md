@@ -5,9 +5,12 @@ provides networking, storage, and app distribution; a small deterministic
 settlement chain provides identity, payments, ownership, and smart contracts.
 Applications stay peer-to-peer — only economic state goes through consensus.
 
+- **Documentation:** the [mdBook site](docs/) covers architecture, building
+  p2p apps, the SDK, smart contracts and the DSL, examples, and CLI/RPC
+  reference. Serve locally with `mdbook serve docs`, or start at
+  [docs/src/introduction.md](docs/src/introduction.md).
 - Specification: `SPEC_PT_01.md`, `SPEC_PT_02.md`, `SPEC_PT_03.md`
 - V1 plan and milestones: `IMPLEMENTATION_PLAN.md`
-- Architecture and threat model: `docs/`
 
 ## Development
 
