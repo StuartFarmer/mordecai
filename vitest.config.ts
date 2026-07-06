@@ -11,6 +11,7 @@ export default defineConfig({
       '@hssn/protocol': pkg('protocol'),
       '@hssn/crypto': pkg('crypto'),
       '@hssn/wallet': pkg('wallet'),
+      '@hssn/networking': pkg('networking'),
     },
   },
   test: {

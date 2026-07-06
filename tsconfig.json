@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/protocol" },
     { "path": "packages/crypto" },
-    { "path": "packages/wallet" }
+    { "path": "packages/wallet" },
+    { "path": "packages/networking" }
   ]
 }
