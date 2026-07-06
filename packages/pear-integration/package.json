@@ -1,0 +1,24 @@
+{
+  "name": "@hssn/pear-integration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pear runtime glue: permission-scoped wallet sessions for apps (auto-auth is never auto-sign)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/protocol": "workspace:*",
+    "@hssn/wallet": "workspace:*"
+  }
+}

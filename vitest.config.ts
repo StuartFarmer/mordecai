@@ -18,6 +18,7 @@ export default defineConfig({
       '@hssn/consensus': pkg('consensus'),
       '@hssn/vm': pkg('vm'),
       '@hssn/sdk': pkg('sdk'),
+      '@hssn/pear-integration': pkg('pear-integration'),
       '@hssn/node': pkg('node'),
     },
   },

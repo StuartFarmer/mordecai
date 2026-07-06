@@ -2,10 +2,10 @@ import { blake2b256, decodeAddress } from '@hssn/crypto';
 import { Feed, Network } from '@hssn/networking';
 import { encodeTransaction, type Payload } from '@hssn/protocol';
 import { NodeRpcClient, type AccountInfo, type AppInfo, type TxInfo } from '@hssn/rpc';
-import { Wallet } from '@hssn/wallet';
+import type { Signer } from '@hssn/wallet';
 
 export interface SdkOptions {
-  wallet: Wallet;
+  wallet: Signer;
   /** RPC public key of any chain node. */
   nodeKey: Uint8Array;
   /** Directory for Hypercore feed storage. */
@@ -29,7 +29,7 @@ export interface InstalledApp {
  */
 export class Hssn {
   private constructor(
-    readonly wallet: Wallet,
+    readonly wallet: Signer,
     readonly network: Network,
     private readonly rpc: NodeRpcClient,
     readonly chainId: string,
@@ -63,7 +63,7 @@ export class Hssn {
   /** Sign a payload with the next nonce, submit it, wait for finality. */
   async submit(payload: Payload, maxFee?: bigint): Promise<TxInfo> {
     const account = await this.rpc.getAccount(this.address);
-    const tx = this.wallet.signTransaction({
+    const tx = await this.wallet.signTransaction({
       chainId: this.chainId,
       nonce: BigInt(account.nonce),
       maxFee: maxFee ?? this.defaultMaxFee,
@@ -101,15 +101,15 @@ export class Hssn {
   // --------------------------------------------------- identity / auth
 
   /** App-level authentication: prove control of the wallet key. */
-  authenticate(challenge: Uint8Array): {
+  async authenticate(challenge: Uint8Array): Promise<{
     address: string;
     publicKey: Uint8Array;
     signature: Uint8Array;
-  } {
+  }> {
     return {
       address: this.address,
       publicKey: this.wallet.publicKey,
-      signature: this.wallet.signMessage(challenge),
+      signature: await this.wallet.signMessage(challenge),
     };
   }
 

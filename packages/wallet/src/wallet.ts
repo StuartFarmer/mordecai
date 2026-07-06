@@ -32,6 +32,18 @@ export interface SignParams {
   payload: Payload;
 }
 
+/**
+ * What applications program against: something that can identify itself
+ * and sign. The Wallet implements it directly; Pear apps get a
+ * permission-scoped WalletSession (@hssn/pear-integration) instead.
+ */
+export interface Signer {
+  readonly address: string;
+  readonly publicKey: Uint8Array;
+  signTransaction(params: SignParams): Transaction | Promise<Transaction>;
+  signMessage(message: Uint8Array): Uint8Array | Promise<Uint8Array>;
+}
+
 export class Wallet {
   readonly publicKey: Uint8Array;
   readonly address: string;

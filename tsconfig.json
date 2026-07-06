@@ -33,6 +33,9 @@
     },
     {
       "path": "packages/sdk"
+    },
+    {
+      "path": "packages/pear-integration"
     }
   ]
 }

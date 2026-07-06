@@ -95,7 +95,7 @@ describe('spec §28 vertical slice', () => {
 
     // 3. The app automatically authenticates the user with their wallet.
     const challenge = new TextEncoder().encode(`login:${APP_ID}:42`);
-    const auth = app.authenticate(challenge);
+    const auth = await app.authenticate(challenge);
     expect(auth.address).toBe(user.address);
     expect(verify(auth.signature, challenge, auth.publicKey)).toBe(true);
 

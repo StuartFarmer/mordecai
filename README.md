@@ -34,6 +34,8 @@ finalized on-chain payment (`packages/sdk/test/vertical.test.ts`).
 - Rust toolchain only needed to rebuild wasm artifacts:
   `scripts/build-wasm.sh` (artifacts are committed).
 
-Remaining for the full v1 vision (see `IMPLEMENTATION_PLAN.md` §5): the real
-Pear/Bare runtime glue (wallet session UI, per-app signing permissions), the
-Pythonic contract DSL, and the example-app suite.
+Also done: the Pythonic contract DSL (`compiler/hssnc`: `.pysc` → Rust →
+wasm32, spec Phase 7) and permission-scoped wallet sessions for apps
+(`packages/pear-integration`: allowance-gated signing, auth grants).
+Remaining for the full v1 vision: hosting apps inside the actual Pear/Bare
+shell with a wallet-approval UI, and the example-app suite.
