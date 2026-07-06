@@ -130,12 +130,13 @@ const stubHost: VmHost = {
   call: () => -1n,
 };
 
-function instantiate(host: VmHost): { exports: RuntimeExports; setHost(next: VmHost): void } {
-  let active = host;
+function instantiate(host: VmHost): { exports: RuntimeExports } {
+  const active = host;
   let stash: Uint8Array = new Uint8Array(0);
-  let exports: RuntimeExports;
+  // Filled right after instantiation; host imports only run during execute().
+  const holder = {} as { exports: RuntimeExports };
 
-  const outer = () => new Uint8Array(exports.memory.buffer);
+  const outer = () => new Uint8Array(holder.exports.memory.buffer);
   const read = (ptr: number, len: number) => outer().slice(ptr, ptr + len);
 
   const instance = new WebAssembly.Instance(runtimeModule(), {
@@ -178,13 +179,8 @@ function instantiate(host: VmHost): { exports: RuntimeExports; setHost(next: VmH
         ),
     },
   });
-  exports = instance.exports as unknown as RuntimeExports;
-  return {
-    exports,
-    setHost(next: VmHost) {
-      active = next;
-    },
-  };
+  holder.exports = instance.exports as unknown as RuntimeExports;
+  return holder;
 }
 
 export class VmRuntime {
