@@ -5,5 +5,18 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "references": [{ "path": "../protocol" }, { "path": "../crypto" }, { "path": "../state" }]
+  "references": [
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../crypto"
+    },
+    {
+      "path": "../state"
+    },
+    {
+      "path": "../vm"
+    }
+  ]
 }

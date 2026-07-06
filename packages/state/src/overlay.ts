@@ -16,6 +16,12 @@ export class Overlay implements StateReader {
     return this.base.get(key);
   }
 
+  getSync(key: Uint8Array): Uint8Array | undefined {
+    const hit = this.writes.get(Buffer.from(key).toString('hex'));
+    if (hit) return hit.value ?? undefined;
+    return this.base.getSync(key);
+  }
+
   set(key: Uint8Array, value: Uint8Array): void {
     this.writes.set(Buffer.from(key).toString('hex'), { key: key.slice(), value: value.slice() });
   }

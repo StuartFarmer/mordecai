@@ -1,0 +1,7 @@
+[package]
+name = "hssn-contract"
+version = "0.1.0"
+edition = "2024"
+description = "Contract-side ABI bindings for HSSN WASM contracts"
+
+[lib]

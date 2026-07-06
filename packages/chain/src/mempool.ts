@@ -1,6 +1,7 @@
 import type { Transaction } from '@hssn/protocol';
+import { VALIDATE_OK, VmRuntime, validationError } from '@hssn/vm';
 import type { Chain } from './chain.js';
-import { checkStateless, computeFee } from './execution.js';
+import { checkStateless, requiredBalance } from './execution.js';
 import { transactionHash } from './tx.js';
 
 export class MempoolError extends Error {
@@ -39,16 +40,27 @@ export class Mempool {
   async add(tx: Transaction): Promise<Uint8Array> {
     const stateless = checkStateless(tx, this.chain.chainId);
     if (stateless) throw new MempoolError(stateless);
-    if (tx.payload.kind !== 'transfer') {
-      throw new MempoolError(`unsupported payload kind: ${tx.payload.kind}`);
+    switch (tx.payload.kind) {
+      case 'transfer':
+      case 'execute_contract':
+        break;
+      case 'deploy_contract': {
+        const status = VmRuntime.validate(tx.payload.code);
+        if (status !== VALIDATE_OK) {
+          throw new MempoolError(`invalid contract: ${validationError(status)}`);
+        }
+        break;
+      }
+      default:
+        throw new MempoolError(`unsupported payload kind: ${tx.payload.kind}`);
     }
 
     const account = await this.chain.getAccount(tx.sender);
     if (tx.nonce < account.nonce) {
       throw new MempoolError(`nonce too low: tx ${tx.nonce}, account ${account.nonce}`);
     }
-    if (account.balance < computeFee(tx)) {
-      throw new MempoolError('balance cannot cover fee');
+    if (account.balance < requiredBalance(tx)) {
+      throw new MempoolError('balance cannot cover fee reserve');
     }
 
     const senderHex = hex(tx.sender);

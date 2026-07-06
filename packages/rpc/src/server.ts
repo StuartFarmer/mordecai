@@ -111,6 +111,8 @@ export class NodeRpcServer {
         index: record.index,
         success: record.receipt.success,
         fee: record.receipt.fee.toString(),
+        events: record.receipt.events.map(hex),
+        returnData: hex(record.receipt.returnData),
         ...(record.receipt.error !== undefined ? { error: record.receipt.error } : {}),
       };
     });

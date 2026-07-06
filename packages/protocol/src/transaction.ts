@@ -35,6 +35,8 @@ export interface DeployContractPayload {
 export interface ExecuteContractPayload {
   kind: 'execute_contract';
   contract: Uint8Array;
+  /** Native currency attached to the call, credited to the contract before it runs. */
+  value: bigint;
   action: string;
   args: Uint8Array;
 }
@@ -95,6 +97,7 @@ function writePayload(w: Writer, payload: Payload): void {
     case 'execute_contract':
       w.u8(PAYLOAD_TAG_EXECUTE_CONTRACT);
       w.fixed(payload.contract, HASH_SIZE);
+      w.u64(payload.value);
       w.string(payload.action, MAX_ACTION_BYTES);
       w.bytes(payload.args, MAX_EXECUTE_ARGS_BYTES);
       break;
@@ -131,6 +134,7 @@ function readPayload(r: Reader): Payload {
       return {
         kind: 'execute_contract',
         contract: r.fixed(HASH_SIZE),
+        value: r.u64(),
         action: r.string(MAX_ACTION_BYTES),
         args: r.bytes(MAX_EXECUTE_ARGS_BYTES),
       };

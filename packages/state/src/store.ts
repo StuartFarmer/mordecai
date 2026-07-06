@@ -3,6 +3,8 @@ import { leafHash, merkleRoot } from './merkle.js';
 
 export interface StateReader {
   get(key: Uint8Array): Promise<Uint8Array | undefined>;
+  /** Synchronous read — required on the contract-execution path. */
+  getSync(key: Uint8Array): Uint8Array | undefined;
 }
 
 /** A change set: value bytes to put, or null to delete. */
@@ -65,6 +67,10 @@ export class MemoryStore implements StateStore {
     return this.data.get(Buffer.from(key).toString('hex'));
   }
 
+  getSync(key: Uint8Array): Uint8Array | undefined {
+    return this.data.get(Buffer.from(key).toString('hex'));
+  }
+
   async applyChanges(changes: Iterable<Change>): Promise<void> {
     for (const [key, value] of changes) {
       const hex = Buffer.from(key).toString('hex');
@@ -96,6 +102,16 @@ export class LevelStore implements StateStore {
   async get(key: Uint8Array): Promise<Uint8Array | undefined> {
     try {
       const value = await this.db.get(Buffer.from(key));
+      return value === undefined ? undefined : new Uint8Array(value);
+    } catch (err) {
+      if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') return undefined;
+      throw err;
+    }
+  }
+
+  getSync(key: Uint8Array): Uint8Array | undefined {
+    try {
+      const value = this.db.getSync(Buffer.from(key));
       return value === undefined ? undefined : new Uint8Array(value);
     } catch (err) {
       if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') return undefined;

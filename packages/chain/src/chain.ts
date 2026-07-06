@@ -106,6 +106,8 @@ function encodeTxRecord(record: TxRecord): Uint8Array {
   w.bool(record.receipt.success);
   w.string(record.receipt.error ?? '', 1024);
   w.u64(record.receipt.fee);
+  w.array(record.receipt.events, 64, (wr, event) => wr.bytes(event, 4096));
+  w.bytes(record.receipt.returnData, 65536);
   return w.finish();
 }
 
@@ -116,11 +118,13 @@ function decodeTxRecord(txHash: Uint8Array, bytes: Uint8Array): TxRecord {
   const success = r.bool();
   const error = r.string(1024);
   const fee = r.u64();
+  const events = r.array(64, (rr) => rr.bytes(4096));
+  const returnData = r.bytes(65536);
   r.finish();
   return {
     height,
     index,
-    receipt: { txHash, success, fee, ...(error === '' ? {} : { error }) },
+    receipt: { txHash, success, fee, events, returnData, ...(error === '' ? {} : { error }) },
   };
 }
 

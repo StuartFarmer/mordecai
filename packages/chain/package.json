@@ -20,6 +20,7 @@
   "dependencies": {
     "@hssn/crypto": "workspace:*",
     "@hssn/protocol": "workspace:*",
-    "@hssn/state": "workspace:*"
+    "@hssn/state": "workspace:*",
+    "@hssn/vm": "workspace:*"
   }
 }

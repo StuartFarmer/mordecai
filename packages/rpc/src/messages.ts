@@ -46,6 +46,10 @@ export interface TxInfo {
   success: boolean;
   error?: string;
   fee: string;
+  /** Contract events, hex. */
+  events: string[];
+  /** Contract return data, hex. */
+  returnData: string;
 }
 
 export type RpcEnvelope<T> = { ok: true; result: T } | { ok: false; error: string };

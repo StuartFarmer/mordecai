@@ -3,3 +3,6 @@ dist/
 *.tsbuildinfo
 coverage/
 .DS_Store
+target/
+!packages/vm/wasm/*.wasm
+!contracts/dist/*.wasm

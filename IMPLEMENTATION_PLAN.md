@@ -37,12 +37,16 @@ it dwarfs the rest of the project. Therefore:
 
 - **Chain node, networking, wallet, SDK, tooling: TypeScript** (Node ≥ 20,
   and Bare-compatible where it must run inside Pear).
-- **Contracts: WASM**, executed via **wasmtime** (`@bytecodealliance/wasmtime`
-  or the wasmtime C-API via N-API) for fuel metering, epoch deadlines, and NaN
-  canonicalization — plain V8 WebAssembly has no gas metering, so it is not
-  acceptable for consensus execution.
-- Rust enters only as the source language for v1 contracts (compiled to
-  `wasm32-unknown-unknown`), which also de-risks the DSL's Rust codegen later.
+- **Contracts: WASM, executed by wasmi compiled to WASM** (M5 spike outcome:
+  the wasmtime npm binding is dead, so instead the wasmi interpreter — fuel
+  metering, deterministic, pure Rust — is itself compiled to
+  wasm32-unknown-unknown and runs inside V8; the JIT never executes contract
+  code directly, and the committed runtime artifact means JS-only development
+  needs no Rust toolchain). Host functions bridge synchronously to the state
+  overlay. See packages/vm/runtime.
+- Rust is the source language for v1 contracts (compiled to
+  `wasm32-unknown-unknown` against contracts/runtime-rs), which also de-risks
+  the DSL's Rust codegen later.
 
 ### D2. Keys and identity: Ed25519 everywhere
 

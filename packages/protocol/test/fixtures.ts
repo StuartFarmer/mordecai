@@ -42,6 +42,7 @@ export function executeTx(): Transaction {
     payload: {
       kind: 'execute_contract',
       contract: fill(32, 0x77),
+      value: 5_000n,
       action: 'buy',
       args: Uint8Array.from([1, 2, 3, 4]),
     },

@@ -45,6 +45,9 @@ importers:
       '@hssn/state':
         specifier: workspace:*
         version: link:../state
+      '@hssn/vm':
+        specifier: workspace:*
+        version: link:../vm
 
   packages/consensus:
     dependencies:
@@ -142,6 +145,8 @@ importers:
       classic-level:
         specifier: ^3.0.0
         version: 3.0.0
+
+  packages/vm: {}
 
   packages/wallet:
     dependencies:

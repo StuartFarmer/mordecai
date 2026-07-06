@@ -1,0 +1,11 @@
+[package]
+name = "counter"
+version = "0.1.0"
+edition = "2024"
+description = "Test contract exercising the full HSSN contract ABI"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hssn-contract = { path = "../runtime-rs" }

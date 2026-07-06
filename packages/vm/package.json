@@ -1,0 +1,21 @@
+{
+  "name": "@hssn/vm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contract VM: wasmi-in-wasm deterministic executor with fuel metering",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}
