@@ -43,6 +43,8 @@ export class Mempool {
     switch (tx.payload.kind) {
       case 'transfer':
       case 'execute_contract':
+      case 'register_app':
+      case 'update_app':
         break;
       case 'deploy_contract': {
         const status = VmRuntime.validate(tx.payload.code);
@@ -51,8 +53,6 @@ export class Mempool {
         }
         break;
       }
-      default:
-        throw new MempoolError(`unsupported payload kind: ${tx.payload.kind}`);
     }
 
     const account = await this.chain.getAccount(tx.sender);

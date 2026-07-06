@@ -52,6 +52,17 @@ export interface TxInfo {
   returnData: string;
 }
 
+export interface AppInfo {
+  appId: string;
+  /** Developer address (z32). */
+  owner: string;
+  /** Hypercore key of the app bundle feed, hex. */
+  pearKey: string;
+  version: string;
+  contractAddress: string;
+  metadataHash: string;
+}
+
 export type RpcEnvelope<T> = { ok: true; result: T } | { ok: false; error: string };
 
 export const RPC_METHODS = ['get_head', 'get_account', 'submit_tx', 'get_block', 'get_tx'] as const;

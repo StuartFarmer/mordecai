@@ -1,5 +1,5 @@
 import { blake2b256 } from '@hssn/crypto';
-import { encodeTransaction, type Transaction } from '@hssn/protocol';
+import { Reader, Writer, encodeTransaction, type Transaction } from '@hssn/protocol';
 import { Overlay, type StateReader } from '@hssn/state';
 import {
   EXEC_OK,
@@ -77,6 +77,50 @@ export function contractIdFor(sender: Uint8Array, nonce: bigint, code: Uint8Arra
   return blake2b256(new TextEncoder().encode('hssn:contract:v1'), sender, nonceBytes, code);
 }
 
+// ------------------------------------------------------- app registry (§17)
+
+const APP_PREFIX = new TextEncoder().encode('app:');
+
+export function appKey(appId: string): Uint8Array {
+  const id = new TextEncoder().encode(appId);
+  const key = new Uint8Array(APP_PREFIX.length + id.length);
+  key.set(APP_PREFIX);
+  key.set(id, APP_PREFIX.length);
+  return key;
+}
+
+/** On-chain registry entry; `owner` is the developer key that registered it. */
+export interface AppEntry {
+  owner: Uint8Array;
+  pearKey: Uint8Array;
+  version: string;
+  contractAddress: Uint8Array;
+  metadataHash: Uint8Array;
+}
+
+export function encodeAppEntry(entry: AppEntry): Uint8Array {
+  const w = new Writer(160);
+  w.fixed(entry.owner, 32);
+  w.fixed(entry.pearKey, 32);
+  w.string(entry.version, 32);
+  w.fixed(entry.contractAddress, 32);
+  w.fixed(entry.metadataHash, 32);
+  return w.finish();
+}
+
+export function decodeAppEntry(bytes: Uint8Array): AppEntry {
+  const r = new Reader(bytes);
+  const entry: AppEntry = {
+    owner: r.fixed(32),
+    pearKey: r.fixed(32),
+    version: r.string(32),
+    contractAddress: r.fixed(32),
+    metadataHash: r.fixed(32),
+  };
+  r.finish();
+  return entry;
+}
+
 // -------------------------------------------------------------- accounts
 
 async function getAccount(state: StateReader, publicKey: Uint8Array): Promise<Account> {
@@ -132,8 +176,10 @@ export async function checkInclusion(
       if (status !== VALIDATE_OK) return `invalid contract: ${validationError(status)}`;
       break;
     }
-    default:
-      return `unsupported payload kind in this protocol version: ${tx.payload.kind}`;
+    case 'register_app':
+    case 'update_app':
+      if (tx.payload.appId.length === 0) return 'empty app id';
+      break;
   }
   const sender = await getAccount(state, tx.sender);
   if (tx.nonce !== sender.nonce) {
@@ -273,8 +319,47 @@ function executePayload(
         throw err;
       }
     }
-    default:
-      return { error: `unsupported payload kind: ${tx.payload.kind}`, fuelUsed: 0n };
+    case 'register_app': {
+      const key = appKey(tx.payload.appId);
+      if (overlay.getSync(key) !== undefined) {
+        return { error: `app already registered: ${tx.payload.appId}`, fuelUsed: 0n };
+      }
+      overlay.set(
+        key,
+        encodeAppEntry({
+          owner: tx.sender,
+          pearKey: tx.payload.pearKey,
+          version: tx.payload.version,
+          contractAddress: tx.payload.contractAddress,
+          metadataHash: tx.payload.metadataHash,
+        }),
+      );
+      ctx.events.push(new TextEncoder().encode(`app:registered:${tx.payload.appId}`));
+      return { error: null, fuelUsed: 0n };
+    }
+    case 'update_app': {
+      const key = appKey(tx.payload.appId);
+      const existing = overlay.getSync(key);
+      if (existing === undefined) {
+        return { error: `no such app: ${tx.payload.appId}`, fuelUsed: 0n };
+      }
+      const entry = decodeAppEntry(existing);
+      if (Buffer.compare(entry.owner, tx.sender) !== 0) {
+        return { error: 'only the registering key may update an app', fuelUsed: 0n };
+      }
+      overlay.set(
+        key,
+        encodeAppEntry({
+          owner: entry.owner,
+          pearKey: tx.payload.pearKey,
+          version: tx.payload.version,
+          contractAddress: tx.payload.contractAddress,
+          metadataHash: tx.payload.metadataHash,
+        }),
+      );
+      ctx.events.push(new TextEncoder().encode(`app:updated:${tx.payload.appId}`));
+      return { error: null, fuelUsed: 0n };
+    }
   }
 }
 

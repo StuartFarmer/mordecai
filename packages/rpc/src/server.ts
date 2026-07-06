@@ -5,6 +5,7 @@ import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
 import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import type {
   AccountInfo,
+  AppInfo,
   BlockInfo,
   HeadInfo,
   RpcEnvelope,
@@ -114,6 +115,19 @@ export class NodeRpcServer {
         events: record.receipt.events.map(hex),
         returnData: hex(record.receipt.returnData),
         ...(record.receipt.error !== undefined ? { error: record.receipt.error } : {}),
+      };
+    });
+
+    respond<AppInfo | null>('get_app', async (params: { appId: string }) => {
+      const entry = await deps.chain.getApp(params.appId);
+      if (!entry) return null;
+      return {
+        appId: params.appId,
+        owner: encodeAddress(entry.owner),
+        pearKey: hex(entry.pearKey),
+        version: entry.version,
+        contractAddress: hex(entry.contractAddress),
+        metadataHash: hex(entry.metadataHash),
       };
     });
 

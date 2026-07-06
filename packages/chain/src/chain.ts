@@ -28,7 +28,14 @@ import {
   type StateStore,
 } from '@hssn/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
-import { applyTransaction, checkInclusion, type Receipt } from './execution.js';
+import {
+  appKey,
+  applyTransaction,
+  checkInclusion,
+  decodeAppEntry,
+  type AppEntry,
+  type Receipt,
+} from './execution.js';
 import { buildGenesisBlock, genesisChanges, genesisHash, type Genesis } from './genesis.js';
 import { transactionHash } from './tx.js';
 
@@ -218,6 +225,11 @@ export class Chain {
   async getTxRecord(txHash: Uint8Array): Promise<TxRecord | undefined> {
     const raw = await this.blockStore.get(txKey(txHash));
     return raw === undefined ? undefined : decodeTxRecord(txHash, raw);
+  }
+
+  async getApp(appId: string): Promise<AppEntry | undefined> {
+    const raw = await this.stateStore.get(appKey(appId));
+    return raw === undefined ? undefined : decodeAppEntry(raw);
   }
 
   private async executeTxs(

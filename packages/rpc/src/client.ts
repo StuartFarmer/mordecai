@@ -1,6 +1,7 @@
 import RPC from '@hyperswarm/rpc';
 import type {
   AccountInfo,
+  AppInfo,
   BlockInfo,
   HeadInfo,
   RpcEnvelope,
@@ -55,6 +56,10 @@ export class NodeRpcClient {
 
   getBlock(height: bigint): Promise<BlockInfo | null> {
     return this.call('get_block', { height: height.toString() });
+  }
+
+  getApp(appId: string): Promise<AppInfo | null> {
+    return this.call('get_app', { appId });
   }
 
   getTx(hashHex: string): Promise<TxInfo | null> {
