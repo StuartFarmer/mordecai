@@ -1,0 +1,25 @@
+{
+  "name": "@hssn/chain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Settlement chain core: genesis, accounts, transaction execution, mempool, blocks",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/crypto": "workspace:*",
+    "@hssn/protocol": "workspace:*",
+    "@hssn/state": "workspace:*"
+  }
+}

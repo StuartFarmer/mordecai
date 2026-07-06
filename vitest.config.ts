@@ -13,6 +13,7 @@ export default defineConfig({
       '@hssn/wallet': pkg('wallet'),
       '@hssn/networking': pkg('networking'),
       '@hssn/state': pkg('state'),
+      '@hssn/chain': pkg('chain'),
     },
   },
   test: {

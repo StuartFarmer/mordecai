@@ -30,6 +30,18 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.0)
 
+  packages/chain:
+    dependencies:
+      '@hssn/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@hssn/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hssn/state':
+        specifier: workspace:*
+        version: link:../state
+
   packages/crypto:
     dependencies:
       '@scure/bip39':

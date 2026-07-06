@@ -8,6 +8,7 @@ import {
   MemoryStore,
   Overlay,
   computeStateRoot,
+  computeStateRootWith,
   leafHash,
   merkleRoot,
   type StateStore,
@@ -105,6 +106,34 @@ it('memory and level stores commit to identical roots', async () => {
   await lvl.applyChanges(changes);
   expect(await computeStateRoot(mem)).toEqual(await computeStateRoot(lvl));
   await lvl.close();
+});
+
+describe('computeStateRootWith', () => {
+  it('matches the root after actually applying the changes', async () => {
+    const store = new MemoryStore();
+    await store.applyChanges([
+      [b('a'), b('1')],
+      [b('c'), b('3')],
+      [b('e'), b('5')],
+    ]);
+    const changes: [Uint8Array, Uint8Array | null][] = [
+      [b('b'), b('2')], // insert between
+      [b('c'), b('30')], // overwrite
+      [b('e'), null], // delete
+      [b('f'), b('6')], // append past end
+    ];
+    const predicted = await computeStateRootWith(store, changes);
+    await store.applyChanges(changes);
+    expect(predicted).toEqual(await computeStateRoot(store));
+  });
+
+  it('handles an empty store and empty changes', async () => {
+    const store = new MemoryStore();
+    expect(await computeStateRootWith(store, [])).toEqual(EMPTY_ROOT);
+    const predicted = await computeStateRootWith(store, [[b('x'), b('1')]]);
+    await store.applyChanges([[b('x'), b('1')]]);
+    expect(predicted).toEqual(await computeStateRoot(store));
+  });
 });
 
 describe('Overlay', () => {

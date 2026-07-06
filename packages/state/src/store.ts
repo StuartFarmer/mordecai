@@ -22,10 +22,35 @@ export interface StateStore extends StateReader {
  * when it becomes the bottleneck.
  */
 export async function computeStateRoot(store: StateStore): Promise<Uint8Array> {
+  return computeStateRootWith(store, []);
+}
+
+/**
+ * Root the store would commit to after applying `changes`, without writing.
+ * Merge-joins the store's sorted entries with the sorted change set.
+ */
+export async function computeStateRootWith(
+  store: StateStore,
+  changes: readonly Change[],
+): Promise<Uint8Array> {
   const leaves: Uint8Array[] = [];
+  let i = 0;
+  const push = (key: Uint8Array, value: Uint8Array | null) => {
+    if (value !== null) leaves.push(leafHash(key, value));
+  };
   for await (const [key, value] of store.entries()) {
-    leaves.push(leafHash(key, value));
+    let shadowed = false;
+    while (i < changes.length) {
+      const cmp = compareBytes(changes[i]![0], key);
+      if (cmp > 0) break;
+      push(changes[i]![0], changes[i]![1]);
+      if (cmp === 0) shadowed = true;
+      i++;
+      if (cmp === 0) break;
+    }
+    if (!shadowed) push(key, value);
   }
+  for (; i < changes.length; i++) push(changes[i]![0], changes[i]![1]);
   return merkleRoot(leaves);
 }
 
