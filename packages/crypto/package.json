@@ -1,0 +1,25 @@
+{
+  "name": "@hssn/crypto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cryptographic primitives: Ed25519 keys, BLAKE2b-256, z32 addresses, encrypted keystore, mnemonics",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@scure/bip39": "^2.2.0",
+    "sodium-native": "^5.1.0",
+    "z32": "^1.1.0"
+  }
+}
