@@ -1,0 +1,24 @@
+{
+  "name": "@hssn/state",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chain state: key-value store with overlay writes and Merkle state commitment",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/crypto": "workspace:*",
+    "classic-level": "^3.0.0"
+  }
+}
