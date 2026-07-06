@@ -1,0 +1,27 @@
+{
+  "name": "@hssn/wallet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wallet: key management, transaction signing, keystore files, and CLI",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "hssn-wallet": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/crypto": "workspace:*",
+    "@hssn/protocol": "workspace:*"
+  }
+}
