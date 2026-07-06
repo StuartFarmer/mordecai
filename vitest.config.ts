@@ -14,6 +14,8 @@ export default defineConfig({
       '@hssn/networking': pkg('networking'),
       '@hssn/state': pkg('state'),
       '@hssn/chain': pkg('chain'),
+      '@hssn/rpc': pkg('rpc'),
+      '@hssn/node': pkg('node'),
     },
   },
   test: {

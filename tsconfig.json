@@ -18,6 +18,12 @@
     },
     {
       "path": "packages/chain"
+    },
+    {
+      "path": "packages/rpc"
+    },
+    {
+      "path": "packages/node"
     }
   ]
 }

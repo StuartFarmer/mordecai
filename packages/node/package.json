@@ -1,0 +1,33 @@
+{
+  "name": "@hssn/node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chain node: sequencer loop, RPC service, and init/start CLI",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "hssn-node": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/chain": "workspace:*",
+    "@hssn/crypto": "workspace:*",
+    "@hssn/protocol": "workspace:*",
+    "@hssn/rpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@hssn/wallet": "workspace:*",
+    "hyperdht": "^6.32.0"
+  }
+}

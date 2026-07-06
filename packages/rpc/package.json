@@ -1,0 +1,26 @@
+{
+  "name": "@hssn/rpc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Node RPC: hyperswarm-RPC server and typed client for chain queries and tx submission",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/chain": "workspace:*",
+    "@hssn/crypto": "workspace:*",
+    "@hssn/protocol": "workspace:*",
+    "@hyperswarm/rpc": "^3.5.0"
+  }
+}

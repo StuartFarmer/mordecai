@@ -1,0 +1,53 @@
+/**
+ * JSON shapes exchanged over RPC. All u64 values travel as decimal strings,
+ * all byte fields as lowercase hex.
+ */
+
+export interface HeadInfo {
+  chainId: string;
+  height: string;
+  headHash: string;
+  stateRoot: string;
+  timestampMs: string;
+}
+
+export interface AccountInfo {
+  address: string;
+  balance: string;
+  nonce: string;
+}
+
+export interface SubmitTxResult {
+  hash: string;
+}
+
+export interface BlockHeaderInfo {
+  version: number;
+  chainId: string;
+  height: string;
+  prevHash: string;
+  timestampMs: string;
+  proposer: string;
+  txsRoot: string;
+  stateRoot: string;
+}
+
+export interface BlockInfo {
+  hash: string;
+  header: BlockHeaderInfo;
+  /** Canonical encoded transactions, hex. */
+  txs: string[];
+}
+
+export interface TxInfo {
+  hash: string;
+  height: string;
+  index: number;
+  success: boolean;
+  error?: string;
+  fee: string;
+}
+
+export type RpcEnvelope<T> = { ok: true; result: T } | { ok: false; error: string };
+
+export const RPC_METHODS = ['get_head', 'get_account', 'submit_tx', 'get_block', 'get_tx'] as const;
