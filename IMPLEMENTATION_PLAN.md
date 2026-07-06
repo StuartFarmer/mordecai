@@ -47,7 +47,7 @@ it dwarfs the rest of the project. Therefore:
 ### D2. Keys and identity: Ed25519 everywhere
 
 Hypercore already uses Ed25519. Using the same scheme for wallets means one
-keypair *is* the universal identity (§9): it can sign transactions, own
+keypair _is_ the universal identity (§9): it can sign transactions, own
 Hypercore feeds, and authenticate to apps.
 
 - Address = z32-encoded Ed25519 public key (same encoding Pear/hyperdht use).
@@ -89,12 +89,15 @@ Dogfood the networking layer instead of adding a parallel TCP stack:
   incrementally per block. A proper sparse-Merkle/Verkle upgrade is post-v1;
   the root lives behind a `StateCommitment` interface so it can be swapped.
 
-### D6. Wire format: compact-encoding, canonical
+### D6. Wire format: in-house canonical codec
 
-All protocol messages (transactions, blocks, votes) use Holepunch's
-`compact-encoding` with strictly defined field order → canonical bytes for
-signing and hashing. Schemas live in one shared `protocol` package that every
-other package imports.
+All protocol messages (transactions, blocks, votes) use a small
+zero-dependency canonical codec in the `protocol` package (fixed-width
+little-endian integers, u32 length prefixes, fatal-mode UTF-8, strict
+full-consumption decode). We own it rather than depending on
+`compact-encoding` because signing preimages need guaranteed canonicality and
+bigint-safe u64 amounts (`compact-encoding` decodes uint64 to JS numbers).
+Every other package imports its schemas; golden vectors pin the exact bytes.
 
 ### D7. Transactions and fees
 
@@ -165,7 +168,8 @@ Monorepo tooling: pnpm workspaces + TypeScript project references; vitest
 Each milestone ends with a demoable acceptance test. Rough sizing assumes 1–2
 engineers; sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3–4 weeks).
 
-### M0 — Scaffold & protocol definitions (S)  [spec Phase 0]
+### M0 — Scaffold & protocol definitions (S) [spec Phase 0]
+
 - Monorepo scaffold, CI, lint/test tooling.
 - `protocol` package: all v1 message/tx/block schemas + canonical encoding,
   with golden-vector tests.
@@ -173,19 +177,22 @@ engineers; sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3–4 weeks)
 - **Accept:** encode/decode round-trip and signing-vector tests pass.
 
 ### M1 — Crypto & wallet core (S)
+
 - `crypto`: keypairs, sign/verify, BLAKE2b, address encoding, encrypted
   keystore, mnemonic.
 - `wallet` CLI: `wallet create | address | sign`.
 - **Accept:** create wallet, sign a canonical tx payload, verify.
 
-### M2 — Networking foundation (M)  [spec Phase 1]
+### M2 — Networking foundation (M) [spec Phase 1]
+
 - Thin wrappers over hyperswarm/hyperdht/hypercore with typed protomux
   channels; peer manager (dial, backoff, dedupe).
 - Feed replication demo: two processes exchange an append-only feed.
 - **Accept (spec Phase 1 milestone):** two peers on different machines/NATs
   replicate a feed both directions.
 
-### M3 — Single-node chain (L)  [spec Phase 2, step 1]
+### M3 — Single-node chain (L) [spec Phase 2, step 1]
+
 - `state`: KV + merkle commitment. `chain`: genesis file (initial balances,
   validator set), mempool with nonce/fee/signature validation, block
   production loop, deterministic execution of Transfer, receipts, events.
@@ -194,7 +201,8 @@ engineers; sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3–4 weeks)
 - **Accept:** transfer currency between two wallets via CLI against one node;
   restart node, state persists; state root reproducible from replaying blocks.
 
-### M4 — Multi-validator consensus (L)  [spec Phase 2, step 2]
+### M4 — Multi-validator consensus (L) [spec Phase 2, step 2]
+
 - `consensus`: round-robin proposer, pre-commit votes, ≥2/3 finality,
   proposer timeout/skip; tx gossip; finalized-block Hypercore feed; new-node
   sync from the feed; identical state roots asserted across nodes.
@@ -203,7 +211,8 @@ engineers; sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3–4 weeks)
   chain continues; a fresh node syncs from genesis and matches state roots;
   transfers finalize in < 2s locally.
 
-### M5 — Contracts on WASM (L)  [spec Phase 4]
+### M5 — Contracts on WASM (L) [spec Phase 4]
+
 - `vm`: wasmtime host, fuel metering, float-opcode rejection, host functions,
   storage isolation, cross-contract `call` with depth limit.
 - Deploy/Execute payloads wired through chain execution; contract events in
@@ -214,18 +223,20 @@ engineers; sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3–4 weeks)
   trade between two wallets, balances and ownership update identically on all
   validators; a contract exceeding fuel is rejected deterministically.
 
-### M6 — Application registry (M)  [spec Phase 5]
+### M6 — Application registry (M) [spec Phase 5]
+
 - Registry as a system contract: `register(app_id, pear_key, version,
-  contract_addr, metadata_hash, sig)`, developer-key-gated updates.
+contract_addr, metadata_hash, sig)`, developer-key-gated updates.
 - Installer flow: query registry → fetch Pear bundle over swarm → verify
   signature against registry entry → launch.
 - **Accept (spec Phase 5 milestone):** register a demo app on devnet, install
   and launch it on a second machine purely from registry + swarm.
 
-### M7 — SDK + Pear integration + vertical slice (L)  [spec Phases 3 & 6]
+### M7 — SDK + Pear integration + vertical slice (L) [spec Phases 3 & 6]
+
 - `sdk`: the §22 surface — blockchain (`wallet, sign, transfer, deploy,
-  execute, query, subscribe_events`) and hypercore helpers (`create_feed,
-  append, replicate, join_swarm, subscribe`).
+execute, query, subscribe_events`) and hypercore helpers (`create_feed,
+append, replicate, join_swarm, subscribe`).
 - `pear-integration`: wallet unlock/session at app launch (per-app permission
   grants: apps request signatures, never touch keys — §26), node discovery
   via DHT, tx status tracking helpers.
@@ -249,7 +260,7 @@ M2 (networking) can proceed in parallel with M1/M3 until M4 needs it.
 ## 5. Post-v1 (explicitly deferred)
 
 - **Pythonic DSL** (spec Phase 7): parser → typed AST → verifier → Rust
-  codegen → the *existing* M5 WASM ABI. Nothing on-chain changes.
+  codegen → the _existing_ M5 WASM ABI. Nothing on-chain changes.
 - Example-app suite (Reddit, AI service, wiki), economic primitive library
   (auction, DAO, subscription, royalties), explorer polish, package manager,
   validator staking/rotation, light-client proofs, state-tree upgrade,

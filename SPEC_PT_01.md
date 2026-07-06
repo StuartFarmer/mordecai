@@ -8,15 +8,15 @@
 
 Build a minimal decentralized platform that combines:
 
-* Native peer-to-peer networking.
-* Distributed application hosting.
-* Fast deterministic settlement.
-* Digital-currency-grade consistency.
-* Smart contracts.
-* Native digital payments.
-* Global identity.
-* A Python-like smart contract language.
-* A foundation for games, marketplaces, AI services, and decentralized applications.
+- Native peer-to-peer networking.
+- Distributed application hosting.
+- Fast deterministic settlement.
+- Digital-currency-grade consistency.
+- Smart contracts.
+- Native digital payments.
+- Global identity.
+- A Python-like smart contract language.
+- A foundation for games, marketplaces, AI services, and decentralized applications.
 
 Unlike traditional blockchains, the blockchain is **not** the application platform.
 
@@ -82,13 +82,13 @@ Each layer has a narrowly defined purpose.
 
 Applications provide:
 
-* User interface
-* Game logic
-* AI interaction
-* Chat
-* Media
-* Multiplayer
-* Local computation
+- User interface
+- Game logic
+- AI interaction
+- Chat
+- Media
+- Multiplayer
+- Local computation
 
 Applications should feel like ordinary software.
 
@@ -100,13 +100,13 @@ They are simply distributed instead of hosted.
 
 Holepunch provides:
 
-* Peer discovery
-* NAT traversal
-* Secure transport
-* Distributed storage
-* Replication
-* Streaming
-* Package distribution
+- Peer discovery
+- NAT traversal
+- Secure transport
+- Distributed storage
+- Replication
+- Streaming
+- Package distribution
 
 Holepunch never attempts to determine truth.
 
@@ -118,22 +118,22 @@ It simply distributes signed data.
 
 The blockchain provides:
 
-* Identity
-* Wallets
-* Native currency
-* Ownership
-* Smart contracts
-* Economic settlement
-* Global state
+- Identity
+- Wallets
+- Native currency
+- Ownership
+- Smart contracts
+- Economic settlement
+- Global state
 
 It does **not** provide:
 
-* File storage
-* Chat
-* Streaming
-* Game simulation
-* Rendering
-* AI inference
+- File storage
+- Chat
+- Streaming
+- Game simulation
+- Rendering
+- AI inference
 
 ---
 
@@ -143,11 +143,11 @@ Consensus exists solely to produce deterministic agreement.
 
 Its responsibilities are intentionally small:
 
-* Order transactions
-* Execute contracts
-* Validate signatures
-* Produce finalized blocks
-* Replicate economic state
+- Order transactions
+- Execute contracts
+- Validate signatures
+- Produce finalized blocks
+- Replicate economic state
 
 Nothing else.
 
@@ -177,18 +177,18 @@ Temporary information that exists only while an application is running.
 
 Examples:
 
-* Mouse movement
-* Voice chat
-* Video streams
-* Live player position
-* Temporary AI context
-* Network sessions
+- Mouse movement
+- Voice chat
+- Video streams
+- Live player position
+- Temporary AI context
+- Network sessions
 
 Properties:
 
-* Never stored permanently.
-* Never globally replicated.
-* Never part of consensus.
+- Never stored permanently.
+- Never globally replicated.
+- Never part of consensus.
 
 ---
 
@@ -198,22 +198,22 @@ Persistent application data that should replicate between peers but does not req
 
 Examples:
 
-* Chat history
-* Chess moves
-* Documents
-* Music
-* Videos
-* Images
-* Reddit posts
-* Game replays
+- Chat history
+- Chess moves
+- Documents
+- Music
+- Videos
+- Images
+- Reddit posts
+- Game replays
 
 Properties:
 
-* Stored in Hypercore.
-* Signed by their author.
-* Append-only.
-* Efficiently replicated.
-* May be mirrored by anyone.
+- Stored in Hypercore.
+- Signed by their author.
+- Append-only.
+- Efficiently replicated.
+- May be mirrored by anyone.
 
 Shared state is authentic, but not globally authoritative.
 
@@ -225,21 +225,21 @@ Information that every participant must agree upon forever.
 
 Examples:
 
-* Wallet balances
-* Token ownership
-* Marketplace orders
-* Escrow
-* Smart contract storage
-* Governance
-* Identity
-* Reputation with financial consequences
+- Wallet balances
+- Token ownership
+- Marketplace orders
+- Escrow
+- Smart contract storage
+- Governance
+- Identity
+- Reputation with financial consequences
 
 Properties:
 
-* Stored on-chain.
-* Finalized through consensus.
-* Deterministic.
-* Globally replicated.
+- Stored on-chain.
+- Finalized through consensus.
+- Deterministic.
+- Globally replicated.
 
 Economic state is intentionally small.
 
@@ -285,11 +285,11 @@ Consensus is expensive.
 
 Consensus should never be used for:
 
-* Chat
-* Multiplayer synchronization
-* File storage
-* AI inference
-* Media streaming
+- Chat
+- Multiplayer synchronization
+- File storage
+- AI inference
+- Media streaming
 
 Consensus is reserved only for operations requiring global trust.
 
@@ -307,11 +307,11 @@ The blockchain is consulted only when economic state changes.
 
 Every application automatically receives:
 
-* Identity
-* Wallet
-* Payments
-* Ownership
-* Smart contracts
+- Identity
+- Wallet
+- Payments
+- Ownership
+- Smart contracts
 
 without implementing these independently.
 
@@ -356,18 +356,18 @@ Each system has clearly defined responsibilities.
 
 Responsible for:
 
-* User interface
-* Local computation
-* Application logic
-* Rendering
-* Networking APIs
-* Wallet integration
+- User interface
+- Local computation
+- Application logic
+- Rendering
+- Networking APIs
+- Wallet integration
 
 Never responsible for:
 
-* Consensus
-* Economic settlement
-* Ownership
+- Consensus
+- Economic settlement
+- Ownership
 
 ---
 
@@ -375,18 +375,18 @@ Never responsible for:
 
 Responsible for:
 
-* Files
-* Chat
-* Media
-* Event logs
-* Multiplayer synchronization
-* Distributed databases
+- Files
+- Chat
+- Media
+- Event logs
+- Multiplayer synchronization
+- Distributed databases
 
 Never responsible for:
 
-* Truth
-* Ownership
-* Payments
+- Truth
+- Ownership
+- Payments
 
 Hypercore distributes data.
 
@@ -398,21 +398,21 @@ It does not validate economics.
 
 Responsible for:
 
-* Wallet balances
-* Smart contracts
-* Identity
-* Native currency
-* Ownership
-* Marketplace settlement
-* Governance
+- Wallet balances
+- Smart contracts
+- Identity
+- Native currency
+- Ownership
+- Marketplace settlement
+- Governance
 
 Never responsible for:
 
-* Images
-* Videos
-* Game state
-* Streaming
-* AI
+- Images
+- Videos
+- Game state
+- Streaming
+- AI
 
 ---
 
@@ -420,10 +420,10 @@ Never responsible for:
 
 Responsible for:
 
-* Transaction ordering
-* Contract execution
-* Finality
-* State commitment
+- Transaction ordering
+- Contract execution
+- Finality
+- State commitment
 
 Never responsible for application execution.
 
@@ -445,10 +445,10 @@ Applications use it to locate peers without centralized servers.
 
 Responsibilities:
 
-* Peer lookup
-* Public key routing
-* NAT traversal support
-* Secure rendezvous
+- Peer lookup
+- Public key routing
+- NAT traversal support
+- Secure rendezvous
 
 Applications never need to know IP addresses.
 
@@ -460,10 +460,10 @@ Hyperswarm builds encrypted peer-to-peer overlays.
 
 Responsibilities:
 
-* Peer connections
-* Swarm membership
-* Connection management
-* Replication transport
+- Peer connections
+- Swarm membership
+- Connection management
+- Replication transport
 
 Applications join swarms using cryptographic identifiers.
 
@@ -475,10 +475,10 @@ Hypercore is the distributed storage primitive.
 
 Every feed is:
 
-* Append-only
-* Signed
-* Verifiable
-* Replicable
+- Append-only
+- Signed
+- Verifiable
+- Replicable
 
 Examples:
 
@@ -564,21 +564,21 @@ Applications are no longer downloaded from centralized app stores.
 
 The networking layer guarantees:
 
-* Peer discovery
-* Encrypted transport
-* Content authenticity
-* Efficient replication
-* Offline synchronization
-* Decentralized application distribution
+- Peer discovery
+- Encrypted transport
+- Content authenticity
+- Efficient replication
+- Offline synchronization
+- Decentralized application distribution
 
 The networking layer does **not** guarantee:
 
-* Economic correctness
-* Ownership
-* Identity
-* Trust
-* Payments
-* Consensus
+- Economic correctness
+- Ownership
+- Identity
+- Trust
+- Payments
+- Consensus
 
 Those responsibilities belong exclusively to the settlement chain.
 
@@ -587,4 +587,3 @@ Those responsibilities belong exclusively to the settlement chain.
 # End of Part 1
 
 The first part establishes the architectural philosophy and networking model. The next section will define the settlement blockchain itself: its execution model, smart contracts, wallets, identity, transaction lifecycle, and the boundary between on-chain economic state and off-chain application state.
-

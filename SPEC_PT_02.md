@@ -42,15 +42,15 @@ Everything else belongs to the application layer.
 
 The settlement layer maintains:
 
-* Native currency
-* Wallet balances
-* Identity
-* Smart contract execution
-* Ownership
-* Escrow
-* Marketplace settlement
-* Governance
-* Global application registry
+- Native currency
+- Wallet balances
+- Identity
+- Smart contract execution
+- Ownership
+- Escrow
+- Marketplace settlement
+- Governance
+- Global application registry
 
 Nothing more.
 
@@ -98,9 +98,9 @@ State Root
 
 The chain produces:
 
-* deterministic execution
-* immediate finality
-* identical global state
+- deterministic execution
+- immediate finality
+- identical global state
 
 Consensus never executes networking logic.
 
@@ -114,20 +114,20 @@ Consensus never manages distributed storage.
 
 Validators:
 
-* Verify signatures
-* Validate transactions
-* Execute contracts
-* Produce blocks
-* Replicate state
-* Commit state roots
+- Verify signatures
+- Validate transactions
+- Execute contracts
+- Produce blocks
+- Replicate state
+- Commit state roots
 
 Validators do **not**:
 
-* Host applications
-* Store media
-* Run AI models
-* Moderate communities
-* Stream files
+- Host applications
+- Store media
+- Run AI models
+- Moderate communities
+- Stream files
 
 ---
 
@@ -161,20 +161,20 @@ Applications never implement separate authentication systems unless they choose 
 
 Wallets manage:
 
-* Signing
-* Balances
-* Permissions
-* Assets
-* Contract interaction
+- Signing
+- Balances
+- Permissions
+- Assets
+- Contract interaction
 
 Wallets should integrate directly into the Pear runtime.
 
 Every application automatically gains access to:
 
-* authentication
-* payments
-* ownership
-* signatures
+- authentication
+- payments
+- ownership
+- signatures
 
 without additional infrastructure.
 
@@ -206,10 +206,10 @@ Stake
 
 Each transaction is:
 
-* signed
-* deterministic
-* ordered
-* permanently recorded
+- signed
+- deterministic
+- ordered
+- permanently recorded
 
 ---
 
@@ -299,23 +299,23 @@ It does not remain running.
 
 Smart contracts define:
 
-* Ownership rules
-* Payment logic
-* Marketplace settlement
-* Escrow
-* Governance
-* Permissions
-* Protocol rules
+- Ownership rules
+- Payment logic
+- Marketplace settlement
+- Escrow
+- Governance
+- Permissions
+- Protocol rules
 
 They do **not** define:
 
-* Rendering
-* Networking
-* User interfaces
-* Multiplayer
-* AI
-* Media
-* Storage replication
+- Rendering
+- Networking
+- User interfaces
+- Multiplayer
+- AI
+- Media
+- Storage replication
 
 ---
 
@@ -405,13 +405,13 @@ Applications may continue functioning even if they never submit transactions.
 
 Applications provide:
 
-* Interface
-* Multiplayer
-* Synchronization
-* Local simulation
-* AI
-* Media
-* User experience
+- Interface
+- Multiplayer
+- Synchronization
+- Local simulation
+- AI
+- Media
+- User experience
 
 Applications request blockchain services only when economic state changes.
 
@@ -429,10 +429,10 @@ Exists only on the local device.
 
 Examples:
 
-* Window layout
-* UI settings
-* Cached assets
-* Temporary computation
+- Window layout
+- UI settings
+- Cached assets
+- Temporary computation
 
 Never replicated.
 
@@ -444,12 +444,12 @@ Replicated through Hypercore.
 
 Examples:
 
-* Chat
-* Documents
-* Multiplayer events
-* Replays
-* Images
-* Community content
+- Chat
+- Documents
+- Multiplayer events
+- Replays
+- Images
+- Community content
 
 Replicated peer-to-peer.
 
@@ -463,12 +463,12 @@ Stored exclusively on-chain.
 
 Examples:
 
-* Currency
-* Ownership
-* Assets
-* Marketplace orders
-* Escrow
-* Identity
+- Currency
+- Ownership
+- Assets
+- Marketplace orders
+- Escrow
+- Identity
 
 Consensus required.
 
@@ -484,13 +484,13 @@ The most important design decision for every application is determining where da
 
 ### Off-chain
 
-* Board state
-* Moves
-* Replay
-* Chat
-* Clock
-* Spectators
-* Match synchronization
+- Board state
+- Moves
+- Replay
+- Chat
+- Clock
+- Spectators
+- Match synchronization
 
 Hypercore handles all replication.
 
@@ -498,12 +498,12 @@ Hypercore handles all replication.
 
 ### On-chain
 
-* Tournament registration
-* Wagers
-* Escrow
-* Prize pool
-* Final payout
-* Reputation with financial consequences
+- Tournament registration
+- Wagers
+- Escrow
+- Prize pool
+- Final payout
+- Reputation with financial consequences
 
 The chess game itself never executes on-chain.
 
@@ -513,19 +513,19 @@ The chess game itself never executes on-chain.
 
 Off-chain
 
-* Posts
-* Comments
-* Images
-* Votes
-* Moderation logs
+- Posts
+- Comments
+- Images
+- Votes
+- Moderation logs
 
 On-chain
 
-* Community ownership
-* Moderator permissions
-* Treasury
-* Premium memberships
-* Creator payments
+- Community ownership
+- Moderator permissions
+- Treasury
+- Premium memberships
+- Creator payments
 
 ---
 
@@ -533,18 +533,18 @@ On-chain
 
 Off-chain
 
-* Product images
-* Search indexes
-* Reviews
-* Product metadata
+- Product images
+- Search indexes
+- Reviews
+- Product metadata
 
 On-chain
 
-* Listings
-* Ownership
-* Escrow
-* Settlement
-* Royalties
+- Listings
+- Ownership
+- Escrow
+- Settlement
+- Royalties
 
 ---
 
@@ -552,17 +552,17 @@ On-chain
 
 Off-chain
 
-* Prompt execution
-* Model inference
-* Context
-* Conversation history
+- Prompt execution
+- Model inference
+- Context
+- Conversation history
 
 On-chain
 
-* Micropayments
-* Subscription state
-* Usage accounting
-* Reputation
+- Micropayments
+- Subscription state
+- Usage accounting
+- Reputation
 
 ---
 
@@ -756,4 +756,3 @@ The blockchain remains small, deterministic, and focused exclusively on globally
 # End of Part 2
 
 The next part defines the developer experience, including the Pythonic smart contract language, repository architecture, protocol organization, security model, phased implementation roadmap, and the first technical milestones required to build the platform from the ground up.
-

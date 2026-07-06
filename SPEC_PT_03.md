@@ -12,10 +12,10 @@ Instead, they should write contracts using a small, deterministic, Python-like l
 
 The language should prioritize:
 
-* readability
-* simplicity
-* deterministic execution
-* static verification
+- readability
+- simplicity
+- deterministic execution
+- static verification
 
 rather than becoming a general-purpose programming language.
 
@@ -94,31 +94,31 @@ Version 1 should deliberately remain small.
 
 Supported:
 
-* integers
-* booleans
-* strings
-* addresses
-* maps
-* structs
-* enums
-* arithmetic
-* comparisons
-* simple conditionals
-* deterministic loops with static bounds
-* contract actions
+- integers
+- booleans
+- strings
+- addresses
+- maps
+- structs
+- enums
+- arithmetic
+- comparisons
+- simple conditionals
+- deterministic loops with static bounds
+- contract actions
 
 Not supported:
 
-* floating point
-* reflection
-* recursion
-* imports
-* threads
-* networking
-* filesystem access
-* randomness
-* wall-clock time
-* dynamic code execution
+- floating point
+- reflection
+- recursion
+- imports
+- threads
+- networking
+- filesystem access
+- randomness
+- wall-clock time
+- dynamic code execution
 
 The language should evolve slowly.
 
@@ -366,10 +366,10 @@ State divergence is impossible without Byzantine failure.
 
 Contracts:
 
-* execute deterministically
-* own isolated storage
-* communicate only by messages
-* cannot access host resources
+- execute deterministically
+- own isolated storage
+- communicate only by messages
+- cannot access host resources
 
 ---
 
@@ -387,9 +387,9 @@ They submit signed requests through wallets.
 
 Hypercore verifies:
 
-* signatures
-* append-only history
-* feed authenticity
+- signatures
+- append-only history
+- feed authenticity
 
 It does **not** verify ownership or economic correctness.
 
@@ -423,11 +423,11 @@ Define the platform.
 
 Deliverables
 
-* Architecture specification
-* Protocol definitions
-* Repository structure
-* Threat model
-* Development tooling
+- Architecture specification
+- Protocol definitions
+- Repository structure
+- Threat model
+- Development tooling
 
 No implementation.
 
@@ -441,11 +441,11 @@ Establish distributed networking.
 
 Deliverables
 
-* HyperDHT integration
-* Hyperswarm integration
-* Hypercore feeds
-* Basic replication
-* Pear application launcher
+- HyperDHT integration
+- Hyperswarm integration
+- Hypercore feeds
+- Basic replication
+- Pear application launcher
 
 Milestone
 
@@ -461,13 +461,13 @@ Create the global trust engine.
 
 Deliverables
 
-* Validators
-* Native currency
-* Wallets
-* Transactions
-* Block production
-* Finality
-* RPC
+- Validators
+- Native currency
+- Wallets
+- Transactions
+- Block production
+- Finality
+- RPC
 
 Milestone
 
@@ -483,11 +483,11 @@ Provide universal authentication.
 
 Deliverables
 
-* Key generation
-* Signing
-* Identity management
-* Wallet SDK
-* Application authentication
+- Key generation
+- Signing
+- Identity management
+- Wallet SDK
+- Application authentication
 
 Milestone
 
@@ -503,11 +503,11 @@ Introduce deterministic programmable state.
 
 Deliverables
 
-* Contract deployment
-* Storage
-* Execution
-* Events
-* Contract SDK
+- Contract deployment
+- Storage
+- Execution
+- Events
+- Contract SDK
 
 Milestone
 
@@ -523,10 +523,10 @@ Create decentralized application discovery.
 
 Deliverables
 
-* Registry contract
-* Metadata schema
-* Version management
-* Package signatures
+- Registry contract
+- Metadata schema
+- Version management
+- Package signatures
 
 Milestone
 
@@ -542,10 +542,10 @@ Connect applications to the blockchain.
 
 Deliverables
 
-* Wallet integration
-* Blockchain SDK
-* Event subscriptions
-* Transaction helpers
+- Wallet integration
+- Blockchain SDK
+- Event subscriptions
+- Transaction helpers
 
 Milestone
 
@@ -561,11 +561,11 @@ Simplify smart contract development.
 
 Deliverables
 
-* Parser
-* AST
-* Type checker
-* Verifier
-* Code generator
+- Parser
+- AST
+- Type checker
+- Verifier
+- Code generator
 
 Milestone
 
@@ -581,17 +581,17 @@ Validate the architecture.
 
 Applications
 
-* Chess
-* Marketplace
-* Reddit
-* AI Assistant
-* Wiki
+- Chess
+- Marketplace
+- Reddit
+- AI Assistant
+- Wiki
 
 Each demonstrates different uses of:
 
-* Hypercore
-* Smart contracts
-* Payments
+- Hypercore
+- Smart contracts
+- Payments
 
 ---
 
@@ -603,14 +603,14 @@ Expand reusable protocol contracts.
 
 Implement
 
-* Escrow
-* Marketplace
-* Auction
-* DAO
-* Subscription
-* Royalties
-* Licensing
-* Identity
+- Escrow
+- Marketplace
+- Auction
+- DAO
+- Subscription
+- Royalties
+- Licensing
+- Identity
 
 Applications begin composing primitives rather than implementing economics themselves.
 
@@ -624,13 +624,13 @@ Turn the protocol into a complete developer platform.
 
 Deliverables
 
-* Explorer
-* Package manager
-* SDKs
-* Testing framework
-* Deployment CLI
-* Documentation
-* Developer portal
+- Explorer
+- Package manager
+- SDKs
+- Testing framework
+- Deployment CLI
+- Documentation
+- Developer portal
 
 The platform becomes self-sustaining.
 
@@ -686,11 +686,11 @@ Continue using the application.
 
 This proves that:
 
-* networking
-* applications
-* wallets
-* settlement
-* contracts
+- networking
+- applications
+- wallets
+- settlement
+- contracts
 
 operate as one coherent system.
 
@@ -712,11 +712,11 @@ Developers should think:
 
 Applications should naturally inherit:
 
-* identity
-* payments
-* ownership
-* contracts
-* governance
+- identity
+- payments
+- ownership
+- contracts
+- governance
 
 without sacrificing the flexibility of traditional software.
 
@@ -821,4 +821,3 @@ Pear applications provide the user experience.
 Each layer remains simple because each layer has exactly one responsibility.
 
 Together they form a decentralized application platform where software behaves like traditional applications, while trust, ownership, and value exchange become native capabilities of the network itself.
-
