@@ -30,6 +30,9 @@
     },
     {
       "path": "packages/vm"
+    },
+    {
+      "path": "packages/sdk"
     }
   ]
 }

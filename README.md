@@ -22,5 +22,18 @@ pnpm lint
 
 ## Status
 
-M0 (scaffold + protocol schemas) — in progress. See `IMPLEMENTATION_PLAN.md`
-§4 for the milestone graph.
+**v1 core complete (M0–M7).** The spec §28 vertical slice passes end to end
+on a multi-validator devnet: registry install with on-chain hash
+verification, wallet authentication, bidirectional Hypercore state sync, and
+finalized on-chain payment (`packages/sdk/test/vertical.test.ts`).
+
+- Protocol, crypto, networking, state, chain, BFT consensus, WASM contract
+  VM (wasmi-in-wasm), marketplace contract, app registry, RPC, node CLI,
+  wallet CLI, application SDK — all tested (`pnpm test`).
+- Local devnet: `pnpm build && node apps/devnet/devnet.mjs 4`.
+- Rust toolchain only needed to rebuild wasm artifacts:
+  `scripts/build-wasm.sh` (artifacts are committed).
+
+Remaining for the full v1 vision (see `IMPLEMENTATION_PLAN.md` §5): the real
+Pear/Bare runtime glue (wallet session UI, per-app signing permissions), the
+Pythonic contract DSL, and the example-app suite.

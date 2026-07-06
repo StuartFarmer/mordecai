@@ -17,6 +17,7 @@ export default defineConfig({
       '@hssn/rpc': pkg('rpc'),
       '@hssn/consensus': pkg('consensus'),
       '@hssn/vm': pkg('vm'),
+      '@hssn/sdk': pkg('sdk'),
       '@hssn/node': pkg('node'),
     },
   },
