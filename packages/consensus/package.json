@@ -1,17 +1,14 @@
 {
-  "name": "@hssn/node",
+  "name": "@hssn/consensus",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Chain node: sequencer loop, RPC service, and init/start CLI",
+  "description": "Multi-validator consensus: round-robin proposals, quorum votes, finality certificates, block sync",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
-  },
-  "bin": {
-    "hssn-node": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -22,13 +19,11 @@
   },
   "dependencies": {
     "@hssn/chain": "workspace:*",
-    "@hssn/consensus": "workspace:*",
     "@hssn/crypto": "workspace:*",
     "@hssn/protocol": "workspace:*",
-    "@hssn/rpc": "workspace:*"
+    "hyperswarm": "^4.17.0"
   },
   "devDependencies": {
-    "@hssn/wallet": "workspace:*",
     "hyperdht": "^6.32.0"
   }
 }

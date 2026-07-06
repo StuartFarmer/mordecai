@@ -75,9 +75,10 @@ Dogfood the networking layer instead of adding a parallel TCP stack:
 - Validators discover each other via **hyperdht** (well-known topic derived
   from genesis hash) and gossip transactions + consensus votes over
   **hyperswarm** connections with **protomux** channels.
-- **The finalized block log is a Hypercore feed** signed by the validator
-  quorum key material (each validator mirrors it). New/light nodes sync blocks
-  via ordinary Hypercore replication — block sync comes for free, verifiably.
+- Finalized blocks carry quorum-vote certificates; new/lagging nodes sync via
+  block_request/response gossip on the consensus mesh, verifying each
+  certificate independently. (The originally planned Hypercore block-log feed
+  is deferred post-v1 — the gossip path was simpler and equally verifiable.)
 - Client RPC: **@hyperswarm/rpc** (apps talk to any node P2P, no server URL),
   plus an optional local HTTP JSON-RPC gateway for explorers/curl/tooling.
 

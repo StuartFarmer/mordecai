@@ -86,14 +86,20 @@ Every state transition is a signed transaction. Nothing unsigned is accepted.
 
 1. **≥ 1/3 Byzantine validators** breaks safety; the validator set is static
    and permissioned. Staking/rotation/slashing are post-v1.
-2. **No fee market** — flat fees; a funded spammer can fill blocks. Mempool
+1. **Consensus liveness under mid-vote proposer failure.** v1 validators
+   vote for at most one block hash per height and stay locked (so two
+   conflicting quorums are impossible), but there is no Tendermint-style
+   unlock: if a proposer crashes after some validators voted but before
+   quorum, that height can stall until those validators restart. Safety is
+   never at risk; full lock/unlock rounds are post-v1.
+1. **No fee market** — flat fees; a funded spammer can fill blocks. Mempool
    per-sender caps are a stopgap.
-3. **Network-level DoS** on the DHT/swarm (eclipse, sybil peers) is mitigated
+1. **Network-level DoS** on the DHT/swarm (eclipse, sybil peers) is mitigated
    only by validator-to-validator direct connections, not solved.
-4. **Key recovery** — mnemonic backup only; no social recovery or rotation of
+1. **Key recovery** — mnemonic backup only; no social recovery or rotation of
    a compromised wallet key.
-5. **Privacy** — all economic state is public; no confidentiality goals in v1.
-6. **Light clients** trust the block-log Hypercore feed plus quorum
+1. **Privacy** — all economic state is public; no confidentiality goals in v1.
+1. **Light clients** trust the block-log Hypercore feed plus quorum
    signatures; no fraud/validity proofs yet.
 
 Each gap should either be closed or explicitly re-accepted at every subsequent

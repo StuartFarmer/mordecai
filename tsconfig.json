@@ -24,6 +24,9 @@
     },
     {
       "path": "packages/node"
+    },
+    {
+      "path": "packages/consensus"
     }
   ]
 }

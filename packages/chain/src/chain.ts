@@ -2,17 +2,21 @@ import { join } from 'node:path';
 import { blake2b256, sign, verify, decodeAddress, type KeyPair } from '@hssn/crypto';
 import {
   MAX_TXS_PER_BLOCK,
+  MAX_VOTES_PER_CERT,
   PROTOCOL_VERSION,
   Reader,
   Writer,
   blockHeaderSigningBytes,
   decodeBlock,
   decodeBlockHeader,
+  decodeVote,
   encodeBlock,
   encodeBlockHeader,
+  encodeVote,
   type Block,
   type BlockHeader,
   type Transaction,
+  type Vote,
 } from '@hssn/protocol';
 import {
   LevelStore,
@@ -48,6 +52,13 @@ export interface ProduceResult {
   skipped: { tx: Transaction; reason: string }[];
 }
 
+/** A block validated against the current head, ready to commit. */
+export interface VerifiedBlock {
+  block: Block;
+  changes: Change[];
+  receipts: Receipt[];
+}
+
 export function blockHash(header: BlockHeader): Uint8Array {
   return blake2b256(encodeBlockHeader(header));
 }
@@ -66,6 +77,26 @@ function txKey(txHash: Uint8Array): Uint8Array {
   key.set(new TextEncoder().encode('t:'));
   key.set(txHash, 2);
   return key;
+}
+
+function certKey(height: bigint): Uint8Array {
+  const key = new Uint8Array(2 + 8);
+  key.set(new TextEncoder().encode('c:'));
+  new DataView(key.buffer).setBigUint64(2, height, false);
+  return key;
+}
+
+function encodeCertificate(votes: Vote[]): Uint8Array {
+  const w = new Writer();
+  w.array(votes, MAX_VOTES_PER_CERT, (wr, vote) => wr.bytes(encodeVote(vote), 256));
+  return w.finish();
+}
+
+function decodeCertificate(bytes: Uint8Array): Vote[] {
+  const r = new Reader(bytes);
+  const votes = r.array(MAX_VOTES_PER_CERT, (rr) => decodeVote(rr.bytes(256)));
+  r.finish();
+  return votes;
 }
 
 function encodeTxRecord(record: TxRecord): Uint8Array {
@@ -207,12 +238,15 @@ export class Chain {
     return { overlay, included, receipts, skipped };
   }
 
-  /** Sequencer path: executes what it can, drops the rest, signs, commits. */
-  async produceBlock(
+  /**
+   * Build and sign a block without committing it — the consensus proposal
+   * path. Non-includable transactions are dropped.
+   */
+  async draftBlock(
     txs: readonly Transaction[],
     proposer: KeyPair,
     timestampMs?: bigint,
-  ): Promise<ProduceResult> {
+  ): Promise<ProduceResult & { verified: VerifiedBlock }> {
     if (!this.isValidator(proposer.publicKey)) {
       throw new ChainError('proposer is not in the validator set');
     }
@@ -233,12 +267,30 @@ export class Chain {
       txs: outcome.included,
       proposerSignature: sign(blockHeaderSigningBytes(header), proposer.secretKey),
     };
-    await this.commit(block, outcome.overlay.changes(), outcome.receipts);
-    return { block, receipts: outcome.receipts, skipped: outcome.skipped };
+    return {
+      block,
+      receipts: outcome.receipts,
+      skipped: outcome.skipped,
+      verified: { block, changes: outcome.overlay.changes(), receipts: outcome.receipts },
+    };
   }
 
-  /** Follower/replay path: full verification, throws on any deviation. */
-  async applyBlock(block: Block): Promise<Receipt[]> {
+  /** Sequencer path: executes what it can, drops the rest, signs, commits. */
+  async produceBlock(
+    txs: readonly Transaction[],
+    proposer: KeyPair,
+    timestampMs?: bigint,
+  ): Promise<ProduceResult> {
+    const draft = await this.draftBlock(txs, proposer, timestampMs);
+    await this.commitVerified(draft.verified);
+    return draft;
+  }
+
+  /**
+   * Fully validate a block against the current head without committing.
+   * The result can be committed later (after consensus votes arrive).
+   */
+  async verifyBlock(block: Block): Promise<VerifiedBlock> {
     const h = block.header;
     if (h.version !== PROTOCOL_VERSION) throw new ChainError(`bad version ${h.version}`);
     if (h.chainId !== this.chainId) throw new ChainError(`bad chain id ${h.chainId}`);
@@ -261,11 +313,25 @@ export class Chain {
     const stateRoot = await computeStateRootWith(this.stateStore, outcome.overlay.changes());
     if (Buffer.compare(stateRoot, h.stateRoot) !== 0) throw new ChainError('stateRoot mismatch');
 
-    await this.commit(block, outcome.overlay.changes(), outcome.receipts);
-    return outcome.receipts;
+    return { block, changes: outcome.overlay.changes(), receipts: outcome.receipts };
   }
 
-  private async commit(block: Block, changes: Change[], receipts: Receipt[]): Promise<void> {
+  /** Follower/replay path: verify + commit in one step. */
+  async applyBlock(block: Block, certificate?: Vote[]): Promise<Receipt[]> {
+    const verified = await this.verifyBlock(block);
+    await this.commitVerified(verified, certificate);
+    return verified.receipts;
+  }
+
+  /**
+   * Persist a block previously validated by verifyBlock/draftBlock. The
+   * verified result must be against the current head.
+   */
+  async commitVerified(verified: VerifiedBlock, certificate?: Vote[]): Promise<void> {
+    const { block, changes, receipts } = verified;
+    if (block.header.height !== this.head.height + 1n) {
+      throw new ChainError('verified block is stale');
+    }
     // State first, then block metadata; Chain.open detects a crash between
     // the two via the state-root consistency check.
     await this.stateStore.applyChanges(changes);
@@ -276,9 +342,18 @@ export class Chain {
         encodeTxRecord({ height: block.header.height, index, receipt }),
       ]);
     });
+    if (certificate && certificate.length > 0) {
+      metaChanges.push([certKey(block.header.height), encodeCertificate(certificate)]);
+    }
     metaChanges.push([HEAD_KEY, encodeBlockHeader(block.header)]);
     await this.blockStore.applyChanges(metaChanges);
     this.head = block.header;
+  }
+
+  /** Quorum votes recorded when the block finalized (absent for M3 sequencer blocks). */
+  async getCertificate(height: bigint): Promise<Vote[] | undefined> {
+    const raw = await this.blockStore.get(certKey(height));
+    return raw === undefined ? undefined : decodeCertificate(raw);
   }
 
   async close(): Promise<void> {

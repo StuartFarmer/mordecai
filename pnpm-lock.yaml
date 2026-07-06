@@ -46,6 +46,25 @@ importers:
         specifier: workspace:*
         version: link:../state
 
+  packages/consensus:
+    dependencies:
+      '@hssn/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@hssn/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@hssn/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      hyperswarm:
+        specifier: ^4.17.0
+        version: 4.17.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
+    devDependencies:
+      hyperdht:
+        specifier: ^6.32.0
+        version: 6.32.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
+
   packages/crypto:
     dependencies:
       '@scure/bip39':
@@ -78,6 +97,9 @@ importers:
       '@hssn/chain':
         specifier: workspace:*
         version: link:../chain
+      '@hssn/consensus':
+        specifier: workspace:*
+        version: link:../consensus
       '@hssn/crypto':
         specifier: workspace:*
         version: link:../crypto

@@ -2,7 +2,7 @@ import RPC from '@hyperswarm/rpc';
 import type { Chain, Mempool } from '@hssn/chain';
 import { blockHash } from '@hssn/chain';
 import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
-import { decodeTransaction, encodeTransaction } from '@hssn/protocol';
+import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import type {
   AccountInfo,
   BlockInfo,
@@ -28,7 +28,12 @@ export class NodeRpcServer {
   ) {}
 
   static async start(
-    deps: { chain: Chain; mempool: Mempool },
+    deps: {
+      chain: Chain;
+      mempool: Mempool;
+      /** Called after a tx is admitted (consensus nodes gossip it here). */
+      onTxAccepted?: (tx: Transaction) => void;
+    },
     options: RpcServerOptions = {},
   ): Promise<NodeRpcServer> {
     const rpc = new RPC({
@@ -73,6 +78,7 @@ export class NodeRpcServer {
     respond<SubmitTxResult>('submit_tx', async (params: { tx: string }) => {
       const tx = decodeTransaction(fromHex(params.tx));
       const hash = await deps.mempool.add(tx);
+      deps.onTxAccepted?.(tx);
       return { hash: hex(hash) };
     });
 
