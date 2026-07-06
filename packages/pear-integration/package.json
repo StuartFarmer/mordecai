@@ -18,7 +18,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hssn/crypto": "workspace:*",
     "@hssn/protocol": "workspace:*",
-    "@hssn/wallet": "workspace:*"
+    "@hssn/wallet": "workspace:*",
+    "@hyperswarm/rpc": "^3.5.0"
+  },
+  "devDependencies": {
+    "hyperdht": "^6.32.0"
   }
 }

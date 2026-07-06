@@ -34,6 +34,34 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.0)
 
+  apps/chess:
+    dependencies:
+      '@hssn/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      '@hssn/networking':
+        specifier: workspace:*
+        version: link:../../packages/networking
+      '@hssn/rpc':
+        specifier: workspace:*
+        version: link:../../packages/rpc
+      '@hssn/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@hssn/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
+      '@hssn/node':
+        specifier: workspace:*
+        version: link:../../packages/node
+      '@hssn/wallet':
+        specifier: workspace:*
+        version: link:../../packages/wallet
+      hyperdht:
+        specifier: ^6.32.0
+        version: 6.32.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
+
   packages/chain:
     dependencies:
       '@hssn/crypto':
@@ -122,12 +150,22 @@ importers:
 
   packages/pear-integration:
     dependencies:
+      '@hssn/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@hssn/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@hssn/wallet':
         specifier: workspace:*
         version: link:../wallet
+      '@hyperswarm/rpc':
+        specifier: ^3.5.0
+        version: 3.5.0(sodium-javascript@0.8.0)
+    devDependencies:
+      hyperdht:
+        specifier: ^6.32.0
+        version: 6.32.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
 
   packages/protocol: {}
 

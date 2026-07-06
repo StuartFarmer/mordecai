@@ -17,3 +17,11 @@ cp contracts/target/wasm32-unknown-unknown/release/counter.wasm contracts/dist/
 cp contracts/target/wasm32-unknown-unknown/release/marketplace.wasm contracts/dist/
 
 ls -la packages/vm/wasm/*.wasm contracts/dist/*.wasm
+
+# DSL example contracts (compiler/examples/*.pysc) — also committed.
+for src in compiler/examples/*.pysc; do
+  name=$(basename "$src" .pysc)
+  ./compiler/hssnc build "$src" -o "compiler/build/$name" --wasm >/dev/null
+  cp "compiler/build/$name/$name.wasm" contracts/dist/
+done
+ls -la contracts/dist/*.wasm

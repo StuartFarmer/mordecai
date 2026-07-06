@@ -6,3 +6,4 @@ coverage/
 target/
 !packages/vm/wasm/*.wasm
 !contracts/dist/*.wasm
+compiler/build/

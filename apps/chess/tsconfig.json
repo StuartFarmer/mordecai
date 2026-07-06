@@ -7,13 +7,16 @@
   "include": ["src"],
   "references": [
     {
-      "path": "../protocol"
+      "path": "../../packages/crypto"
     },
     {
-      "path": "../wallet"
+      "path": "../../packages/networking"
     },
     {
-      "path": "../crypto"
+      "path": "../../packages/sdk"
+    },
+    {
+      "path": "../../packages/rpc"
     }
   ]
 }

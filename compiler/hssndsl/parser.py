@@ -13,7 +13,9 @@ Grammar (v0):
     state   : "state" NAME "[" type "]" ":" INDENT field+ DEDENT
     field   : NAME ":" type ("=" literal)?
     action  : "action" NAME "(" params? ")" ":" INDENT stmt+ DEDENT
-    stmt    : require | if | assign
+    stmt    : require | if | transfer | emit | assign
+    transfer: "transfer" "(" expr "," expr ")"
+    emit    : "emit" "(" expr ")"
     require : "require" "(" expr ("," STRING)? ")"
     if      : "if" expr ":" suite ("elif" expr ":" suite)* ("else" ":" suite)?
     assign  : target ("=" | "+=" | "-=") expr
@@ -27,9 +29,9 @@ import token as T
 import tokenize
 
 from hssndsl.ast_nodes import (
-    Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, Exists,
-    FieldDef, If, Index, IntLit, Name, NotOp, Param, Program, Require,
-    StateDef, Stmt, StrLit,
+    Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
+    Exists, FieldDef, If, Index, IntLit, Name, NotOp, Param, Program,
+    Require, StateDef, Stmt, StrLit, TransferStmt,
 )
 from hssndsl.errors import DslError
 
@@ -95,7 +97,7 @@ class _Parser:
         tok = self.expect(T.NAME)
         if tok.string in ("if", "elif", "else", "and", "or", "not", "True",
                           "False", "contract", "config", "state", "action",
-                          "require", "exists"):
+                          "require", "exists", "transfer", "emit"):
             self.error(f"{tok.string!r} is a reserved word", tok)
         return tok
 
@@ -222,6 +224,8 @@ class _Parser:
                 params.append(Param(p_tok.string, ty, p_tok.start[0]))
                 if not self.eat(T.OP, ","):
                     break
+                if self.at(T.OP, ")"):
+                    break  # trailing comma
         self.expect(T.OP, ")")
         self.expect(T.OP, ":")
         body = self.parse_suite()
@@ -245,6 +249,10 @@ class _Parser:
                 return self.parse_require()
             if tok.string == "if":
                 return self.parse_if()
+            if tok.string == "transfer":
+                return self.parse_transfer()
+            if tok.string == "emit":
+                return self.parse_emit()
             if tok.string in ("while", "for", "def", "import", "from",
                               "return", "class", "lambda", "del", "pass"):
                 self.error(f"{tok.string!r} is not allowed in the v0 language", tok)
@@ -261,6 +269,24 @@ class _Parser:
         self.expect(T.OP, ")")
         self.newline()
         return Require(line=start.start[0], cond=cond, msg=msg)
+
+    def parse_transfer(self) -> TransferStmt:
+        start = self.expect_name("transfer")
+        self.expect(T.OP, "(")
+        to = self.parse_expr()
+        self.expect(T.OP, ",")
+        amount = self.parse_expr()
+        self.expect(T.OP, ")")
+        self.newline()
+        return TransferStmt(line=start.start[0], to=to, amount=amount)
+
+    def parse_emit(self) -> EmitStmt:
+        start = self.expect_name("emit")
+        self.expect(T.OP, "(")
+        value = self.parse_expr()
+        self.expect(T.OP, ")")
+        self.newline()
+        return EmitStmt(line=start.start[0], value=value)
 
     def parse_if(self) -> If:
         start = self.expect_name("if")
@@ -406,6 +432,8 @@ class _Parser:
                 kwargs.append((key_tok.string, self.parse_expr()))
                 if not self.eat(T.OP, ","):
                     break
+                if self.at(T.OP, ")"):
+                    break  # trailing comma
         self.expect(T.OP, ")")
         return Ctor(line=name_tok.start[0], struct=name_tok.string, kwargs=kwargs)
 

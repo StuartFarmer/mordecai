@@ -107,6 +107,19 @@ class Assign(Stmt):
 
 
 @dataclass
+class TransferStmt(Stmt):
+    """transfer(to, amount): pay out of the contract's own balance."""
+    to: Expr = None
+    amount: Expr = None
+
+
+@dataclass
+class EmitStmt(Stmt):
+    """emit(message): append an event to the receipt."""
+    value: Expr = None
+
+
+@dataclass
 class If(Stmt):
     # (condition, body) pairs for if/elif; orelse for the final else
     branches: list[tuple[Expr, list[Stmt]]] = field(default_factory=list)

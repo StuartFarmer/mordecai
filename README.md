@@ -34,8 +34,21 @@ finalized on-chain payment (`packages/sdk/test/vertical.test.ts`).
 - Rust toolchain only needed to rebuild wasm artifacts:
   `scripts/build-wasm.sh` (artifacts are committed).
 
-Also done: the Pythonic contract DSL (`compiler/hssnc`: `.pysc` → Rust →
-wasm32, spec Phase 7) and permission-scoped wallet sessions for apps
-(`packages/pear-integration`: allowance-gated signing, auth grants).
-Remaining for the full v1 vision: hosting apps inside the actual Pear/Bare
-shell with a wallet-approval UI, and the example-app suite.
+Also done:
+
+- **Pythonic contract DSL** (`compiler/hssnc`: `.pysc` → Rust → wasm32, spec
+  Phase 7) with `value`/`transfer`/`emit`/`height` builtins.
+- **Wallet daemon + IPC signer** (`packages/pear-integration`): apps hold a
+  RemoteSigner over hyperswarm RPC; keys stay in the daemon process, per-app
+  grants and spend allowances enforced there, overages escalate to an
+  approval hook (the seam for the Pear wallet UI).
+- **Example app: p2p chess** (`apps/chess`) — the spec §15 exemplar: the
+  match plays entirely over Hypercore feeds; only the wager escrow
+  (`compiler/examples/chess_wager.pysc`, written in the DSL) touches the
+  chain.
+- **hssn-launcher** — registry install CLI: lookup → swarm fetch → verify
+  against the on-chain hash.
+
+Remaining beyond v1: hosting apps inside the actual Pear/Bare desktop shell
+(the wallet-approval UI itself), multi-writer feeds (Autobase) for
+community-style apps, and the rest of the example suite.

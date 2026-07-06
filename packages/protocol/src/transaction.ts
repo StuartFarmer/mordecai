@@ -147,6 +147,20 @@ function readPayload(r: Reader): Payload {
   }
 }
 
+/** Standalone payload codec (wallet-daemon IPC and tooling). */
+export function encodePayload(payload: Payload): Uint8Array {
+  const w = new Writer();
+  writePayload(w, payload);
+  return w.finish();
+}
+
+export function decodePayload(bytes: Uint8Array): Payload {
+  const r = new Reader(bytes);
+  const payload = readPayload(r);
+  r.finish();
+  return payload;
+}
+
 function writeUnsigned(w: Writer, tx: UnsignedTransaction): void {
   w.string(tx.chainId, MAX_CHAIN_ID_BYTES);
   w.u64(tx.nonce);

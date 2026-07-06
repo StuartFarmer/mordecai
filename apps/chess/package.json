@@ -1,9 +1,9 @@
 {
-  "name": "@hssn/sdk",
+  "name": "@hssn/example-chess",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Application SDK: wallet auth, payments, contracts, registry install, and Hypercore state (spec \u00a722)",
+  "description": "Example app (spec Phase 8): p2p chess over Hypercore feeds with an on-chain wager escrow written in the DSL",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -20,16 +20,13 @@
   "dependencies": {
     "@hssn/crypto": "workspace:*",
     "@hssn/networking": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/rpc": "workspace:*",
-    "@hssn/wallet": "workspace:*"
+    "@hssn/sdk": "workspace:*",
+    "@hssn/rpc": "workspace:*"
   },
   "devDependencies": {
     "@hssn/chain": "workspace:*",
     "@hssn/node": "workspace:*",
+    "@hssn/wallet": "workspace:*",
     "hyperdht": "^6.32.0"
-  },
-  "bin": {
-    "hssn-launcher": "./dist/launcher-cli.js"
   }
 }

@@ -1,0 +1,69 @@
+# Wagered-match escrow (spec §15 chess example): stakes are escrowed in
+# the contract, the game itself is played off-chain over Hypercore feeds,
+# and the pot pays out when both players report the same winner.
+
+contract ChessWager:
+
+    state Meta[int]:
+        next_id: int = 0
+
+    state Match[int]:
+        creator: address
+        opponent: address
+        stake: int
+        # 0 = open, 1 = active, 2 = settled or cancelled
+        phase: int = 0
+        creator_reported: bool = False
+        opponent_reported: bool = False
+        creator_pick: address
+        opponent_pick: address
+
+    action create():
+        require(value > 0, "attach a stake to create a match")
+        match_id = Meta[0].next_id
+        Meta[0].next_id += 1
+        Match[match_id] = Match(
+            creator=sender,
+            opponent=sender,
+            stake=value,
+            creator_pick=sender,
+            opponent_pick=sender,
+        )
+        emit("match created")
+
+    action join(match_id: int):
+        m = Match[match_id]
+        require(m.phase == 0, "match is not open")
+        require(sender != m.creator, "cannot play against yourself")
+        require(value == m.stake, "attached value must match the stake")
+        m.opponent = sender
+        m.phase = 1
+        emit("match joined")
+
+    action report(match_id: int, winner: address):
+        m = Match[match_id]
+        require(m.phase == 1, "match is not active")
+        require(winner == m.creator or winner == m.opponent,
+                "winner must be one of the players")
+        if sender == m.creator:
+            m.creator_pick = winner
+            m.creator_reported = True
+        elif sender == m.opponent:
+            m.opponent_pick = winner
+            m.opponent_reported = True
+        else:
+            require(False, "only the players can report a result")
+
+        if m.creator_reported and m.opponent_reported:
+            if m.creator_pick == m.opponent_pick:
+                m.phase = 2
+                transfer(m.creator_pick, m.stake + m.stake)
+                emit("match settled")
+
+    action cancel(match_id: int):
+        m = Match[match_id]
+        require(m.phase == 0, "match already started")
+        require(sender == m.creator, "only the creator can cancel")
+        m.phase = 2
+        transfer(m.creator, m.stake)
+        emit("match cancelled")

@@ -5,8 +5,9 @@ config, rebinding state handles, and identifiers that would collide with the
 generated Rust."""
 
 from hssndsl.ast_nodes import (
-    Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, Exists,
-    If, Index, IntLit, Name, NotOp, Program, Require, StrLit,
+    Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
+    Exists, If, Index, IntLit, Name, NotOp, Program, Require, StrLit,
+    TransferStmt,
 )
 from hssndsl.errors import DslError
 
@@ -22,8 +23,8 @@ RUST_KEYWORDS = {
 }
 # names the generated Rust already uses
 RESERVED_IDENTS = RUST_KEYWORDS | {
-    "deps", "env", "info", "msg", "config", "sender", "height", "storage",
-    "key", "addr",
+    "deps", "env", "info", "msg", "config", "sender", "height", "value",
+    "storage", "key", "addr",
 }
 RESERVED_TYPE_NAMES = {
     "Config", "InstantiateMsg", "ExecuteMsg", "QueryMsg", "ContractError",
@@ -120,6 +121,19 @@ class _Checker:
                         self.fail(f"if condition must be bool, got {ty}", cond)
                     self.check_body(branch, dict(scope), action)
                 self.check_body(stmt.orelse, dict(scope), action)
+            elif isinstance(stmt, TransferStmt):
+                to_ty = self.type_expr(stmt.to, scope, action)
+                if to_ty != "address":
+                    self.fail(f"transfer() recipient must be an address, got {to_ty}",
+                              stmt.to)
+                amt_ty = self.type_expr(stmt.amount, scope, action)
+                if amt_ty != "int":
+                    self.fail(f"transfer() amount must be int, got {amt_ty}",
+                              stmt.amount)
+            elif isinstance(stmt, EmitStmt):
+                ty = self.type_expr(stmt.value, scope, action)
+                if ty != "str":
+                    self.fail(f"emit() takes a str, got {ty}", stmt.value)
             elif isinstance(stmt, Assign):
                 self.check_assign(stmt, scope, action)
             else:
@@ -143,7 +157,7 @@ class _Checker:
         # local = ... (binding or scalar)
         if isinstance(target, Name):
             self.check_ident(target.id, "variable", target)
-            if target.id in ("sender", "height"):
+            if target.id in ("sender", "height", "value"):
                 self.fail(f"cannot assign to builtin {target.id!r}", target)
             if target.id in action.params_set:
                 self.fail("cannot reassign an action parameter", target)
@@ -271,6 +285,9 @@ class _Checker:
                 return "address"
             if expr.id == "height":
                 expr.kind = "height"
+                return "int"
+            if expr.id == "value":
+                expr.kind = "value"
                 return "int"
             if expr.id == "config":
                 self.fail("config fields are accessed as config.<field>", expr)

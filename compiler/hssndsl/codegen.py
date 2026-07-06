@@ -16,8 +16,8 @@ ArgReader/args helpers match it).
 """
 
 from hssndsl.ast_nodes import (
-    Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, Exists, If,
-    IntLit, Name, NotOp, Program, Require, StrLit,
+    Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt, Exists,
+    If, IntLit, Name, NotOp, Program, Require, StrLit, TransferStmt,
 )
 
 RUST_TYPES = {"int": "u64", "str": "String", "bool": "bool", "address": "[u8; 32]"}
@@ -315,6 +315,12 @@ class _CodeGen:
                 self.emit_body(stmt.orelse, action)
                 w.indent -= 1
             w.w("}")
+        elif isinstance(stmt, TransferStmt):
+            w.w(f"if !c::transfer(&({self.expr(stmt.to)}), {self.expr(stmt.amount)}) {{")
+            w.w('    c::fail("transfer failed: insufficient contract balance");')
+            w.w("}")
+        elif isinstance(stmt, EmitStmt):
+            w.w(f"c::emit(({self.expr(stmt.value)}).as_bytes());")
         elif isinstance(stmt, Assign):
             self.emit_assign(stmt, action)
         else:
@@ -429,6 +435,8 @@ class _CodeGen:
                 return "sender"
             if e.kind == "height":
                 return "c::block_height()"
+            if e.kind == "value":
+                return "c::attached_value()"
             if e.ty == "str":
                 return f"{e.id}.clone()"
             return e.id
