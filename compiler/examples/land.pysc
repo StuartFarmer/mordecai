@@ -1,0 +1,50 @@
+# The land contract, in mordsl. Compiles to the same behavior as the
+# hand-written Rust contract in contracts/land — that contract's demo
+# (chain/scripts/land_demo.sh) is the conformance reference for this file.
+
+contract Land:
+
+    config:
+        max_tiles: int
+
+    state Tile[int]:
+        owner: address
+        building: str = ""
+        last_harvest_height: int = 0
+
+    state Account[address]:
+        wood: int = 0
+        wheat: int = 0
+
+    action claim_tile(tile_id: int):
+        require(tile_id < config.max_tiles, "tile is off the map")
+        require(not exists(Tile[tile_id]), "tile is already claimed")
+
+        Tile[tile_id] = Tile(owner=sender, last_harvest_height=height)
+        Account[sender].wood += 25
+
+    action transfer_tile(tile_id: int, to: address):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        tile.owner = to
+
+    action build_farm(tile_id: int):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building == "", "tile already has a building")
+        require(Account[sender].wood >= 10, "not enough wood")
+
+        Account[sender].wood -= 10
+        tile.building = "farm"
+        tile.last_harvest_height = height
+
+    action harvest(tile_id: int):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building == "farm", "tile has no farm to harvest")
+
+        grown = height - tile.last_harvest_height
+        require(grown > 0, "nothing to harvest yet")
+
+        Account[sender].wheat += grown
+        tile.last_harvest_height = height
