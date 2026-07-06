@@ -14,6 +14,7 @@ mod abi {
         pub fn storage_del(key_ptr: *const u8, key_len: i32);
         pub fn caller_addr(dst_ptr: *mut u8);
         pub fn attached_value() -> i64;
+        pub fn block_height() -> i64;
         pub fn arg_len() -> i32;
         pub fn arg_read(dst_ptr: *mut u8);
         pub fn set_return(ptr: *const u8, len: i32);
@@ -60,6 +61,11 @@ pub fn caller() -> [u8; 32] {
 /// contract's account before the action runs).
 pub fn attached_value() -> u64 {
     (unsafe { abi::attached_value() }) as u64
+}
+
+/// Height of the block containing this transaction.
+pub fn block_height() -> u64 {
+    (unsafe { abi::block_height() }) as u64
 }
 
 pub fn args() -> Vec<u8> {

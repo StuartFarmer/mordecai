@@ -39,7 +39,16 @@ function mapHost(storage = new Map<string, Uint8Array>()): VmHost & {
 const CALLER = new Uint8Array(32).fill(7);
 
 function run(action: string, host = mapHost(), args = new Uint8Array(0), fuel = 1_000_000n) {
-  return VmRuntime.execute({ code: counter, action, args, caller: CALLER, value: 0n, fuel, host });
+  return VmRuntime.execute({
+    code: counter,
+    action,
+    args,
+    caller: CALLER,
+    value: 0n,
+    height: 7n,
+    fuel,
+    host,
+  });
 }
 
 describe('VmRuntime.validate', () => {

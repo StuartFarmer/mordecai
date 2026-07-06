@@ -126,6 +126,7 @@ const ALLOWED_IMPORTS: &[&str] = &[
     "storage_del",
     "caller_addr",
     "attached_value",
+    "block_height",
     "arg_len",
     "arg_read",
     "set_return",
@@ -216,6 +217,7 @@ pub const EXEC_ABORTED: u32 = 6;
 struct Ctx {
     caller: [u8; 32],
     value: u64,
+    height: u64,
     args: Vec<u8>,
     ret: Vec<u8>,
     aborted: Option<Vec<u8>>,
@@ -326,6 +328,9 @@ fn link_env(linker: &mut Linker<Ctx>) -> Result<(), wasmi::Error> {
     linker.func_wrap("env", "attached_value", |caller: Caller<'_, Ctx>| -> i64 {
         caller.data().value as i64
     })?;
+    linker.func_wrap("env", "block_height", |caller: Caller<'_, Ctx>| -> i64 {
+        caller.data().height as i64
+    })?;
     linker.func_wrap("env", "arg_len", |caller: Caller<'_, Ctx>| -> i32 {
         caller.data().args.len() as i32
     })?;
@@ -422,6 +427,7 @@ pub unsafe extern "C" fn execute(
     args_len: u32,
     caller_ptr: *const u8,
     value: u64,
+    height: u64,
     fuel: u64,
 ) -> u32 {
     let code = unsafe { core::slice::from_raw_parts(code_ptr, code_len as usize) };
@@ -447,6 +453,7 @@ pub unsafe extern "C" fn execute(
     let ctx = Ctx {
         caller: caller_addr,
         value,
+        height,
         args,
         ret: Vec::new(),
         aborted: None,

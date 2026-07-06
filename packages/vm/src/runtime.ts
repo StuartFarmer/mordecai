@@ -67,6 +67,8 @@ export interface ExecuteParams {
   /** 32 bytes: tx sender, or calling contract id in sub-calls. */
   caller: Uint8Array;
   value: bigint;
+  /** Height of the block being executed. */
+  height: bigint;
   fuel: bigint;
   host: VmHost;
 }
@@ -103,6 +105,7 @@ interface RuntimeExports {
     argsLen: number,
     callerPtr: number,
     value: bigint,
+    height: bigint,
     fuel: bigint,
   ): number;
   ret_ptr(): number;
@@ -216,6 +219,7 @@ export class VmRuntime {
         params.args.length,
         callerPtr,
         params.value,
+        params.height,
         params.fuel,
       );
       const ret = new Uint8Array(exports.memory.buffer).slice(

@@ -248,7 +248,7 @@ export class Chain {
         skipped.push({ tx, reason });
         continue;
       }
-      receipts.push(await applyTransaction(overlay, tx, proposer));
+      receipts.push(await applyTransaction(overlay, tx, proposer, this.head.height + 1n));
       included.push(tx);
     }
     return { overlay, included, receipts, skipped };
