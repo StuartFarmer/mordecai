@@ -1,0 +1,20 @@
+{
+  "name": "@hssn/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical wire encoding and core protocol types (transactions, blocks, votes) for the Holepunch Smart Settlement Network",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}
