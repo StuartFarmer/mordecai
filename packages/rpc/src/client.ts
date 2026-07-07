@@ -48,10 +48,11 @@ export class NodeRpcClient {
 
   /** Submit a canonical encoded transaction; returns its hash (hex). */
   async submitTx(txBytes: Uint8Array): Promise<string> {
-    const { hash } = await this.call<SubmitTxResult>('submit_tx', {
-      tx: Buffer.from(txBytes).toString('hex'),
-    });
-    return hash;
+    const raw = await this.client.request('submit_tx_raw', Buffer.from(txBytes));
+    if (raw.length === 32) return raw.toString('hex');
+    const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<SubmitTxResult>;
+    if (!envelope.ok) throw new RpcError(envelope.error);
+    return envelope.result.hash;
   }
 
   getBlock(height: bigint): Promise<BlockInfo | null> {

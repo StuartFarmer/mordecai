@@ -204,6 +204,28 @@ describe('applyBlock (follower replay)', () => {
     await follower.applyBlock(block);
     await expect(follower.applyBlock(block)).rejects.toThrow(/bad height/);
   });
+
+  it('supports parallel transaction signature verification on follower replay', async () => {
+    const producer = await openChain(genesis());
+    const follower = await Chain.open(tmp(), genesis(), { signatureVerificationConcurrency: 2 });
+    cleanups.push(() => follower.close());
+    const { block } = await producer.produceBlock(
+      [transfer(alice, 0n, bob.publicKey, 5_000n)],
+      val,
+      1_000n,
+    );
+
+    await follower.applyBlock(block);
+    expect(follower.headHash).toEqual(producer.headHash);
+
+    const badFollower = await Chain.open(tmp(), genesis(), { signatureVerificationConcurrency: 2 });
+    cleanups.push(() => badFollower.close());
+    const badBlock = {
+      ...block,
+      txs: [{ ...block.txs[0]!, signature: new Uint8Array(64) }],
+    };
+    await expect(badFollower.applyBlock(badBlock)).rejects.toThrow(/invalid signature/);
+  });
 });
 
 describe('persistence', () => {

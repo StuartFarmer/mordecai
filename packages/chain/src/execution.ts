@@ -1,5 +1,5 @@
 import { blake2b256 } from '@hssn/crypto';
-import { Reader, Writer, encodeTransaction, type Transaction } from '@hssn/protocol';
+import { Reader, Writer, type Transaction } from '@hssn/protocol';
 import { Overlay, type StateReader } from '@hssn/state';
 import {
   EXEC_OK,
@@ -16,7 +16,12 @@ import {
   encodeAccount,
   type Account,
 } from './account.js';
-import { transactionHash, verifyTransactionSignature } from './tx.js';
+import {
+  getTransactionFacts,
+  transactionHash,
+  verifyTransactionSignature,
+  type TransactionFacts,
+} from './tx.js';
 
 // ------------------------------------------------------------------- fees
 
@@ -31,8 +36,11 @@ export const MAX_CALL_DEPTH = 4;
 export const MAX_EVENTS = 64;
 
 /** The state-independent part of the fee, charged on every included tx. */
-export function computeFee(tx: Transaction): bigint {
-  return FLAT_FEE + FEE_PER_BYTE * BigInt(encodeTransaction(tx).length);
+export function computeFee(
+  tx: Transaction,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): bigint {
+  return FLAT_FEE + FEE_PER_BYTE * BigInt(facts.encodedLength);
 }
 
 export interface Receipt {
@@ -48,6 +56,13 @@ export interface Receipt {
 }
 
 export type InclusionError = string;
+export type TransferTransaction = Transaction & { payload: { kind: 'transfer' } };
+
+export interface TransferBatchOutcome {
+  included: Transaction[];
+  receipts: Receipt[];
+  skipped: { index: number; tx: Transaction; reason: InclusionError }[];
+}
 
 // ------------------------------------------------------------ state layout
 
@@ -140,18 +155,25 @@ function setAccount(overlay: Overlay, publicKey: Uint8Array, account: Account): 
 // -------------------------------------------------------------- admission
 
 /** Checks that don't depend on state: signature and chain binding. */
-export function checkStateless(tx: Transaction, chainId: string): InclusionError | null {
+export function checkStateless(
+  tx: Transaction,
+  chainId: string,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): InclusionError | null {
   if (tx.chainId !== chainId) return `wrong chain id: ${tx.chainId}`;
-  if (!verifyTransactionSignature(tx)) return 'invalid signature';
-  if (computeFee(tx) > tx.maxFee) return 'maxFee below required fee';
+  if (computeFee(tx, facts) > tx.maxFee) return 'maxFee below required fee';
+  if (!verifyTransactionSignature(tx, facts)) return 'invalid signature';
   return null;
 }
 
 /** Funds a tx must provably hold at inclusion (fee reserve + attached value). */
-export function requiredBalance(tx: Transaction): bigint {
+export function requiredBalance(
+  tx: Transaction,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): bigint {
   switch (tx.payload.kind) {
     case 'transfer':
-      return computeFee(tx);
+      return computeFee(tx, facts);
     case 'execute_contract':
       return tx.maxFee + tx.payload.value;
     default:
@@ -164,8 +186,9 @@ export async function checkInclusion(
   state: StateReader,
   tx: Transaction,
   chainId: string,
+  facts: TransactionFacts = getTransactionFacts(tx),
 ): Promise<InclusionError | null> {
-  const stateless = checkStateless(tx, chainId);
+  const stateless = checkStateless(tx, chainId, facts);
   if (stateless) return stateless;
   switch (tx.payload.kind) {
     case 'transfer':
@@ -185,7 +208,7 @@ export async function checkInclusion(
   if (tx.nonce !== sender.nonce) {
     return `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}`;
   }
-  if (sender.balance < requiredBalance(tx)) return 'balance cannot cover fee reserve';
+  if (sender.balance < requiredBalance(tx, facts)) return 'balance cannot cover fee reserve';
   return null;
 }
 
@@ -213,8 +236,9 @@ export async function applyTransaction(
   tx: Transaction,
   proposer: Uint8Array,
   height: bigint,
+  facts: TransactionFacts = getTransactionFacts(tx),
 ): Promise<Receipt> {
-  const staticFee = computeFee(tx);
+  const staticFee = computeFee(tx, facts);
   const feeReserve = tx.payload.kind === 'transfer' ? staticFee : tx.maxFee;
   const txHash = transactionHash(tx);
 
@@ -271,6 +295,165 @@ export async function applyTransaction(
     events: ctx.events,
     returnData: ctx.returnData,
   };
+}
+
+export async function applyTransferTransaction(
+  blockOverlay: Overlay,
+  tx: TransferTransaction,
+  chainId: string,
+  proposer: Uint8Array,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): Promise<{ receipt: Receipt } | { reason: InclusionError }> {
+  const stateless = checkStateless(tx, chainId, facts);
+  if (stateless) return { reason: stateless };
+
+  const sender = await getAccount(blockOverlay, tx.sender);
+  if (tx.nonce !== sender.nonce) {
+    return { reason: `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}` };
+  }
+
+  const staticFee = computeFee(tx, facts);
+  if (sender.balance < staticFee) return { reason: 'balance cannot cover fee reserve' };
+
+  const txHash = transactionHash(tx);
+  const afterFee = sender.balance - staticFee;
+  const { to, amount } = tx.payload;
+
+  if (afterFee < amount) {
+    setAccount(blockOverlay, tx.sender, { balance: afterFee, nonce: sender.nonce + 1n });
+    const proposerAccount = await getAccount(blockOverlay, proposer);
+    setAccount(blockOverlay, proposer, {
+      ...proposerAccount,
+      balance: proposerAccount.balance + staticFee,
+    });
+    return {
+      receipt: {
+        txHash,
+        success: false,
+        error: `insufficient balance: have ${afterFee}, need ${amount}`,
+        fee: staticFee,
+        events: [],
+        returnData: new Uint8Array(0),
+      },
+    };
+  }
+
+  setAccount(blockOverlay, tx.sender, { balance: afterFee - amount, nonce: sender.nonce + 1n });
+  const recipient = await getAccount(blockOverlay, to);
+  setAccount(blockOverlay, to, { ...recipient, balance: recipient.balance + amount });
+  const proposerAccount = await getAccount(blockOverlay, proposer);
+  setAccount(blockOverlay, proposer, {
+    ...proposerAccount,
+    balance: proposerAccount.balance + staticFee,
+  });
+
+  return {
+    receipt: {
+      txHash,
+      success: true,
+      fee: staticFee,
+      events: [],
+      returnData: new Uint8Array(0),
+    },
+  };
+}
+
+export async function applyTransferTransactions(
+  blockOverlay: Overlay,
+  txs: readonly TransferTransaction[],
+  chainId: string,
+  proposer: Uint8Array,
+): Promise<TransferBatchOutcome> {
+  const cache = new Map<string, { publicKey: Uint8Array; account: Account; dirty: boolean }>();
+  const included: Transaction[] = [];
+  const receipts: Receipt[] = [];
+  const skipped: { index: number; tx: Transaction; reason: InclusionError }[] = [];
+
+  const key = (publicKey: Uint8Array) => Buffer.from(publicKey).toString('hex');
+  const getCached = async (publicKey: Uint8Array): Promise<Account> => {
+    const accountKeyHex = key(publicKey);
+    const cached = cache.get(accountKeyHex);
+    if (cached) return cached.account;
+    const account = await getAccount(blockOverlay, publicKey);
+    cache.set(accountKeyHex, { publicKey, account, dirty: false });
+    return account;
+  };
+  const markDirty = (publicKey: Uint8Array): void => {
+    const cached = cache.get(key(publicKey));
+    if (cached) cached.dirty = true;
+  };
+
+  for (const [index, tx] of txs.entries()) {
+    const facts = getTransactionFacts(tx);
+    const stateless = checkStateless(tx, chainId, facts);
+    if (stateless) {
+      skipped.push({ index, tx, reason: stateless });
+      continue;
+    }
+
+    const sender = await getCached(tx.sender);
+    if (tx.nonce !== sender.nonce) {
+      skipped.push({
+        index,
+        tx,
+        reason: `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}`,
+      });
+      continue;
+    }
+
+    const staticFee = computeFee(tx, facts);
+    if (sender.balance < staticFee) {
+      skipped.push({ index, tx, reason: 'balance cannot cover fee reserve' });
+      continue;
+    }
+
+    const txHash = transactionHash(tx);
+    const afterFee = sender.balance - staticFee;
+    const { to, amount } = tx.payload;
+
+    sender.balance = afterFee;
+    sender.nonce += 1n;
+    markDirty(tx.sender);
+
+    if (sender.balance < amount) {
+      const proposerAccount = await getCached(proposer);
+      proposerAccount.balance += staticFee;
+      markDirty(proposer);
+      receipts.push({
+        txHash,
+        success: false,
+        error: `insufficient balance: have ${sender.balance}, need ${amount}`,
+        fee: staticFee,
+        events: [],
+        returnData: new Uint8Array(0),
+      });
+      included.push(tx);
+      continue;
+    }
+
+    sender.balance -= amount;
+    const recipient = await getCached(to);
+    recipient.balance += amount;
+    markDirty(to);
+    const proposerAccount = await getCached(proposer);
+    proposerAccount.balance += staticFee;
+    markDirty(proposer);
+
+    receipts.push({
+      txHash,
+      success: true,
+      fee: staticFee,
+      events: [],
+      returnData: new Uint8Array(0),
+    });
+    included.push(tx);
+  }
+
+  for (const { publicKey, account, dirty } of cache.values()) {
+    if (dirty) setAccount(blockOverlay, publicKey, account);
+  }
+
+  return { included, receipts, skipped };
 }
 
 function executePayload(

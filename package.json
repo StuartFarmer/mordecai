@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "web:build": "pnpm --dir web build",
+    "web:dev": "pnpm --dir web dev",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",

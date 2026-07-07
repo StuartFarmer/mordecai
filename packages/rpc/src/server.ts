@@ -34,6 +34,8 @@ export class NodeRpcServer {
       mempool: Mempool;
       /** Called after a tx is admitted (consensus nodes gossip it here). */
       onTxAccepted?: (tx: Transaction) => void;
+      /** Called with canonical tx bytes after admission, avoiding a re-encode. */
+      onTxAcceptedBytes?: (tx: Uint8Array) => void;
     },
     options: RpcServerOptions = {},
   ): Promise<NodeRpcServer> {
@@ -53,6 +55,17 @@ export class NodeRpcServer {
           envelope = { ok: false, error: err instanceof Error ? err.message : String(err) };
         }
         return Buffer.from(JSON.stringify(envelope));
+      });
+    };
+
+    const respondRaw = (method: string, handler: (raw: Buffer) => Promise<Buffer>) => {
+      server.respond(method, async (raw: Buffer) => {
+        try {
+          return await handler(raw);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return Buffer.from(JSON.stringify({ ok: false, error: message }));
+        }
       });
     };
 
@@ -77,10 +90,21 @@ export class NodeRpcServer {
     });
 
     respond<SubmitTxResult>('submit_tx', async (params: { tx: string }) => {
-      const tx = decodeTransaction(fromHex(params.tx));
-      const hash = await deps.mempool.add(tx);
-      deps.onTxAccepted?.(tx);
+      const txBytes = fromHex(params.tx);
+      const hash = await deps.mempool.addEncoded(txBytes);
+      deps.onTxAcceptedBytes?.(txBytes);
+      if (!deps.onTxAcceptedBytes && deps.onTxAccepted)
+        deps.onTxAccepted(decodeTransaction(txBytes));
       return { hash: hex(hash) };
+    });
+
+    respondRaw('submit_tx_raw', async (raw: Buffer) => {
+      const txBytes = new Uint8Array(raw);
+      const hash = await deps.mempool.addEncoded(txBytes);
+      deps.onTxAcceptedBytes?.(txBytes);
+      if (!deps.onTxAcceptedBytes && deps.onTxAccepted)
+        deps.onTxAccepted(decodeTransaction(txBytes));
+      return Buffer.from(hash);
     });
 
     respond<BlockInfo | null>('get_block', async (params: { height: string }) => {

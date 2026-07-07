@@ -180,6 +180,18 @@ export function transactionSigningBytes(tx: UnsignedTransaction): Uint8Array {
   return w.finish();
 }
 
+export function transactionSigningBytesFromEncoded(encoded: Uint8Array): Uint8Array {
+  if (encoded.length < SIGNATURE_SIZE) {
+    throw new WireError(`encoded transaction too short: ${encoded.length}`);
+  }
+  const domain = utf8(DOMAIN_TX);
+  const unsignedLength = encoded.length - SIGNATURE_SIZE;
+  const bytes = new Uint8Array(domain.length + unsignedLength);
+  bytes.set(domain);
+  bytes.set(encoded.subarray(0, unsignedLength), domain.length);
+  return bytes;
+}
+
 export function encodeTransaction(tx: Transaction): Uint8Array {
   const w = new Writer();
   writeUnsigned(w, tx);
