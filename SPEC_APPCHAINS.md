@@ -9,15 +9,15 @@ Depends on: the platform as of spec parts 1–3 plus the gateway/web tier
 ## 1. Concept
 
 An **app chain** is the group-truth lane of a Pear app: the same `Chain` +
-`ConsensusEngine` + VM + DSL that run L1, instantiated *by the app's own
-peers* with a per-app genesis, discovered over the same swarm (topic =
+`ConsensusEngine` + VM + DSL that run L1, instantiated _by the app's own
+peers_ with a per-app genesis, discovered over the same swarm (topic =
 genesis hash). It sits between the two lanes that already exist:
 
-| who must agree?     | lane                | primitive                        |
-| ------------------- | ------------------- | -------------------------------- |
-| nobody (one author) | content             | hypercore feed                   |
-| the app's peers     | **app chain (new)** | Chain + VM + DSL, per-app        |
-| everyone (money)    | L1                  | the existing chain               |
+| who must agree?     | lane                | primitive                 |
+| ------------------- | ------------------- | ------------------------- |
+| nobody (one author) | content             | hypercore feed            |
+| the app's peers     | **app chain (new)** | Chain + VM + DSL, per-app |
+| everyone (money)    | L1                  | the existing chain        |
 
 Design invariants, agreed up front:
 
@@ -27,7 +27,7 @@ Design invariants, agreed up front:
 2. **Payments stay on L1.** The only cross-chain artifact is the
    **anchor**: a quorum-attested statement "our chain reached state root
    R at height H" plus, optionally, one **outcome call** — an ordinary
-   contract call delivered *as the app* (`sender = appAddress(appId)`).
+   contract call delivered _as the app_ (`sender = appAddress(appId)`).
 3. **L1 trusts exactly the app's registered quorum for that app's
    results, and nothing else.** The blast radius of a corrupt app chain
    is the pot voluntarily staked on it.
@@ -91,7 +91,7 @@ anchor {
 Carried in an **ordinary transaction** — normal sender (the relayer),
 normal nonce, normal fee (flat + per-byte prices the signature bytes;
 the outcome call draws on the normal fuel budget from `maxFee`). This is
-deliberately *not* a new authorization path at the transaction envelope:
+deliberately _not_ a new authorization path at the transaction envelope:
 admission, mempool, hashing, blocks are all untouched.
 
 Execution of an `anchor` payload (all-or-nothing, like any payload):
@@ -119,7 +119,7 @@ chainValidators: vec<32-byte pubkey>   (0..MAX_APP_VALIDATORS = 64)
 ```
 
 Empty = the app has no chain. `update_app` (owner-gated, as today)
-rotates the set; the *current* set at execution time judges each anchor.
+rotates the set; the _current_ set at execution time judges each anchor.
 
 ### 2.5 App-chain genesis convention
 
@@ -159,7 +159,7 @@ allocations = each validator gets 1_000_000_000_000 (fee float; app-chain
 
 - `packages/protocol/test/golden.test.ts` — register/update_app vectors
   change bytes → regenerate vectors, add anchor vectors. This is the
-  *intended* tripwire; treat every other golden diff as a bug.
+  _intended_ tripwire; treat every other golden diff as a bug.
 - Old nodes decode new register_app/anchor txs as `WireError` → mixed
   old/new networks fork at the first new-format tx. Prerelease stance:
   no compatibility shim; devnets restart from fresh data dirs (stored
@@ -236,12 +236,17 @@ protocol, crypto).
   in the set, follower otherwise. (The node stack is unchanged; this is
   composition.)
 - Attestation helpers: `buildAttestation(chain, {appId, l1ChainId,
-  epoch, call?})` (reads head height/root), `signAttestation`,
+epoch, call?})` (reads head height/root), `signAttestation`,
   `verifyAttestation`.
-- `Cosigner` — tiny hyperswarm-RPC service each validator exposes:
-  `anchor_sign(attestation)` → verify `stateRoot` matches *local* chain
-  at `appHeight` (waiting briefly if behind), sign, return. This is how
-  a proposer collects the quorum without new consensus messages.
+- `registerCosigner` — an `anchor_sign` method registered **on the
+  validator's existing node RPC endpoint** (the node's DHT identity is
+  the validator keypair, so peers dial each other by the keys the
+  registry already publishes; a second RPC server on the same keypair
+  would collide on the DHT). Handler: verify `stateRoot` matches the
+  _local_ chain at `appHeight` (waiting briefly if behind), sign,
+  return. This is how a proposer collects the quorum without new
+  consensus messages. Requires a small `NodeRpcServer.respondRaw` +
+  `Node.rpcServer` accessor.
 - `AnchorDaemon` — epoch timer (or `anchorNow()`): build attestation,
   self-sign, gather co-signatures, assemble the anchor payload, submit
   to L1 through `NodeRpcClient` with a funded relayer wallet, await
@@ -255,6 +260,22 @@ handle inside the package: co-signer behind head (bounded wait, then
 anchor without a call or with fewer sigs if still quorate), L1 rejection
 (stale epoch → refresh from `getAnchor` and retry), relayer balance
 exhausted (surface loudly).
+
+**Found during implementation** (two latent consensus-liveness gaps that
+small player-run chains hit immediately, fixed on this branch):
+
+- _Swarm discovery race_: two `PeerHub`s joining the same topic can
+  announce/look up in the wrong order and hyperswarm's own re-query
+  interval is minutes — the mesh simply never formed in fresh
+  two-validator chains. Fix: the hub re-queries the topic every second
+  while it has zero peers.
+- _Proposal into an empty mesh_: a proposer that broadcasts before the
+  mesh is up cannot re-propose (the one-vote-per-height lock forbids
+  it), and gossip is not stored — the height deadlocked forever. Fix:
+  on every stall-round rotation the engine re-broadcasts its locked
+  proposal and vote (idempotent; duplicates are dropped by receivers,
+  so safety is unaffected). `AppChain.waitForPeers(n)` is the
+  belt-and-braces app-side pattern.
 
 **Tests**
 
@@ -278,7 +299,7 @@ exhausted (surface loudly).
 - RPC: `AppInfo.chainValidators`, `get_app_anchor` (or fold into
   `get_app`); client methods.
 - Gateway: `GET /api/app/<appId>` (registry entry incl. validators +
-  latest anchor). Full app-chain *state* reads through the gateway
+  latest anchor). Full app-chain _state_ reads through the gateway
   (`/api/app/<id>/state`) are listed but optional in v0.1 — the demo
   reads app-chain state through a second gateway pointed at an
   app-chain node, which needs zero new code.
@@ -322,7 +343,7 @@ contract SeasonPool:
 3. Deploy `SeasonPool` on L1 with `game = appAddress('mmo-season-1')`;
    both players `stake()` with attached value.
 4. Both players `joinChain('mmo-season-1')` — the frontier contract is
-   deployed *on the app chain* and they play several fast, fee-trivial
+   deployed _on the app chain_ and they play several fast, fee-trivial
    moves there.
 5. Season ends: the daemon anchors with
    `call = payout(winner)`; quorum = both players' signatures.
@@ -339,20 +360,20 @@ outcome touched L1; money moved only by quorum judgment.
 
 ## 4. Test matrix summary
 
-| layer     | suite                                | proves                                    |
-| --------- | ------------------------------------ | ----------------------------------------- |
-| protocol  | anchor/AppRecord roundtrips + golden | one canonical encoding, frozen bytes      |
-| protocol  | signing-bytes separation             | no cross-context signature reuse          |
-| chain     | anchor execution unit tests          | quorum, epochs, binding, app-sender rules |
-| chain     | rotation test                        | update_app governs the judging set        |
-| appchain  | cosigner + daemon over DHT testnet   | real collection + relay path              |
-| appchain  | season acceptance                    | the end-to-end feature                    |
-| sdk/gw    | registry + `/api/app` shapes         | client surface                            |
-| all       | existing 159 tests stay green        | nothing regressed                         |
+| layer    | suite                                | proves                                    |
+| -------- | ------------------------------------ | ----------------------------------------- |
+| protocol | anchor/AppRecord roundtrips + golden | one canonical encoding, frozen bytes      |
+| protocol | signing-bytes separation             | no cross-context signature reuse          |
+| chain    | anchor execution unit tests          | quorum, epochs, binding, app-sender rules |
+| chain    | rotation test                        | update_app governs the judging set        |
+| appchain | cosigner + daemon over DHT testnet   | real collection + relay path              |
+| appchain | season acceptance                    | the end-to-end feature                    |
+| sdk/gw   | registry + `/api/app` shapes         | client surface                            |
+| all      | existing 159 tests stay green        | nothing regressed                         |
 
 ## 5. Explicitly deferred
 
-- Fraud/validity proofs; challenge windows live in *contracts* (a
+- Fraud/validity proofs; challenge windows live in _contracts_ (a
   `payout_after`/contest pattern), not the protocol.
 - Validator rotation via anchored handoff (today: owner-gated).
 - DSL-level outbox (`emit_l1(...)`) replacing the JS outcome callback.

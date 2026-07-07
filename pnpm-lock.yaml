@@ -87,6 +87,31 @@ importers:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.0)
 
+  packages/appchain:
+    dependencies:
+      '@hssn/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@hssn/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@hssn/node':
+        specifier: workspace:*
+        version: link:../node
+      '@hssn/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hssn/rpc':
+        specifier: workspace:*
+        version: link:../rpc
+      '@hyperswarm/rpc':
+        specifier: ^3.5.0
+        version: 3.5.0(sodium-javascript@0.8.0)
+    devDependencies:
+      hyperdht:
+        specifier: ^6.32.0
+        version: 6.32.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
+
   packages/chain:
     dependencies:
       '@hssn/crypto':

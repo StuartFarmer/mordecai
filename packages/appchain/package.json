@@ -1,0 +1,31 @@
+{
+  "name": "@hssn/appchain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Per-app chains: derived genesis, anchor attestations, co-signing, and the anchor daemon (app-chains spec)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/chain": "workspace:*",
+    "@hssn/crypto": "workspace:*",
+    "@hssn/node": "workspace:*",
+    "@hssn/protocol": "workspace:*",
+    "@hssn/rpc": "workspace:*",
+    "@hyperswarm/rpc": "^3.5.0"
+  },
+  "devDependencies": {
+    "hyperdht": "^6.32.0"
+  }
+}

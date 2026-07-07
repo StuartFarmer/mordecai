@@ -15,6 +15,7 @@ import { NodeRpcClient } from '@hssn/rpc';
  *   GET  /api/account/<z32 address>        → balance + nonce
  *   GET  /api/tx/<hash hex>                → tx status or 404
  *   POST /api/tx        {"tx": "<hex>"}    → {"hash": "<hex>"} (signed, encoded tx)
+ *   GET  /api/app/<appId>                  → registry entry + latest anchor
  *   GET  /api/contract/<id hex>/state[?prefix=<hex>]
  *                                          → [{key, value}] storage entries
  *
@@ -130,6 +131,13 @@ export class Gateway {
           }
           const hash = await rpc.submitTx(new Uint8Array(Buffer.from(body.tx, 'hex')));
           return json(res, 200, { hash });
+        }
+        const app = path.match(/^\/api\/app\/([^/]+)$/);
+        if (req.method === 'GET' && app) {
+          const appId = decodeURIComponent(app[1]!);
+          const [entry, anchor] = await Promise.all([rpc.getApp(appId), rpc.getAppAnchor(appId)]);
+          if (!entry) return json(res, 404, { error: `app not registered: ${appId}` });
+          return json(res, 200, { ...entry, anchor });
         }
         const state = path.match(/^\/api\/contract\/([0-9a-fA-F]{64})\/state$/);
         if (req.method === 'GET' && state) {

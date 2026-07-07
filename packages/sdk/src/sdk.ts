@@ -1,6 +1,6 @@
 import { blake2b256, decodeAddress } from '@hssn/crypto';
 import { Feed, Network } from '@hssn/networking';
-import { encodeTransaction, type Payload } from '@hssn/protocol';
+import { DOMAIN_APP_SENDER, encodeTransaction, type Payload } from '@hssn/protocol';
 import { NodeRpcClient, type AccountInfo, type AppInfo, type TxInfo } from '@hssn/rpc';
 import type { Signer } from '@hssn/wallet';
 
@@ -20,6 +20,16 @@ export interface InstalledApp {
   entry: AppInfo;
   /** The verified application bundle (feed block 0). */
   bundle: Uint8Array;
+}
+
+/**
+ * The L1 sender address of an app's anchored outcome calls (app-chains
+ * spec §2.1). Contracts gate on it with `require(sender == config.game)`.
+ * Matches `appAddress` in @hssn/chain; kept dependency-light here so the
+ * SDK stays Bare-compatible (no node/storage imports).
+ */
+export function appAddress(appId: string): Uint8Array {
+  return blake2b256(new TextEncoder().encode(DOMAIN_APP_SENDER), new TextEncoder().encode(appId));
 }
 
 /**
