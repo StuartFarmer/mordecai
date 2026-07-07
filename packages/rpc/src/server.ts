@@ -7,6 +7,7 @@ import type {
   AccountInfo,
   AppInfo,
   BlockInfo,
+  ContractStateEntry,
   HeadInfo,
   RpcEnvelope,
   SubmitTxResult,
@@ -117,6 +118,17 @@ export class NodeRpcServer {
         ...(record.receipt.error !== undefined ? { error: record.receipt.error } : {}),
       };
     });
+
+    respond<ContractStateEntry[]>(
+      'get_contract_state',
+      async (params: { contract: string; prefix?: string }) => {
+        const entries = await deps.chain.getContractState(
+          fromHex(params.contract),
+          params.prefix ? fromHex(params.prefix) : undefined,
+        );
+        return entries.map(([key, value]) => ({ key: hex(key), value: hex(value) }));
+      },
+    );
 
     respond<AppInfo | null>('get_app', async (params: { appId: string }) => {
       const entry = await deps.chain.getApp(params.appId);

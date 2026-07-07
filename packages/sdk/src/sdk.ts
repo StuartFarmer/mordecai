@@ -98,6 +98,18 @@ export class Hssn {
     return this.rpc.getAccount(address);
   }
 
+  /**
+   * Read a contract's storage (spec §22 `query`): [inner key, value] pairs,
+   * optionally narrowed by inner-key prefix (e.g. the DSL's `s:Tile:`).
+   */
+  async query(contract: Uint8Array, prefix?: Uint8Array): Promise<[Uint8Array, Uint8Array][]> {
+    const entries = await this.rpc.getContractState(contract, prefix);
+    return entries.map(({ key, value }) => [
+      new Uint8Array(Buffer.from(key, 'hex')),
+      new Uint8Array(Buffer.from(value, 'hex')),
+    ]);
+  }
+
   // --------------------------------------------------- identity / auth
 
   /** App-level authentication: prove control of the wallet key. */

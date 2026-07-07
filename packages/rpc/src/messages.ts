@@ -63,6 +63,19 @@ export interface AppInfo {
   metadataHash: string;
 }
 
+/** One contract storage entry; the key is contract-internal (hex). */
+export interface ContractStateEntry {
+  key: string;
+  value: string;
+}
+
 export type RpcEnvelope<T> = { ok: true; result: T } | { ok: false; error: string };
 
-export const RPC_METHODS = ['get_head', 'get_account', 'submit_tx', 'get_block', 'get_tx'] as const;
+export const RPC_METHODS = [
+  'get_head',
+  'get_account',
+  'submit_tx',
+  'get_block',
+  'get_tx',
+  'get_contract_state',
+] as const;

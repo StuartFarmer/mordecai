@@ -3,6 +3,7 @@ import type {
   AccountInfo,
   AppInfo,
   BlockInfo,
+  ContractStateEntry,
   HeadInfo,
   RpcEnvelope,
   SubmitTxResult,
@@ -64,6 +65,14 @@ export class NodeRpcClient {
 
   getTx(hashHex: string): Promise<TxInfo | null> {
     return this.call('get_tx', { hash: hashHex });
+  }
+
+  /** A contract's storage entries, optionally narrowed by inner-key prefix. */
+  getContractState(contract: Uint8Array, prefix?: Uint8Array): Promise<ContractStateEntry[]> {
+    return this.call('get_contract_state', {
+      contract: Buffer.from(contract).toString('hex'),
+      ...(prefix ? { prefix: Buffer.from(prefix).toString('hex') } : {}),
+    });
   }
 
   /** Poll until the transaction lands in a block (M3 stand-in for event subscriptions). */
