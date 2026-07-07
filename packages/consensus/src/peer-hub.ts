@@ -15,6 +15,7 @@ export class PeerHub {
   private readonly sockets = new Set<Duplex>();
   private readonly handlers = new Set<MessageHandler>();
   private readonly onPeer = new Set<() => void>();
+  private refreshTimer: NodeJS.Timeout | undefined;
 
   private constructor(private readonly swarm: Hyperswarm) {}
 
@@ -27,6 +28,13 @@ export class PeerHub {
     swarm.on('connection', (socket) => hub.attach(socket));
     const discovery = swarm.join(options.topic, { server: true, client: true });
     await discovery.flushed();
+    // Peers that announce/look up in the wrong order can miss each other,
+    // and hyperswarm's own topic re-query interval is minutes — far too
+    // slow for consensus. Re-query while the mesh is empty.
+    hub.refreshTimer = setInterval(() => {
+      if (hub.sockets.size === 0) void discovery.refresh().catch(() => {});
+    }, 1_000);
+    hub.refreshTimer.unref();
     return hub;
   }
 
@@ -85,6 +93,7 @@ export class PeerHub {
   }
 
   async close(): Promise<void> {
+    if (this.refreshTimer) clearInterval(this.refreshTimer);
     await this.swarm.destroy();
   }
 }

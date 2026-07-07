@@ -27,8 +27,21 @@ export interface RpcServerOptions {
 export class NodeRpcServer {
   private constructor(
     private readonly rpc: RPC,
-    private readonly server: { close(): Promise<void>; publicKey: Uint8Array | null },
+    private readonly server: {
+      close(): Promise<void>;
+      respond(method: string, handler: (request: Buffer) => Buffer | Promise<Buffer>): void;
+      publicKey: Uint8Array | null;
+    },
   ) {}
+
+  /**
+   * Register an additional raw method on this node's endpoint (e.g. the
+   * app-chain co-signer). One server per node identity — a second RPC
+   * server on the same keypair would collide on the DHT.
+   */
+  respondRaw(method: string, handler: (raw: Buffer) => Promise<Buffer>): void {
+    this.server.respond(method, handler);
+  }
 
   static async start(
     deps: {
