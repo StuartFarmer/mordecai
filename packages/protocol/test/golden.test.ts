@@ -22,7 +22,10 @@ import {
   transactionSigningBytes,
   voteSigningBytes,
 } from '../src/index.js';
+import { anchorSigningBytes, type AnchorPayload } from '../src/index.js';
 import {
+  anchorTx,
+  anchorTxNoCall,
   block,
   deployTx,
   executeTx,
@@ -32,6 +35,11 @@ import {
   updateAppTx,
   vote,
 } from './fixtures.js';
+
+function anchorBody(): Omit<AnchorPayload, 'kind' | 'signatures'> {
+  const { kind: _kind, signatures: _sigs, ...body } = anchorTx().payload as AnchorPayload;
+  return body;
+}
 
 const vectorsPath = join(dirname(fileURLToPath(import.meta.url)), 'vectors', 'golden.json');
 
@@ -47,6 +55,9 @@ function computeVectors(): Record<string, string> {
     tx_execute_contract: hex(encodeTransaction(executeTx())),
     tx_register_app: hex(encodeTransaction(registerAppTx())),
     tx_update_app: hex(encodeTransaction(updateAppTx())),
+    tx_anchor: hex(encodeTransaction(anchorTx())),
+    tx_anchor_no_call: hex(encodeTransaction(anchorTxNoCall())),
+    anchor_signing: hex(anchorSigningBytes('hssn-dev-1', anchorBody())),
     block_header: hex(encodeBlockHeader(header())),
     block_header_signing: hex(blockHeaderSigningBytes(header())),
     block: hex(encodeBlock(block())),
