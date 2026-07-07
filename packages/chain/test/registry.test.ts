@@ -57,6 +57,7 @@ function registerApp(sender: KeyPair, nonce: bigint, version = '1.0.0'): Transac
     version,
     contractAddress: new Uint8Array(32),
     metadataHash: bundleHash,
+    chainValidators: [],
   });
 }
 
@@ -93,6 +94,7 @@ describe('application registry (M6)', () => {
       version: '9.9.9',
       contractAddress: new Uint8Array(32),
       metadataHash: bundleHash,
+      chainValidators: [],
     });
     const r = await chain.produceBlock([foreign], val, 3_000n);
     expect(r.receipts[0]!.success).toBe(false);
@@ -110,6 +112,7 @@ describe('application registry (M6)', () => {
       version: '1.1.0',
       contractAddress: new Uint8Array(32),
       metadataHash: blake2b256(new TextEncoder().encode('bundle-v2')),
+      chainValidators: [],
     });
     const r = await chain.produceBlock([update], val, 2_000n);
     expect(r.receipts[0]!.success).toBe(true);

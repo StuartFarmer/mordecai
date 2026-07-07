@@ -1,8 +1,10 @@
 import RPC from '@hyperswarm/rpc';
 import type {
   AccountInfo,
+  AnchorInfo,
   AppInfo,
   BlockInfo,
+  ContractStateEntry,
   HeadInfo,
   RpcEnvelope,
   SubmitTxResult,
@@ -48,10 +50,11 @@ export class NodeRpcClient {
 
   /** Submit a canonical encoded transaction; returns its hash (hex). */
   async submitTx(txBytes: Uint8Array): Promise<string> {
-    const { hash } = await this.call<SubmitTxResult>('submit_tx', {
-      tx: Buffer.from(txBytes).toString('hex'),
-    });
-    return hash;
+    const raw = await this.client.request('submit_tx_raw', Buffer.from(txBytes));
+    if (raw.length === 32) return raw.toString('hex');
+    const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<SubmitTxResult>;
+    if (!envelope.ok) throw new RpcError(envelope.error);
+    return envelope.result.hash;
   }
 
   getBlock(height: bigint): Promise<BlockInfo | null> {
@@ -62,8 +65,21 @@ export class NodeRpcClient {
     return this.call('get_app', { appId });
   }
 
+  /** Last accepted app-chain anchor for `appId`, or null. */
+  getAppAnchor(appId: string): Promise<AnchorInfo | null> {
+    return this.call('get_app_anchor', { appId });
+  }
+
   getTx(hashHex: string): Promise<TxInfo | null> {
     return this.call('get_tx', { hash: hashHex });
+  }
+
+  /** A contract's storage entries, optionally narrowed by inner-key prefix. */
+  getContractState(contract: Uint8Array, prefix?: Uint8Array): Promise<ContractStateEntry[]> {
+    return this.call('get_contract_state', {
+      contract: Buffer.from(contract).toString('hex'),
+      ...(prefix ? { prefix: Buffer.from(prefix).toString('hex') } : {}),
+    });
   }
 
   /** Poll until the transaction lands in a block (M3 stand-in for event subscriptions). */

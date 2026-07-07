@@ -1,13 +1,16 @@
 import {
+  DOMAIN_ANCHOR,
   DOMAIN_TX,
   HASH_SIZE,
   MAX_ACTION_BYTES,
   MAX_APP_ID_BYTES,
+  MAX_APP_VALIDATORS,
   MAX_CHAIN_ID_BYTES,
   MAX_CONTRACT_CODE_BYTES,
   MAX_EXECUTE_ARGS_BYTES,
   MAX_TX_BYTES,
   MAX_VERSION_BYTES,
+  PAYLOAD_TAG_ANCHOR,
   PAYLOAD_TAG_DEPLOY_CONTRACT,
   PAYLOAD_TAG_EXECUTE_CONTRACT,
   PAYLOAD_TAG_REGISTER_APP,
@@ -50,6 +53,12 @@ export interface AppRecord {
   contractAddress: Uint8Array;
   /** BLAKE2b-256 of the off-chain metadata document. */
   metadataHash: Uint8Array;
+  /**
+   * The app chain's validator set (Ed25519 public keys); empty when the
+   * app has no chain. This is the set whose quorum L1 accepts anchors
+   * from (app-chains spec §2.4).
+   */
+  chainValidators: Uint8Array[];
 }
 
 export interface RegisterAppPayload extends AppRecord {
@@ -60,12 +69,44 @@ export interface UpdateAppPayload extends AppRecord {
   kind: 'update_app';
 }
 
+/** The outcome delivered by an anchor: a contract call made as the app. */
+export interface AnchorCall {
+  contract: Uint8Array;
+  action: string;
+  args: Uint8Array;
+}
+
+/** One app-chain validator's signature over `anchorSigningBytes`. */
+export interface AnchorSignature {
+  validator: Uint8Array;
+  signature: Uint8Array;
+}
+
+/**
+ * App-chain anchor (app-chains spec §2.3): a quorum-attested statement
+ * that the app chain reached `stateRoot` at `appHeight`, optionally
+ * carrying one outcome call executed with the app's derived address as
+ * sender. Relayed inside an ordinary transaction; the signatures — not
+ * the transaction sender — are the authority.
+ */
+export interface AnchorPayload {
+  kind: 'anchor';
+  appId: string;
+  /** Strictly increasing per app; replay protection on L1. */
+  epoch: bigint;
+  appHeight: bigint;
+  stateRoot: Uint8Array;
+  call?: AnchorCall;
+  signatures: AnchorSignature[];
+}
+
 export type Payload =
   | TransferPayload
   | DeployContractPayload
   | ExecuteContractPayload
   | RegisterAppPayload
-  | UpdateAppPayload;
+  | UpdateAppPayload
+  | AnchorPayload;
 
 export interface UnsignedTransaction {
   chainId: string;
@@ -109,8 +150,71 @@ function writePayload(w: Writer, payload: Payload): void {
       w.string(payload.version, MAX_VERSION_BYTES);
       w.fixed(payload.contractAddress, HASH_SIZE);
       w.fixed(payload.metadataHash, HASH_SIZE);
+      w.array(payload.chainValidators, MAX_APP_VALIDATORS, (w, v) => w.fixed(v, PUBKEY_SIZE));
+      break;
+    case 'anchor':
+      w.u8(PAYLOAD_TAG_ANCHOR);
+      writeAnchorBody(w, payload);
+      w.array(payload.signatures, MAX_APP_VALIDATORS, (w, s) => {
+        w.fixed(s.validator, PUBKEY_SIZE);
+        w.fixed(s.signature, SIGNATURE_SIZE);
+      });
       break;
   }
+}
+
+/** The attested fields of an anchor — everything except the signatures. */
+function writeAnchorBody(w: Writer, anchor: Omit<AnchorPayload, 'kind' | 'signatures'>): void {
+  w.string(anchor.appId, MAX_APP_ID_BYTES);
+  w.u64(anchor.epoch);
+  w.u64(anchor.appHeight);
+  w.fixed(anchor.stateRoot, HASH_SIZE);
+  if (anchor.call) {
+    w.u8(1);
+    w.fixed(anchor.call.contract, HASH_SIZE);
+    w.string(anchor.call.action, MAX_ACTION_BYTES);
+    w.bytes(anchor.call.args, MAX_EXECUTE_ARGS_BYTES);
+  } else {
+    w.u8(0);
+  }
+}
+
+function readAnchorBody(r: Reader): Omit<AnchorPayload, 'kind' | 'signatures'> {
+  const appId = r.string(MAX_APP_ID_BYTES);
+  const epoch = r.u64();
+  const appHeight = r.u64();
+  const stateRoot = r.fixed(HASH_SIZE);
+  const hasCall = r.u8();
+  if (hasCall > 1) throw new WireError(`invalid anchor call flag: ${hasCall}`);
+  if (hasCall === 0) return { appId, epoch, appHeight, stateRoot };
+  return {
+    appId,
+    epoch,
+    appHeight,
+    stateRoot,
+    call: {
+      contract: r.fixed(HASH_SIZE),
+      action: r.string(MAX_ACTION_BYTES),
+      args: r.bytes(MAX_EXECUTE_ARGS_BYTES),
+    },
+  };
+}
+
+/**
+ * Domain-separated preimage each app-chain validator signs to attest an
+ * anchor (app-chains spec §2.2). Binds the L1 chain id, the app, the
+ * epoch, the attested head, and the outcome call — a signature is valid
+ * for exactly one anchor on exactly one network.
+ */
+export function anchorSigningBytes(
+  l1ChainId: string,
+  anchor: Omit<AnchorPayload, 'kind' | 'signatures'>,
+): Uint8Array {
+  const w = new Writer();
+  w.raw(utf8(DOMAIN_ANCHOR));
+  w.string(l1ChainId, MAX_CHAIN_ID_BYTES);
+  writeAnchorBody(w, anchor);
+  return w.finish();
 }
 
 function readAppRecord(r: Reader): AppRecord {
@@ -120,6 +224,7 @@ function readAppRecord(r: Reader): AppRecord {
     version: r.string(MAX_VERSION_BYTES),
     contractAddress: r.fixed(HASH_SIZE),
     metadataHash: r.fixed(HASH_SIZE),
+    chainValidators: r.array(MAX_APP_VALIDATORS, (r) => r.fixed(PUBKEY_SIZE)),
   };
 }
 
@@ -142,6 +247,14 @@ function readPayload(r: Reader): Payload {
       return { kind: 'register_app', ...readAppRecord(r) };
     case PAYLOAD_TAG_UPDATE_APP:
       return { kind: 'update_app', ...readAppRecord(r) };
+    case PAYLOAD_TAG_ANCHOR: {
+      const body = readAnchorBody(r);
+      const signatures = r.array(MAX_APP_VALIDATORS, (r) => ({
+        validator: r.fixed(PUBKEY_SIZE),
+        signature: r.fixed(SIGNATURE_SIZE),
+      }));
+      return { kind: 'anchor', ...body, signatures };
+    }
     default:
       throw new WireError(`unknown payload tag: ${tag}`);
   }
@@ -178,6 +291,18 @@ export function transactionSigningBytes(tx: UnsignedTransaction): Uint8Array {
   w.raw(utf8(DOMAIN_TX));
   writeUnsigned(w, tx);
   return w.finish();
+}
+
+export function transactionSigningBytesFromEncoded(encoded: Uint8Array): Uint8Array {
+  if (encoded.length < SIGNATURE_SIZE) {
+    throw new WireError(`encoded transaction too short: ${encoded.length}`);
+  }
+  const domain = utf8(DOMAIN_TX);
+  const unsignedLength = encoded.length - SIGNATURE_SIZE;
+  const bytes = new Uint8Array(domain.length + unsignedLength);
+  bytes.set(domain);
+  bytes.set(encoded.subarray(0, unsignedLength), domain.length);
+  return bytes;
 }
 
 export function encodeTransaction(tx: Transaction): Uint8Array {

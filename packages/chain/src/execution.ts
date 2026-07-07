@@ -1,5 +1,13 @@
-import { blake2b256 } from '@hssn/crypto';
-import { Reader, Writer, encodeTransaction, type Transaction } from '@hssn/protocol';
+import { blake2b256, verify } from '@hssn/crypto';
+import {
+  DOMAIN_APP_SENDER,
+  MAX_APP_VALIDATORS,
+  Reader,
+  Writer,
+  anchorSigningBytes,
+  type AnchorPayload,
+  type Transaction,
+} from '@hssn/protocol';
 import { Overlay, type StateReader } from '@hssn/state';
 import {
   EXEC_OK,
@@ -16,7 +24,12 @@ import {
   encodeAccount,
   type Account,
 } from './account.js';
-import { transactionHash, verifyTransactionSignature } from './tx.js';
+import {
+  getTransactionFacts,
+  transactionHash,
+  verifyTransactionSignature,
+  type TransactionFacts,
+} from './tx.js';
 
 // ------------------------------------------------------------------- fees
 
@@ -31,8 +44,11 @@ export const MAX_CALL_DEPTH = 4;
 export const MAX_EVENTS = 64;
 
 /** The state-independent part of the fee, charged on every included tx. */
-export function computeFee(tx: Transaction): bigint {
-  return FLAT_FEE + FEE_PER_BYTE * BigInt(encodeTransaction(tx).length);
+export function computeFee(
+  tx: Transaction,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): bigint {
+  return FLAT_FEE + FEE_PER_BYTE * BigInt(facts.encodedLength);
 }
 
 export interface Receipt {
@@ -48,6 +64,13 @@ export interface Receipt {
 }
 
 export type InclusionError = string;
+export type TransferTransaction = Transaction & { payload: { kind: 'transfer' } };
+
+export interface TransferBatchOutcome {
+  included: Transaction[];
+  receipts: Receipt[];
+  skipped: { index: number; tx: Transaction; reason: InclusionError }[];
+}
 
 // ------------------------------------------------------------ state layout
 
@@ -77,6 +100,15 @@ export function contractIdFor(sender: Uint8Array, nonce: bigint, code: Uint8Arra
   return blake2b256(new TextEncoder().encode('hssn:contract:v1'), sender, nonceBytes, code);
 }
 
+/**
+ * The account address an app's anchored outcome calls execute under
+ * (app-chains spec §2.1). A hash with no known private key: only an
+ * anchor quorum can act as this sender.
+ */
+export function appAddress(appId: string): Uint8Array {
+  return blake2b256(new TextEncoder().encode(DOMAIN_APP_SENDER), new TextEncoder().encode(appId));
+}
+
 // ------------------------------------------------------- app registry (§17)
 
 const APP_PREFIX = new TextEncoder().encode('app:');
@@ -96,6 +128,8 @@ export interface AppEntry {
   version: string;
   contractAddress: Uint8Array;
   metadataHash: Uint8Array;
+  /** App-chain validator set whose quorum L1 accepts anchors from; empty = no chain. */
+  chainValidators: Uint8Array[];
 }
 
 export function encodeAppEntry(entry: AppEntry): Uint8Array {
@@ -105,6 +139,7 @@ export function encodeAppEntry(entry: AppEntry): Uint8Array {
   w.string(entry.version, 32);
   w.fixed(entry.contractAddress, 32);
   w.fixed(entry.metadataHash, 32);
+  w.array(entry.chainValidators, MAX_APP_VALIDATORS, (w, v) => w.fixed(v, 32));
   return w.finish();
 }
 
@@ -116,9 +151,84 @@ export function decodeAppEntry(bytes: Uint8Array): AppEntry {
     version: r.string(32),
     contractAddress: r.fixed(32),
     metadataHash: r.fixed(32),
+    chainValidators: r.array(MAX_APP_VALIDATORS, (r) => r.fixed(32)),
   };
   r.finish();
   return entry;
+}
+
+// ------------------------------------------------------ app-chain anchors
+
+const ANCHOR_PREFIX = new TextEncoder().encode('an:');
+
+export function anchorKey(appId: string): Uint8Array {
+  const id = new TextEncoder().encode(appId);
+  const key = new Uint8Array(ANCHOR_PREFIX.length + id.length);
+  key.set(ANCHOR_PREFIX);
+  key.set(id, ANCHOR_PREFIX.length);
+  return key;
+}
+
+/** The last accepted anchor for an app (app-chains spec §2.3 step 4). */
+export interface AnchorRecord {
+  epoch: bigint;
+  appHeight: bigint;
+  stateRoot: Uint8Array;
+}
+
+export function encodeAnchorRecord(record: AnchorRecord): Uint8Array {
+  const w = new Writer(48);
+  w.u64(record.epoch);
+  w.u64(record.appHeight);
+  w.fixed(record.stateRoot, 32);
+  return w.finish();
+}
+
+export function decodeAnchorRecord(bytes: Uint8Array): AnchorRecord {
+  const r = new Reader(bytes);
+  const record: AnchorRecord = {
+    epoch: r.u64(),
+    appHeight: r.u64(),
+    stateRoot: r.fixed(32),
+  };
+  r.finish();
+  return record;
+}
+
+/** Quorum threshold over a validator set: strictly more than 2/3. */
+export function anchorQuorum(validatorCount: number): number {
+  return Math.floor((2 * validatorCount) / 3) + 1;
+}
+
+/**
+ * Verify an anchor's attestation against a validator set: distinct known
+ * signers, each signature valid over `anchorSigningBytes`, quorum met.
+ * Returns null when valid, an error string otherwise.
+ */
+export function verifyAnchorSignatures(
+  l1ChainId: string,
+  payload: AnchorPayload,
+  validators: Uint8Array[],
+): string | null {
+  if (validators.length === 0) return 'app has no registered chain validators';
+  const message = anchorSigningBytes(l1ChainId, payload);
+  const seen = new Set<string>();
+  let valid = 0;
+  for (const { validator, signature } of payload.signatures) {
+    const hex = Buffer.from(validator).toString('hex');
+    if (seen.has(hex)) return 'duplicate anchor signer';
+    seen.add(hex);
+    if (!validators.some((v) => Buffer.compare(v, validator) === 0)) {
+      return 'anchor signer is not a registered validator';
+    }
+    if (!verify(signature, message, validator)) return 'invalid anchor signature';
+    valid++;
+  }
+  const needed = anchorQuorum(validators.length);
+  if (valid < needed) {
+    return `anchor quorum not met: ${valid} of ${validators.length} (need ${needed})`;
+  }
+  return null;
 }
 
 // -------------------------------------------------------------- accounts
@@ -140,18 +250,25 @@ function setAccount(overlay: Overlay, publicKey: Uint8Array, account: Account): 
 // -------------------------------------------------------------- admission
 
 /** Checks that don't depend on state: signature and chain binding. */
-export function checkStateless(tx: Transaction, chainId: string): InclusionError | null {
+export function checkStateless(
+  tx: Transaction,
+  chainId: string,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): InclusionError | null {
   if (tx.chainId !== chainId) return `wrong chain id: ${tx.chainId}`;
-  if (!verifyTransactionSignature(tx)) return 'invalid signature';
-  if (computeFee(tx) > tx.maxFee) return 'maxFee below required fee';
+  if (computeFee(tx, facts) > tx.maxFee) return 'maxFee below required fee';
+  if (!verifyTransactionSignature(tx, facts)) return 'invalid signature';
   return null;
 }
 
 /** Funds a tx must provably hold at inclusion (fee reserve + attached value). */
-export function requiredBalance(tx: Transaction): bigint {
+export function requiredBalance(
+  tx: Transaction,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): bigint {
   switch (tx.payload.kind) {
     case 'transfer':
-      return computeFee(tx);
+      return computeFee(tx, facts);
     case 'execute_contract':
       return tx.maxFee + tx.payload.value;
     default:
@@ -164,8 +281,9 @@ export async function checkInclusion(
   state: StateReader,
   tx: Transaction,
   chainId: string,
+  facts: TransactionFacts = getTransactionFacts(tx),
 ): Promise<InclusionError | null> {
-  const stateless = checkStateless(tx, chainId);
+  const stateless = checkStateless(tx, chainId, facts);
   if (stateless) return stateless;
   switch (tx.payload.kind) {
     case 'transfer':
@@ -180,12 +298,18 @@ export async function checkInclusion(
     case 'update_app':
       if (tx.payload.appId.length === 0) return 'empty app id';
       break;
+    case 'anchor':
+      // Cheap gates only; signature verification happens in execution so
+      // mempool admission stays O(bytes).
+      if (tx.payload.appId.length === 0) return 'empty app id';
+      if (tx.payload.signatures.length === 0) return 'anchor carries no signatures';
+      break;
   }
   const sender = await getAccount(state, tx.sender);
   if (tx.nonce !== sender.nonce) {
     return `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}`;
   }
-  if (sender.balance < requiredBalance(tx)) return 'balance cannot cover fee reserve';
+  if (sender.balance < requiredBalance(tx, facts)) return 'balance cannot cover fee reserve';
   return null;
 }
 
@@ -213,8 +337,9 @@ export async function applyTransaction(
   tx: Transaction,
   proposer: Uint8Array,
   height: bigint,
+  facts: TransactionFacts = getTransactionFacts(tx),
 ): Promise<Receipt> {
-  const staticFee = computeFee(tx);
+  const staticFee = computeFee(tx, facts);
   const feeReserve = tx.payload.kind === 'transfer' ? staticFee : tx.maxFee;
   const txHash = transactionHash(tx);
 
@@ -271,6 +396,165 @@ export async function applyTransaction(
     events: ctx.events,
     returnData: ctx.returnData,
   };
+}
+
+export async function applyTransferTransaction(
+  blockOverlay: Overlay,
+  tx: TransferTransaction,
+  chainId: string,
+  proposer: Uint8Array,
+  facts: TransactionFacts = getTransactionFacts(tx),
+): Promise<{ receipt: Receipt } | { reason: InclusionError }> {
+  const stateless = checkStateless(tx, chainId, facts);
+  if (stateless) return { reason: stateless };
+
+  const sender = await getAccount(blockOverlay, tx.sender);
+  if (tx.nonce !== sender.nonce) {
+    return { reason: `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}` };
+  }
+
+  const staticFee = computeFee(tx, facts);
+  if (sender.balance < staticFee) return { reason: 'balance cannot cover fee reserve' };
+
+  const txHash = transactionHash(tx);
+  const afterFee = sender.balance - staticFee;
+  const { to, amount } = tx.payload;
+
+  if (afterFee < amount) {
+    setAccount(blockOverlay, tx.sender, { balance: afterFee, nonce: sender.nonce + 1n });
+    const proposerAccount = await getAccount(blockOverlay, proposer);
+    setAccount(blockOverlay, proposer, {
+      ...proposerAccount,
+      balance: proposerAccount.balance + staticFee,
+    });
+    return {
+      receipt: {
+        txHash,
+        success: false,
+        error: `insufficient balance: have ${afterFee}, need ${amount}`,
+        fee: staticFee,
+        events: [],
+        returnData: new Uint8Array(0),
+      },
+    };
+  }
+
+  setAccount(blockOverlay, tx.sender, { balance: afterFee - amount, nonce: sender.nonce + 1n });
+  const recipient = await getAccount(blockOverlay, to);
+  setAccount(blockOverlay, to, { ...recipient, balance: recipient.balance + amount });
+  const proposerAccount = await getAccount(blockOverlay, proposer);
+  setAccount(blockOverlay, proposer, {
+    ...proposerAccount,
+    balance: proposerAccount.balance + staticFee,
+  });
+
+  return {
+    receipt: {
+      txHash,
+      success: true,
+      fee: staticFee,
+      events: [],
+      returnData: new Uint8Array(0),
+    },
+  };
+}
+
+export async function applyTransferTransactions(
+  blockOverlay: Overlay,
+  txs: readonly TransferTransaction[],
+  chainId: string,
+  proposer: Uint8Array,
+): Promise<TransferBatchOutcome> {
+  const cache = new Map<string, { publicKey: Uint8Array; account: Account; dirty: boolean }>();
+  const included: Transaction[] = [];
+  const receipts: Receipt[] = [];
+  const skipped: { index: number; tx: Transaction; reason: InclusionError }[] = [];
+
+  const key = (publicKey: Uint8Array) => Buffer.from(publicKey).toString('hex');
+  const getCached = async (publicKey: Uint8Array): Promise<Account> => {
+    const accountKeyHex = key(publicKey);
+    const cached = cache.get(accountKeyHex);
+    if (cached) return cached.account;
+    const account = await getAccount(blockOverlay, publicKey);
+    cache.set(accountKeyHex, { publicKey, account, dirty: false });
+    return account;
+  };
+  const markDirty = (publicKey: Uint8Array): void => {
+    const cached = cache.get(key(publicKey));
+    if (cached) cached.dirty = true;
+  };
+
+  for (const [index, tx] of txs.entries()) {
+    const facts = getTransactionFacts(tx);
+    const stateless = checkStateless(tx, chainId, facts);
+    if (stateless) {
+      skipped.push({ index, tx, reason: stateless });
+      continue;
+    }
+
+    const sender = await getCached(tx.sender);
+    if (tx.nonce !== sender.nonce) {
+      skipped.push({
+        index,
+        tx,
+        reason: `nonce mismatch: tx ${tx.nonce}, account ${sender.nonce}`,
+      });
+      continue;
+    }
+
+    const staticFee = computeFee(tx, facts);
+    if (sender.balance < staticFee) {
+      skipped.push({ index, tx, reason: 'balance cannot cover fee reserve' });
+      continue;
+    }
+
+    const txHash = transactionHash(tx);
+    const afterFee = sender.balance - staticFee;
+    const { to, amount } = tx.payload;
+
+    sender.balance = afterFee;
+    sender.nonce += 1n;
+    markDirty(tx.sender);
+
+    if (sender.balance < amount) {
+      const proposerAccount = await getCached(proposer);
+      proposerAccount.balance += staticFee;
+      markDirty(proposer);
+      receipts.push({
+        txHash,
+        success: false,
+        error: `insufficient balance: have ${sender.balance}, need ${amount}`,
+        fee: staticFee,
+        events: [],
+        returnData: new Uint8Array(0),
+      });
+      included.push(tx);
+      continue;
+    }
+
+    sender.balance -= amount;
+    const recipient = await getCached(to);
+    recipient.balance += amount;
+    markDirty(to);
+    const proposerAccount = await getCached(proposer);
+    proposerAccount.balance += staticFee;
+    markDirty(proposer);
+
+    receipts.push({
+      txHash,
+      success: true,
+      fee: staticFee,
+      events: [],
+      returnData: new Uint8Array(0),
+    });
+    included.push(tx);
+  }
+
+  for (const { publicKey, account, dirty } of cache.values()) {
+    if (dirty) setAccount(blockOverlay, publicKey, account);
+  }
+
+  return { included, receipts, skipped };
 }
 
 function executePayload(
@@ -335,6 +619,7 @@ function executePayload(
           version: tx.payload.version,
           contractAddress: tx.payload.contractAddress,
           metadataHash: tx.payload.metadataHash,
+          chainValidators: tx.payload.chainValidators,
         }),
       );
       ctx.events.push(new TextEncoder().encode(`app:registered:${tx.payload.appId}`));
@@ -358,9 +643,82 @@ function executePayload(
           version: tx.payload.version,
           contractAddress: tx.payload.contractAddress,
           metadataHash: tx.payload.metadataHash,
+          chainValidators: tx.payload.chainValidators,
         }),
       );
       ctx.events.push(new TextEncoder().encode(`app:updated:${tx.payload.appId}`));
+      return { error: null, fuelUsed: 0n };
+    }
+    case 'anchor': {
+      const payload = tx.payload;
+      const raw = overlay.getSync(appKey(payload.appId));
+      if (raw === undefined) {
+        return { error: `no such app: ${payload.appId}`, fuelUsed: 0n };
+      }
+      const entry = decodeAppEntry(raw);
+
+      const key = anchorKey(payload.appId);
+      const prevRaw = overlay.getSync(key);
+      const prevEpoch = prevRaw === undefined ? 0n : decodeAnchorRecord(prevRaw).epoch;
+      if (payload.epoch <= prevEpoch) {
+        return {
+          error: `stale anchor epoch: ${payload.epoch} (last anchored ${prevEpoch})`,
+          fuelUsed: 0n,
+        };
+      }
+
+      const sigError = verifyAnchorSignatures(tx.chainId, payload, entry.chainValidators);
+      if (sigError !== null) return { error: sigError, fuelUsed: 0n };
+
+      // The outcome call runs as the app; a failed call fails the whole
+      // payload so the epoch is not consumed by a bad outcome.
+      if (payload.call) {
+        const result = (() => {
+          try {
+            return runContract(overlay, ctx, {
+              contractId: payload.call.contract,
+              caller: appAddress(payload.appId),
+              action: payload.call.action,
+              args: payload.call.args,
+              value: 0n,
+              height,
+              fuel: ctx.meter.budget,
+              depth: 0,
+            });
+          } catch (err) {
+            if (err instanceof VmHostError && err.outOfFuel) {
+              return { error: 'out of fuel', fuelUsed: ctx.meter.budget };
+            }
+            throw err;
+          }
+        })();
+        if (result.error !== null) {
+          return {
+            error: `anchor outcome call failed: ${result.error}`,
+            fuelUsed: result.fuelUsed,
+          };
+        }
+        overlay.set(
+          key,
+          encodeAnchorRecord({
+            epoch: payload.epoch,
+            appHeight: payload.appHeight,
+            stateRoot: payload.stateRoot,
+          }),
+        );
+        ctx.events.push(new TextEncoder().encode(`anchor:${payload.appId}:${payload.epoch}`));
+        return { error: null, fuelUsed: result.fuelUsed };
+      }
+
+      overlay.set(
+        key,
+        encodeAnchorRecord({
+          epoch: payload.epoch,
+          appHeight: payload.appHeight,
+          stateRoot: payload.stateRoot,
+        }),
+      );
+      ctx.events.push(new TextEncoder().encode(`anchor:${payload.appId}:${payload.epoch}`));
       return { error: null, fuelUsed: 0n };
     }
   }

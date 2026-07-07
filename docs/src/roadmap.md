@@ -22,6 +22,17 @@ The spec §28 vertical slice — install from registry, wallet auth, p2p state
 sync, on-chain payment, finalized confirmation, keep playing — passes end
 to end on a multi-validator devnet (`packages/sdk/test/vertical.test.ts`).
 
+Beyond the original phases, the `feat/app-chains` line adds two tiers on
+top (SPEC_APPCHAINS.md):
+
+- **The web tier** — the HTTP [gateway](apps/gateway.md), contract-state
+  reads, and browser clients with in-browser signing
+  ([frontier-web](examples/frontier-web.md)).
+- **App chains** — per-app consensus with anchored outcomes
+  ([architecture](architecture/app-chains.md),
+  [how-to](apps/app-chains.md)), proven by the
+  [outpost](examples/outpost.md) cross-chain goods market.
+
 ## Known limitations (deliberate v1 scope)
 
 Security-relevant items are tracked in the [Threat Model](architecture/threat-model.md);
@@ -31,7 +42,13 @@ the headline ones:
   rotation, and slashing are future work. Safety needs < 1/3 Byzantine.
 - **Consensus liveness gap.** One-vote-per-height locking has no unlock: a
   proposer crash mid-vote can stall a height (never fork it) until the
-  locked validators restart.
+  locked validators restart. (Missed-gossip stalls are healed — locked
+  proposals re-broadcast on stall rounds — but the crash case remains.)
+- **Anchors attest, they don't prove.** An app chain's quorum can anchor
+  a lie; the blast radius is confined to stakes voluntarily placed
+  against that app. Co-signers vet state roots but not outcome-call
+  semantics yet — per-app call vetting is the next hardening step. Fraud
+  proofs are deliberately out of scope.
 - **Flat fees, no fee market** — a funded spammer can fill blocks.
 - **Single-writer feeds only.** Community-style apps (forums, wikis) need
   multi-writer structures (Autobase) — the biggest platform gap for the

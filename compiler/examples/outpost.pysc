@@ -1,0 +1,80 @@
+# Outpost — the MMORTS demo game, run on the app's own chain. The land
+# economy is frontier's (claim, build, harvest by block height); `deliver`
+# is the cross-chain hook: it hands goods to a buyer in-game against an
+# order that escrowed L1 currency, and records the delivery so the anchor
+# outcome can settle the escrow (app-chains spec). One wallet identity
+# plays on both chains: buyer/seller addresses here are the same Ed25519
+# keys that hold HSSN on L1.
+
+contract Outpost:
+
+    config:
+        max_tiles: int
+
+    state Tile[int]:
+        owner: address
+        building: str = ""
+        last_tick_height: int = 0
+
+    state Account[address]:
+        wood: int = 0
+        wheat: int = 0
+
+    # One entry per settled L1 order id: the audit record the anchor
+    # quorum attests before the escrow is released.
+    state Delivery[int]:
+        seller: address
+        buyer: address
+        good: str
+        amount: int
+
+    action claim_tile(tile_id: int):
+        require(tile_id < config.max_tiles, "tile is off the map")
+        require(not exists(Tile[tile_id]), "tile is already claimed")
+
+        Tile[tile_id] = Tile(owner=sender, last_tick_height=height)
+        Account[sender].wood += 25
+
+    action build(tile_id: int, kind: str):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building == "", "tile already has a building")
+        require(kind == "farm" or kind == "lumbermill", "unknown building kind")
+        require(Account[sender].wood >= 10, "not enough wood")
+
+        Account[sender].wood -= 10
+        tile.building = kind
+        tile.last_tick_height = height
+
+    action harvest(tile_id: int):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building != "", "nothing built on this tile")
+
+        grown = height - tile.last_tick_height
+        require(grown > 0, "nothing to harvest yet")
+
+        if tile.building == "farm":
+            Account[sender].wheat += grown
+        elif tile.building == "lumbermill":
+            Account[sender].wood += grown
+
+        tile.last_tick_height = height
+
+    action deliver(order_id: int, buyer: address, good: str, amount: int):
+        require(not exists(Delivery[order_id]), "order already delivered")
+        require(good == "wood" or good == "wheat", "unknown good")
+        require(amount > 0, "amount must be positive")
+        require(buyer != sender, "cannot deliver to yourself")
+
+        if good == "wood":
+            require(Account[sender].wood >= amount, "not enough wood")
+            Account[sender].wood -= amount
+            Account[buyer].wood += amount
+        else:
+            require(Account[sender].wheat >= amount, "not enough wheat")
+            Account[sender].wheat -= amount
+            Account[buyer].wheat += amount
+
+        Delivery[order_id] = Delivery(seller=sender, buyer=buyer, good=good, amount=amount)
+        emit("delivered")

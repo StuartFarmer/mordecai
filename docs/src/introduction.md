@@ -1,7 +1,7 @@
 # Introduction
 
-HSSN is a decentralized platform for peer-to-peer software. It combines two
-independent systems:
+Mordecai Network is a decentralized platform for peer-to-peer software. It
+combines two independent systems:
 
 ```text
 Pear Applications          ← UI, game logic, chat, media, simulation
@@ -25,11 +25,11 @@ apart.
   executes contracts deterministically, and finalizes blocks with BFT
   quorum certificates.
 
-A casual chess game between two players starts, plays, and ends without a
-single transaction. A _wagered_ chess game touches the chain exactly three
-times: two escrow deposits and one payout. That ratio — everything free and
-peer-to-peer except the few operations that need global trust — is the whole
-design.
+A marketplace listing, seller conversation, image set, and reputation trail
+can replicate directly between interested users. The chain only gets involved
+when a purchase needs one public answer: payment transferred, ownership moved,
+or escrow released. That ratio — everything local and peer-to-peer except the
+few operations that need global trust — is the whole design.
 
 ## What every application gets for free
 

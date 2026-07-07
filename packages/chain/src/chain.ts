@@ -20,6 +20,7 @@ import {
 } from '@hssn/protocol';
 import {
   LevelStore,
+  MemoryStore,
   Overlay,
   computeStateRoot,
   computeStateRootWith,
@@ -29,15 +30,22 @@ import {
 } from '@hssn/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
 import {
+  anchorKey,
   appKey,
   applyTransaction,
+  applyTransferTransaction,
+  applyTransferTransactions,
   checkInclusion,
+  contractStorageKey,
+  decodeAnchorRecord,
   decodeAppEntry,
+  type AnchorRecord,
   type AppEntry,
   type Receipt,
+  type TransferTransaction,
 } from './execution.js';
 import { buildGenesisBlock, genesisChanges, genesisHash, type Genesis } from './genesis.js';
-import { transactionHash } from './tx.js';
+import { getTransactionFacts, transactionHash, verifyTransactionSignatures } from './tx.js';
 
 export class ChainError extends Error {
   constructor(message: string) {
@@ -57,6 +65,12 @@ export interface ProduceResult {
   receipts: Receipt[];
   /** Transactions handed in but not includable (produce mode drops them). */
   skipped: { tx: Transaction; reason: string }[];
+}
+
+export interface ChainOpenOptions {
+  indexTransactions?: boolean;
+  stateBackend?: 'level' | 'memory';
+  signatureVerificationConcurrency?: number;
 }
 
 /** A block validated against the current head, ready to commit. */
@@ -153,12 +167,24 @@ export class Chain {
     private readonly blockStore: StateStore,
     private head: BlockHeader,
     private readonly validatorKeys: Uint8Array[],
+    private readonly indexTransactions: boolean,
+    private readonly signatureVerificationConcurrency: number,
   ) {}
 
-  static async open(dir: string, genesis: Genesis): Promise<Chain> {
-    const stateStore = new LevelStore(join(dir, 'state'));
+  static async open(
+    dir: string,
+    genesis: Genesis,
+    options: ChainOpenOptions = {},
+  ): Promise<Chain> {
+    const stateStore =
+      options.stateBackend === 'memory' ? new MemoryStore() : new LevelStore(join(dir, 'state'));
     const blockStore = new LevelStore(join(dir, 'blocks'));
     const validatorKeys = genesis.validators.map(decodeAddress);
+    const indexTransactions = options.indexTransactions ?? true;
+    const signatureVerificationConcurrency = Math.max(
+      1,
+      Math.trunc(options.signatureVerificationConcurrency ?? 1),
+    );
 
     const headRaw = await blockStore.get(HEAD_KEY);
     if (headRaw === undefined) {
@@ -168,7 +194,15 @@ export class Chain {
         [blockKey(0n), encodeBlock(genesisBlock)],
         [HEAD_KEY, encodeBlockHeader(genesisBlock.header)],
       ]);
-      return new Chain(genesis, stateStore, blockStore, genesisBlock.header, validatorKeys);
+      return new Chain(
+        genesis,
+        stateStore,
+        blockStore,
+        genesisBlock.header,
+        validatorKeys,
+        indexTransactions,
+        signatureVerificationConcurrency,
+      );
     }
 
     const head = decodeBlockHeader(headRaw);
@@ -188,7 +222,15 @@ export class Chain {
     if (Buffer.compare(storedRoot, head.stateRoot) !== 0) {
       throw new ChainError('state does not match head state root (corrupt data dir)');
     }
-    return new Chain(genesis, stateStore, blockStore, head, validatorKeys);
+    return new Chain(
+      genesis,
+      stateStore,
+      blockStore,
+      head,
+      validatorKeys,
+      indexTransactions,
+      signatureVerificationConcurrency,
+    );
   }
 
   get chainId(): string {
@@ -232,23 +274,92 @@ export class Chain {
     return raw === undefined ? undefined : decodeAppEntry(raw);
   }
 
+  /** The last accepted app-chain anchor for `appId`, if any. */
+  async getAnchor(appId: string): Promise<AnchorRecord | undefined> {
+    const raw = await this.stateStore.get(anchorKey(appId));
+    return raw === undefined ? undefined : decodeAnchorRecord(raw);
+  }
+
+  /**
+   * A contract's storage entries as [inner key, value] pairs, optionally
+   * narrowed to inner keys starting with `prefix`. Full scan of the state
+   * store — fine at devnet scale, same trade-off as computeStateRoot.
+   */
+  async getContractState(
+    contractId: Uint8Array,
+    prefix: Uint8Array = new Uint8Array(0),
+  ): Promise<[Uint8Array, Uint8Array][]> {
+    const base = contractStorageKey(contractId, prefix);
+    const out: [Uint8Array, Uint8Array][] = [];
+    const skip = base.length - prefix.length;
+    for await (const [key, value] of this.stateStore.entries()) {
+      if (key.length < base.length) continue;
+      if (Buffer.compare(Buffer.from(key.subarray(0, base.length)), Buffer.from(base)) !== 0) {
+        continue;
+      }
+      out.push([key.subarray(skip), value]);
+    }
+    return out;
+  }
+
   private async executeTxs(
     txs: readonly Transaction[],
     proposer: Uint8Array,
     mode: 'produce' | 'verify',
   ): Promise<ExecOutcome> {
     const overlay = new Overlay(this.stateStore);
+    if (mode === 'verify' && this.signatureVerificationConcurrency > 1) {
+      const invalidSignatureIndex = await verifyTransactionSignatures(
+        txs,
+        this.signatureVerificationConcurrency,
+      );
+      if (invalidSignatureIndex !== null) {
+        throw new ChainError(`invalid tx at index ${invalidSignatureIndex}: invalid signature`);
+      }
+    }
+    if (txs.every((tx): tx is TransferTransaction => tx.payload.kind === 'transfer')) {
+      const outcome = await applyTransferTransactions(overlay, txs, this.chainId, proposer);
+      if (mode === 'verify' && outcome.skipped.length > 0) {
+        const skipped = outcome.skipped[0]!;
+        throw new ChainError(`invalid tx at index ${skipped.index}: ${skipped.reason}`);
+      }
+      return {
+        overlay,
+        included: outcome.included,
+        receipts: outcome.receipts,
+        skipped: outcome.skipped.map(({ tx, reason }) => ({ tx, reason })),
+      };
+    }
     const included: Transaction[] = [];
     const receipts: Receipt[] = [];
     const skipped: { tx: Transaction; reason: string }[] = [];
     for (const [i, tx] of txs.entries()) {
-      const reason = await checkInclusion(overlay, tx, this.chainId);
+      const facts = getTransactionFacts(tx);
+      if (tx.payload.kind === 'transfer') {
+        const outcome = await applyTransferTransaction(
+          overlay,
+          tx as Transaction & { payload: { kind: 'transfer' } },
+          this.chainId,
+          proposer,
+          facts,
+        );
+        if ('reason' in outcome) {
+          if (mode === 'verify')
+            throw new ChainError(`invalid tx at index ${i}: ${outcome.reason}`);
+          skipped.push({ tx, reason: outcome.reason });
+          continue;
+        }
+        receipts.push(outcome.receipt);
+        included.push(tx);
+        continue;
+      }
+      const reason = await checkInclusion(overlay, tx, this.chainId, facts);
       if (reason) {
         if (mode === 'verify') throw new ChainError(`invalid tx at index ${i}: ${reason}`);
         skipped.push({ tx, reason });
         continue;
       }
-      receipts.push(await applyTransaction(overlay, tx, proposer, this.head.height + 1n));
+      receipts.push(await applyTransaction(overlay, tx, proposer, this.head.height + 1n, facts));
       included.push(tx);
     }
     return { overlay, included, receipts, skipped };
@@ -352,12 +463,14 @@ export class Chain {
     // the two via the state-root consistency check.
     await this.stateStore.applyChanges(changes);
     const metaChanges: Change[] = [[blockKey(block.header.height), encodeBlock(block)]];
-    receipts.forEach((receipt, index) => {
-      metaChanges.push([
-        txKey(receipt.txHash),
-        encodeTxRecord({ height: block.header.height, index, receipt }),
-      ]);
-    });
+    if (this.indexTransactions) {
+      receipts.forEach((receipt, index) => {
+        metaChanges.push([
+          txKey(receipt.txHash),
+          encodeTxRecord({ height: block.header.height, index, receipt }),
+        ]);
+      });
+    }
     if (certificate && certificate.length > 0) {
       metaChanges.push([certKey(block.header.height), encodeCertificate(certificate)]);
     }

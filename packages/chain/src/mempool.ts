@@ -1,8 +1,8 @@
-import type { Transaction } from '@hssn/protocol';
+import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import { VALIDATE_OK, VmRuntime, validationError } from '@hssn/vm';
 import type { Chain } from './chain.js';
 import { checkStateless, requiredBalance } from './execution.js';
-import { transactionHash } from './tx.js';
+import { rememberEncodedTransaction, transactionHash, type TransactionFacts } from './tx.js';
 
 export class MempoolError extends Error {
   constructor(message: string) {
@@ -16,6 +16,12 @@ const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');
 interface PendingTx {
   tx: Transaction;
   hashHex: string;
+  encoded: Uint8Array;
+}
+
+export interface MissingNonceRequest {
+  sender: Uint8Array;
+  nonce: bigint;
 }
 
 /**
@@ -38,7 +44,22 @@ export class Mempool {
 
   /** Validate and admit a transaction; returns its hash. */
   async add(tx: Transaction): Promise<Uint8Array> {
-    const stateless = checkStateless(tx, this.chain.chainId);
+    return this.addEncoded(encodeTransaction(tx));
+  }
+
+  /** Validate and admit a canonical encoded transaction; returns its hash. */
+  async addEncoded(encoded: Uint8Array): Promise<Uint8Array> {
+    const tx = decodeTransaction(encoded);
+    const facts = rememberEncodedTransaction(tx, encoded);
+    return this.addDecoded(tx, facts, encoded);
+  }
+
+  private async addDecoded(
+    tx: Transaction,
+    facts: TransactionFacts,
+    encoded: Uint8Array,
+  ): Promise<Uint8Array> {
+    const stateless = checkStateless(tx, this.chain.chainId, facts);
     if (stateless) throw new MempoolError(stateless);
     switch (tx.payload.kind) {
       case 'transfer':
@@ -59,7 +80,7 @@ export class Mempool {
     if (tx.nonce < account.nonce) {
       throw new MempoolError(`nonce too low: tx ${tx.nonce}, account ${account.nonce}`);
     }
-    if (account.balance < requiredBalance(tx)) {
+    if (account.balance < requiredBalance(tx, facts)) {
       throw new MempoolError('balance cannot cover fee reserve');
     }
 
@@ -68,6 +89,8 @@ export class Mempool {
     if (!pending) {
       pending = new Map();
       this.bySender.set(senderHex, pending);
+    } else {
+      this.pruneSender(pending, account.nonce);
     }
     const hash = transactionHash(tx);
     const existing = pending.get(tx.nonce);
@@ -78,9 +101,18 @@ export class Mempool {
     if (pending.size >= this.maxPerSender) {
       throw new MempoolError(`sender has ${pending.size} pending txs (limit ${this.maxPerSender})`);
     }
-    pending.set(tx.nonce, { tx, hashHex: hex(hash) });
+    pending.set(tx.nonce, { tx, hashHex: hex(hash), encoded });
     this.count += 1;
     return hash;
+  }
+
+  private pruneSender(pending: Map<bigint, PendingTx>, nonce: bigint): void {
+    for (const pendingNonce of [...pending.keys()]) {
+      if (pendingNonce < nonce) {
+        pending.delete(pendingNonce);
+        this.count -= 1;
+      }
+    }
   }
 
   /**
@@ -100,16 +132,47 @@ export class Mempool {
     return picked;
   }
 
+  hasPending(sender: Uint8Array, nonce: bigint): boolean {
+    return this.bySender.get(hex(sender))?.has(nonce) ?? false;
+  }
+
+  getEncoded(sender: Uint8Array, nonce: bigint): Uint8Array | undefined {
+    return this.bySender.get(hex(sender))?.get(nonce)?.encoded;
+  }
+
+  /**
+   * Find nonce gaps that are blocking locally known future transactions.
+   * These are cheap, high-confidence repair requests because a higher nonce
+   * proves this node is missing an earlier transaction from the same sender.
+   */
+  async missingNonceRequests(maxCount: number): Promise<MissingNonceRequest[]> {
+    const requests: MissingNonceRequest[] = [];
+    for (const senderHex of [...this.bySender.keys()].sort()) {
+      const pending = this.bySender.get(senderHex)!;
+      const first = pending.values().next().value;
+      if (!first) continue;
+      const account = await this.chain.getAccount(first.tx.sender);
+      this.pruneSender(pending, account.nonce);
+      if (pending.size === 0) {
+        this.bySender.delete(senderHex);
+        continue;
+      }
+
+      let nonce = account.nonce;
+      while (pending.has(nonce)) nonce += 1n;
+      if ([...pending.keys()].some((pendingNonce) => pendingNonce > nonce)) {
+        requests.push({ sender: first.tx.sender, nonce });
+        if (requests.length >= maxCount) return requests;
+      }
+    }
+    return requests;
+  }
+
   /** Drop everything the chain has moved past (call after each block). */
   async prune(): Promise<void> {
     for (const [senderHex, pending] of this.bySender) {
       const account = await this.chain.getAccount(pending.values().next().value!.tx.sender);
-      for (const nonce of [...pending.keys()]) {
-        if (nonce < account.nonce) {
-          pending.delete(nonce);
-          this.count -= 1;
-        }
-      }
+      this.pruneSender(pending, account.nonce);
       if (pending.size === 0) this.bySender.delete(senderHex);
     }
   }

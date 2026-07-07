@@ -1,0 +1,121 @@
+# The frontier economy (ported from the mordecai project's Phase 5 example):
+# everything the land contract does, plus a second building type and a
+# player-to-player market with escrowed orders.
+
+contract Frontier:
+
+    config:
+        max_tiles: int
+
+    state Tile[int]:
+        owner: address
+        building: str = ""
+        last_tick_height: int = 0
+
+    state Account[address]:
+        wood: int = 0
+        wheat: int = 0
+
+    state Order[int]:
+        maker: address
+        give: str
+        give_amount: int
+        want: str
+        want_amount: int
+        open: bool = True
+
+    state Meta[int]:
+        next_order_id: int = 0
+
+    action claim_tile(tile_id: int):
+        require(tile_id < config.max_tiles, "tile is off the map")
+        require(not exists(Tile[tile_id]), "tile is already claimed")
+
+        Tile[tile_id] = Tile(owner=sender, last_tick_height=height)
+        Account[sender].wood += 25
+
+    action transfer_tile(tile_id: int, to: address):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        tile.owner = to
+
+    action build(tile_id: int, kind: str):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building == "", "tile already has a building")
+        require(kind == "farm" or kind == "lumbermill", "unknown building kind")
+        require(Account[sender].wood >= 10, "not enough wood")
+
+        Account[sender].wood -= 10
+        tile.building = kind
+        tile.last_tick_height = height
+
+    action harvest(tile_id: int):
+        tile = Tile[tile_id]
+        require(tile.owner == sender, "only the tile owner can do that")
+        require(tile.building != "", "nothing built on this tile")
+
+        grown = height - tile.last_tick_height
+        require(grown > 0, "nothing to harvest yet")
+
+        if tile.building == "farm":
+            Account[sender].wheat += grown
+        elif tile.building == "lumbermill":
+            Account[sender].wood += grown
+
+        tile.last_tick_height = height
+
+    action place_order(give: str, give_amount: int, want: str, want_amount: int):
+        require(give == "wood" or give == "wheat", "unknown resource")
+        require(want == "wood" or want == "wheat", "unknown resource")
+        require(give != want, "cannot trade a resource for itself")
+        require(give_amount > 0 and want_amount > 0, "amounts must be positive")
+
+        # escrow the offered goods in the order
+        if give == "wood":
+            require(Account[sender].wood >= give_amount, "not enough wood")
+            Account[sender].wood -= give_amount
+        else:
+            require(Account[sender].wheat >= give_amount, "not enough wheat")
+            Account[sender].wheat -= give_amount
+
+        order_id = Meta[0].next_order_id
+        Order[order_id] = Order(maker=sender, give=give, give_amount=give_amount,
+                                want=want, want_amount=want_amount)
+        Meta[0].next_order_id += 1
+
+    action fill_order(order_id: int):
+        order = Order[order_id]
+        require(order.open, "order is not open")
+        require(order.maker != sender, "cannot fill your own order")
+
+        # the taker pays the maker what the maker asked for...
+        if order.want == "wood":
+            require(Account[sender].wood >= order.want_amount, "not enough wood")
+            Account[sender].wood -= order.want_amount
+            Account[order.maker].wood += order.want_amount
+        else:
+            require(Account[sender].wheat >= order.want_amount, "not enough wheat")
+            Account[sender].wheat -= order.want_amount
+            Account[order.maker].wheat += order.want_amount
+
+        # ...and receives the escrowed goods
+        if order.give == "wood":
+            Account[sender].wood += order.give_amount
+        else:
+            Account[sender].wheat += order.give_amount
+
+        order.open = False
+
+    action cancel_order(order_id: int):
+        order = Order[order_id]
+        require(order.maker == sender, "only the maker can cancel")
+        require(order.open, "order is not open")
+
+        # refund the escrow
+        if order.give == "wood":
+            Account[sender].wood += order.give_amount
+        else:
+            Account[sender].wheat += order.give_amount
+
+        order.open = False

@@ -10,7 +10,14 @@ export interface NodeOptions {
   genesis: Genesis;
   keyPair: KeyPair;
   blockIntervalMs?: number;
+  roundTimeoutMs?: number;
   maxTxsPerBlock?: number;
+  minTxsPerBlock?: number;
+  maxProposalWaitMs?: number;
+  txRepair?: boolean;
+  indexTransactions?: boolean;
+  stateBackend?: 'level' | 'memory';
+  signatureVerificationConcurrency?: number;
   bootstrap?: { host: string; port: number }[];
   log?: (message: string) => void;
 }
@@ -36,7 +43,13 @@ export class Node {
   ) {}
 
   static async start(options: NodeOptions): Promise<Node> {
-    const chain = await Chain.open(join(options.dir, 'chain'), options.genesis);
+    const chain = await Chain.open(join(options.dir, 'chain'), options.genesis, {
+      indexTransactions: options.indexTransactions ?? true,
+      ...(options.stateBackend ? { stateBackend: options.stateBackend } : {}),
+      ...(options.signatureVerificationConcurrency !== undefined
+        ? { signatureVerificationConcurrency: options.signatureVerificationConcurrency }
+        : {}),
+    });
     const mempool = new Mempool(chain);
     const log = options.log ?? (() => {});
     const consensusMode = options.genesis.validators.length > 1;
@@ -54,7 +67,13 @@ export class Node {
         keyPair: options.keyPair,
         hub,
         ...(options.blockIntervalMs !== undefined ? { blockTimeMs: options.blockIntervalMs } : {}),
+        ...(options.roundTimeoutMs !== undefined ? { roundTimeoutMs: options.roundTimeoutMs } : {}),
         maxTxsPerBlock: options.maxTxsPerBlock ?? 1_000,
+        ...(options.minTxsPerBlock !== undefined ? { minTxsPerBlock: options.minTxsPerBlock } : {}),
+        ...(options.maxProposalWaitMs !== undefined
+          ? { maxProposalWaitMs: options.maxProposalWaitMs }
+          : {}),
+        ...(options.txRepair !== undefined ? { txRepair: options.txRepair } : {}),
         log,
       });
       engine.start();
@@ -64,7 +83,7 @@ export class Node {
       {
         chain,
         mempool,
-        ...(engine ? { onTxAccepted: (tx) => engine!.broadcastTx(tx) } : {}),
+        ...(engine ? { onTxAcceptedBytes: (tx) => engine!.broadcastTxBytes(tx) } : {}),
       },
       {
         ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
@@ -92,6 +111,16 @@ export class Node {
 
   get rpcPublicKey(): Uint8Array {
     return this.rpc.publicKey;
+  }
+
+  /** The node's RPC server, for registering additional methods on its endpoint. */
+  get rpcServer(): NodeRpcServer {
+    return this.rpc;
+  }
+
+  /** Connected consensus peers (0 in single-sequencer mode). */
+  get peerCount(): number {
+    return this.hub?.peerCount ?? 0;
   }
 
   private async tick(): Promise<void> {

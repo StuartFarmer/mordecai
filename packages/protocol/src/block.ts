@@ -35,6 +35,11 @@ export interface Block {
   proposerSignature: Uint8Array;
 }
 
+export interface DecodedBlockWithTransactionBytes {
+  block: Block;
+  txBytes: Uint8Array[];
+}
+
 /** Pre-commit for a proposed block. A block is final with votes from ≥2/3 of validators. */
 export interface Vote {
   chainId: string;
@@ -110,15 +115,29 @@ export function encodeBlock(block: Block): Uint8Array {
 }
 
 export function decodeBlock(bytes: Uint8Array): Block {
+  return decodeBlockWithTransactionBytes(bytes).block;
+}
+
+export function decodeBlockWithTransactionBytes(bytes: Uint8Array): DecodedBlockWithTransactionBytes {
   if (bytes.length > MAX_BLOCK_BYTES) {
     throw new WireError(`block size ${bytes.length} exceeds limit ${MAX_BLOCK_BYTES}`);
   }
   const r = new Reader(bytes);
   const header = readHeader(r);
-  const txs = r.array(MAX_TXS_PER_BLOCK, readTransaction);
+  const count = r.u32();
+  if (count > MAX_TXS_PER_BLOCK) {
+    throw new WireError(`array length ${count} exceeds limit ${MAX_TXS_PER_BLOCK}`);
+  }
+  const txs: Transaction[] = [];
+  const txBytes: Uint8Array[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const start = r.position();
+    txs.push(readTransaction(r));
+    txBytes.push(r.slice(start, r.position()));
+  }
   const proposerSignature = r.fixed(SIGNATURE_SIZE);
   r.finish();
-  return { header, txs, proposerSignature };
+  return { block: { header, txs, proposerSignature }, txBytes };
 }
 
 function writeUnsignedVote(w: Writer, vote: Omit<Vote, 'signature'>): void {

@@ -5,8 +5,10 @@ import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
 import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import type {
   AccountInfo,
+  AnchorInfo,
   AppInfo,
   BlockInfo,
+  ContractStateEntry,
   HeadInfo,
   RpcEnvelope,
   SubmitTxResult,
@@ -25,8 +27,21 @@ export interface RpcServerOptions {
 export class NodeRpcServer {
   private constructor(
     private readonly rpc: RPC,
-    private readonly server: { close(): Promise<void>; publicKey: Uint8Array | null },
+    private readonly server: {
+      close(): Promise<void>;
+      respond(method: string, handler: (request: Buffer) => Buffer | Promise<Buffer>): void;
+      publicKey: Uint8Array | null;
+    },
   ) {}
+
+  /**
+   * Register an additional raw method on this node's endpoint (e.g. the
+   * app-chain co-signer). One server per node identity — a second RPC
+   * server on the same keypair would collide on the DHT.
+   */
+  respondRaw(method: string, handler: (raw: Buffer) => Promise<Buffer>): void {
+    this.server.respond(method, handler);
+  }
 
   static async start(
     deps: {
@@ -34,6 +49,8 @@ export class NodeRpcServer {
       mempool: Mempool;
       /** Called after a tx is admitted (consensus nodes gossip it here). */
       onTxAccepted?: (tx: Transaction) => void;
+      /** Called with canonical tx bytes after admission, avoiding a re-encode. */
+      onTxAcceptedBytes?: (tx: Uint8Array) => void;
     },
     options: RpcServerOptions = {},
   ): Promise<NodeRpcServer> {
@@ -53,6 +70,17 @@ export class NodeRpcServer {
           envelope = { ok: false, error: err instanceof Error ? err.message : String(err) };
         }
         return Buffer.from(JSON.stringify(envelope));
+      });
+    };
+
+    const respondRaw = (method: string, handler: (raw: Buffer) => Promise<Buffer>) => {
+      server.respond(method, async (raw: Buffer) => {
+        try {
+          return await handler(raw);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return Buffer.from(JSON.stringify({ ok: false, error: message }));
+        }
       });
     };
 
@@ -77,10 +105,21 @@ export class NodeRpcServer {
     });
 
     respond<SubmitTxResult>('submit_tx', async (params: { tx: string }) => {
-      const tx = decodeTransaction(fromHex(params.tx));
-      const hash = await deps.mempool.add(tx);
-      deps.onTxAccepted?.(tx);
+      const txBytes = fromHex(params.tx);
+      const hash = await deps.mempool.addEncoded(txBytes);
+      deps.onTxAcceptedBytes?.(txBytes);
+      if (!deps.onTxAcceptedBytes && deps.onTxAccepted)
+        deps.onTxAccepted(decodeTransaction(txBytes));
       return { hash: hex(hash) };
+    });
+
+    respondRaw('submit_tx_raw', async (raw: Buffer) => {
+      const txBytes = new Uint8Array(raw);
+      const hash = await deps.mempool.addEncoded(txBytes);
+      deps.onTxAcceptedBytes?.(txBytes);
+      if (!deps.onTxAcceptedBytes && deps.onTxAccepted)
+        deps.onTxAccepted(decodeTransaction(txBytes));
+      return Buffer.from(hash);
     });
 
     respond<BlockInfo | null>('get_block', async (params: { height: string }) => {
@@ -118,6 +157,17 @@ export class NodeRpcServer {
       };
     });
 
+    respond<ContractStateEntry[]>(
+      'get_contract_state',
+      async (params: { contract: string; prefix?: string }) => {
+        const entries = await deps.chain.getContractState(
+          fromHex(params.contract),
+          params.prefix ? fromHex(params.prefix) : undefined,
+        );
+        return entries.map(([key, value]) => ({ key: hex(key), value: hex(value) }));
+      },
+    );
+
     respond<AppInfo | null>('get_app', async (params: { appId: string }) => {
       const entry = await deps.chain.getApp(params.appId);
       if (!entry) return null;
@@ -128,6 +178,18 @@ export class NodeRpcServer {
         version: entry.version,
         contractAddress: hex(entry.contractAddress),
         metadataHash: hex(entry.metadataHash),
+        chainValidators: entry.chainValidators.map(hex),
+      };
+    });
+
+    respond<AnchorInfo | null>('get_app_anchor', async (params: { appId: string }) => {
+      const record = await deps.chain.getAnchor(params.appId);
+      if (!record) return null;
+      return {
+        appId: params.appId,
+        epoch: record.epoch.toString(),
+        appHeight: record.appHeight.toString(),
+        stateRoot: hex(record.stateRoot),
       };
     });
 

@@ -193,6 +193,17 @@ export class Reader {
     return this.buf.length - this.off;
   }
 
+  position(): number {
+    return this.off;
+  }
+
+  slice(start: number, end: number): Uint8Array {
+    if (start < 0 || end < start || end > this.buf.length) {
+      throw new WireError(`invalid slice ${start}..${end}`);
+    }
+    return this.buf.slice(start, end);
+  }
+
   /** Canonicality check: every byte of input must have been consumed. */
   finish(): void {
     if (this.off !== this.buf.length) {
