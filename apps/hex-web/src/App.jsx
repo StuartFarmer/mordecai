@@ -14,8 +14,8 @@ import {
   winningPath,
 } from './chain.js';
 
-const DEFAULT_STAKE = 1000;
-const FUND_FLOOR = 5000; // ask the faucet when the L1 balance drops below this
+const DEFAULT_STAKE = 1_000_000;
+const FUND_FLOOR = 2_500_000; // ask the faucet when the L1 balance drops below this
 
 // ------------------------------------------------------------ board maths
 

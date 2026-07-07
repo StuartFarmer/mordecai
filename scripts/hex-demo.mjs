@@ -44,7 +44,7 @@ const TIMEOUT_MS = BigInt(process.env.HEX_TIMEOUT_MS ?? 180_000); // 3-minute in
 const L1_PORT = Number(process.env.PORT ?? 8787);
 const APP_PORT = L1_PORT + 1;
 const FAUCET_PORT = L1_PORT + 2;
-const L1_GRANT = 1_000_000n; // per faucet request, covers stakes + fees
+const L1_GRANT = 10_000_000n; // per faucet request, covers stakes + fees
 const APP_GRANT = 1_000_000_000n; // app-chain fee float (valueless by design)
 
 const hosts = {
@@ -280,7 +280,7 @@ console.log(`\n⬡ hex is live: http://127.0.0.1:${gateway.port}`);
 console.log(`   app-chain gateway: http://127.0.0.1:${appGateway.port}`);
 console.log(`   faucet:            http://127.0.0.1:${FAUCET_PORT}`);
 console.log('\nplay: open the site on two machines (or two browsers), agree on a game');
-console.log('code, create on one and join on the other — 1000 🪙 each, winner takes all.');
+console.log('code, create on one and join on the other — 1,000,000 🪙 each, winner takes all.');
 console.log('Ctrl-C to stop.');
 
 process.on('SIGINT', async () => {

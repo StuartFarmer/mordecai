@@ -9,8 +9,8 @@ the page, and plays.
   both the app-chain `Game` and the L1 `Pot` — create a game by entering a
   new code, join one by entering a code whose game hasn't started.
 - **Escrow.** Creating a game stakes HSSN into `hex_escrow` on L1 (default
-  1000); joining matches it. The winner takes the whole pot, paid by the
-  app chain's anchored `settle(game_id, winner)` outcome call.
+  1,000,000); joining matches it. The winner takes the whole pot, paid by
+  the app chain's anchored `settle(game_id, winner)` outcome call.
 - **Rules on-chain.** `hex.pysc` enforces turns, occupancy, and bounds on
   the classic 11×11 board. Wins are _proven_ on-chain: the client finds the
   connecting path and walks the contract along it, one adjacency-checked
