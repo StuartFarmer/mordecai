@@ -35,6 +35,12 @@
       "path": "packages/sdk"
     },
     {
+      "path": "packages/gateway"
+    },
+    {
+      "path": "packages/appchain"
+    },
+    {
       "path": "packages/pear-integration"
     },
     {

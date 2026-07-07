@@ -5,8 +5,10 @@ import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
 import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import type {
   AccountInfo,
+  AnchorInfo,
   AppInfo,
   BlockInfo,
+  ContractStateEntry,
   HeadInfo,
   RpcEnvelope,
   SubmitTxResult,
@@ -25,8 +27,21 @@ export interface RpcServerOptions {
 export class NodeRpcServer {
   private constructor(
     private readonly rpc: RPC,
-    private readonly server: { close(): Promise<void>; publicKey: Uint8Array | null },
+    private readonly server: {
+      close(): Promise<void>;
+      respond(method: string, handler: (request: Buffer) => Buffer | Promise<Buffer>): void;
+      publicKey: Uint8Array | null;
+    },
   ) {}
+
+  /**
+   * Register an additional raw method on this node's endpoint (e.g. the
+   * app-chain co-signer). One server per node identity — a second RPC
+   * server on the same keypair would collide on the DHT.
+   */
+  respondRaw(method: string, handler: (raw: Buffer) => Promise<Buffer>): void {
+    this.server.respond(method, handler);
+  }
 
   static async start(
     deps: {
@@ -142,6 +157,17 @@ export class NodeRpcServer {
       };
     });
 
+    respond<ContractStateEntry[]>(
+      'get_contract_state',
+      async (params: { contract: string; prefix?: string }) => {
+        const entries = await deps.chain.getContractState(
+          fromHex(params.contract),
+          params.prefix ? fromHex(params.prefix) : undefined,
+        );
+        return entries.map(([key, value]) => ({ key: hex(key), value: hex(value) }));
+      },
+    );
+
     respond<AppInfo | null>('get_app', async (params: { appId: string }) => {
       const entry = await deps.chain.getApp(params.appId);
       if (!entry) return null;
@@ -152,6 +178,18 @@ export class NodeRpcServer {
         version: entry.version,
         contractAddress: hex(entry.contractAddress),
         metadataHash: hex(entry.metadataHash),
+        chainValidators: entry.chainValidators.map(hex),
+      };
+    });
+
+    respond<AnchorInfo | null>('get_app_anchor', async (params: { appId: string }) => {
+      const record = await deps.chain.getAnchor(params.appId);
+      if (!record) return null;
+      return {
+        appId: params.appId,
+        epoch: record.epoch.toString(),
+        appHeight: record.appHeight.toString(),
+        stateRoot: hex(record.stateRoot),
       };
     });
 

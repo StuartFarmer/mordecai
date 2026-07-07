@@ -7,6 +7,7 @@ declare module 'hyperswarm' {
 
   interface PeerDiscovery {
     flushed(): Promise<void>;
+    refresh(options?: { client?: boolean; server?: boolean }): Promise<void>;
     destroy(): Promise<void>;
   }
 

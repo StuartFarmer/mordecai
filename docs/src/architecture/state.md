@@ -59,3 +59,14 @@ is the expensive tier.
 The pattern: **scarce things on-chain, everything else off.** Currency,
 ownership, escrow, identity, governance — on-chain. Content, computation,
 communication — off.
+
+## A fourth lane: group state
+
+Shared state assumes one author per feed. Some app data is genuinely
+_multi-writer_ — two players contending for the same tile, a guild
+world's resources — but still only matters to the app's own peers, not
+to everyone. That data belongs on an **[app chain](app-chains.md)**: the
+same chain stack, instantiated per-app by its players, anchored back to
+L1 by quorum attestation. The classification question generalizes to
+_who has to agree?_ — nobody (feed), the app's peers (app chain),
+everyone (L1).

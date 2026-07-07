@@ -30,12 +30,16 @@ import {
 } from '@hssn/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
 import {
+  anchorKey,
   appKey,
   applyTransaction,
   applyTransferTransaction,
   applyTransferTransactions,
   checkInclusion,
+  contractStorageKey,
+  decodeAnchorRecord,
   decodeAppEntry,
+  type AnchorRecord,
   type AppEntry,
   type Receipt,
   type TransferTransaction,
@@ -268,6 +272,34 @@ export class Chain {
   async getApp(appId: string): Promise<AppEntry | undefined> {
     const raw = await this.stateStore.get(appKey(appId));
     return raw === undefined ? undefined : decodeAppEntry(raw);
+  }
+
+  /** The last accepted app-chain anchor for `appId`, if any. */
+  async getAnchor(appId: string): Promise<AnchorRecord | undefined> {
+    const raw = await this.stateStore.get(anchorKey(appId));
+    return raw === undefined ? undefined : decodeAnchorRecord(raw);
+  }
+
+  /**
+   * A contract's storage entries as [inner key, value] pairs, optionally
+   * narrowed to inner keys starting with `prefix`. Full scan of the state
+   * store — fine at devnet scale, same trade-off as computeStateRoot.
+   */
+  async getContractState(
+    contractId: Uint8Array,
+    prefix: Uint8Array = new Uint8Array(0),
+  ): Promise<[Uint8Array, Uint8Array][]> {
+    const base = contractStorageKey(contractId, prefix);
+    const out: [Uint8Array, Uint8Array][] = [];
+    const skip = base.length - prefix.length;
+    for await (const [key, value] of this.stateStore.entries()) {
+      if (key.length < base.length) continue;
+      if (Buffer.compare(Buffer.from(key.subarray(0, base.length)), Buffer.from(base)) !== 0) {
+        continue;
+      }
+      out.push([key.subarray(skip), value]);
+    }
+    return out;
   }
 
   private async executeTxs(

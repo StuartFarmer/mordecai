@@ -289,6 +289,24 @@ export class ConsensusEngine {
       this.roundDeadline = now + (this.options.roundTimeoutMs ?? 3_000);
       this.proposalWaitStartedAt = null;
       this.log(`height ${this.nextHeight}: round ${this.round} (proposer stalled)`);
+      // Liveness on late joins: gossip isn't stored, so a peer that
+      // connected after our proposal/vote never saw them — and the vote
+      // lock forbids re-proposing. Re-broadcast what we already committed
+      // to; duplicates are dropped by receivers, so this cannot fork.
+      if (this.myVote !== null) {
+        const proposal = this.proposals.get(this.myVote);
+        if (proposal) {
+          this.options.hub.broadcast(
+            encodeGossip({
+              kind: 'proposal',
+              round: this.round,
+              block: encodeBlock(proposal.block),
+            }),
+          );
+        }
+        const vote = this.votes.get(this.myVote)?.get(hex(this.options.keyPair.publicKey));
+        if (vote) this.options.hub.broadcast(encodeGossip({ kind: 'vote', vote }));
+      }
     }
 
     const pendingWork = this.mempool.size > 0 || this.proposals.size > 0;
