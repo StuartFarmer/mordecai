@@ -1,5 +1,14 @@
-import { blake2b256 } from '@hssn/crypto';
-import { Reader, Writer, encodeTransaction, type Transaction } from '@hssn/protocol';
+import { blake2b256, verify } from '@hssn/crypto';
+import {
+  DOMAIN_APP_SENDER,
+  MAX_APP_VALIDATORS,
+  Reader,
+  Writer,
+  anchorSigningBytes,
+  encodeTransaction,
+  type AnchorPayload,
+  type Transaction,
+} from '@hssn/protocol';
 import { Overlay, type StateReader } from '@hssn/state';
 import {
   EXEC_OK,
@@ -77,6 +86,15 @@ export function contractIdFor(sender: Uint8Array, nonce: bigint, code: Uint8Arra
   return blake2b256(new TextEncoder().encode('hssn:contract:v1'), sender, nonceBytes, code);
 }
 
+/**
+ * The account address an app's anchored outcome calls execute under
+ * (app-chains spec §2.1). A hash with no known private key: only an
+ * anchor quorum can act as this sender.
+ */
+export function appAddress(appId: string): Uint8Array {
+  return blake2b256(new TextEncoder().encode(DOMAIN_APP_SENDER), new TextEncoder().encode(appId));
+}
+
 // ------------------------------------------------------- app registry (§17)
 
 const APP_PREFIX = new TextEncoder().encode('app:');
@@ -96,6 +114,8 @@ export interface AppEntry {
   version: string;
   contractAddress: Uint8Array;
   metadataHash: Uint8Array;
+  /** App-chain validator set whose quorum L1 accepts anchors from; empty = no chain. */
+  chainValidators: Uint8Array[];
 }
 
 export function encodeAppEntry(entry: AppEntry): Uint8Array {
@@ -105,6 +125,7 @@ export function encodeAppEntry(entry: AppEntry): Uint8Array {
   w.string(entry.version, 32);
   w.fixed(entry.contractAddress, 32);
   w.fixed(entry.metadataHash, 32);
+  w.array(entry.chainValidators, MAX_APP_VALIDATORS, (w, v) => w.fixed(v, 32));
   return w.finish();
 }
 
@@ -116,9 +137,84 @@ export function decodeAppEntry(bytes: Uint8Array): AppEntry {
     version: r.string(32),
     contractAddress: r.fixed(32),
     metadataHash: r.fixed(32),
+    chainValidators: r.array(MAX_APP_VALIDATORS, (r) => r.fixed(32)),
   };
   r.finish();
   return entry;
+}
+
+// ------------------------------------------------------ app-chain anchors
+
+const ANCHOR_PREFIX = new TextEncoder().encode('an:');
+
+export function anchorKey(appId: string): Uint8Array {
+  const id = new TextEncoder().encode(appId);
+  const key = new Uint8Array(ANCHOR_PREFIX.length + id.length);
+  key.set(ANCHOR_PREFIX);
+  key.set(id, ANCHOR_PREFIX.length);
+  return key;
+}
+
+/** The last accepted anchor for an app (app-chains spec §2.3 step 4). */
+export interface AnchorRecord {
+  epoch: bigint;
+  appHeight: bigint;
+  stateRoot: Uint8Array;
+}
+
+export function encodeAnchorRecord(record: AnchorRecord): Uint8Array {
+  const w = new Writer(48);
+  w.u64(record.epoch);
+  w.u64(record.appHeight);
+  w.fixed(record.stateRoot, 32);
+  return w.finish();
+}
+
+export function decodeAnchorRecord(bytes: Uint8Array): AnchorRecord {
+  const r = new Reader(bytes);
+  const record: AnchorRecord = {
+    epoch: r.u64(),
+    appHeight: r.u64(),
+    stateRoot: r.fixed(32),
+  };
+  r.finish();
+  return record;
+}
+
+/** Quorum threshold over a validator set: strictly more than 2/3. */
+export function anchorQuorum(validatorCount: number): number {
+  return Math.floor((2 * validatorCount) / 3) + 1;
+}
+
+/**
+ * Verify an anchor's attestation against a validator set: distinct known
+ * signers, each signature valid over `anchorSigningBytes`, quorum met.
+ * Returns null when valid, an error string otherwise.
+ */
+export function verifyAnchorSignatures(
+  l1ChainId: string,
+  payload: AnchorPayload,
+  validators: Uint8Array[],
+): string | null {
+  if (validators.length === 0) return 'app has no registered chain validators';
+  const message = anchorSigningBytes(l1ChainId, payload);
+  const seen = new Set<string>();
+  let valid = 0;
+  for (const { validator, signature } of payload.signatures) {
+    const hex = Buffer.from(validator).toString('hex');
+    if (seen.has(hex)) return 'duplicate anchor signer';
+    seen.add(hex);
+    if (!validators.some((v) => Buffer.compare(v, validator) === 0)) {
+      return 'anchor signer is not a registered validator';
+    }
+    if (!verify(signature, message, validator)) return 'invalid anchor signature';
+    valid++;
+  }
+  const needed = anchorQuorum(validators.length);
+  if (valid < needed) {
+    return `anchor quorum not met: ${valid} of ${validators.length} (need ${needed})`;
+  }
+  return null;
 }
 
 // -------------------------------------------------------------- accounts
@@ -179,6 +275,12 @@ export async function checkInclusion(
     case 'register_app':
     case 'update_app':
       if (tx.payload.appId.length === 0) return 'empty app id';
+      break;
+    case 'anchor':
+      // Cheap gates only; signature verification happens in execution so
+      // mempool admission stays O(bytes).
+      if (tx.payload.appId.length === 0) return 'empty app id';
+      if (tx.payload.signatures.length === 0) return 'anchor carries no signatures';
       break;
   }
   const sender = await getAccount(state, tx.sender);
@@ -335,6 +437,7 @@ function executePayload(
           version: tx.payload.version,
           contractAddress: tx.payload.contractAddress,
           metadataHash: tx.payload.metadataHash,
+          chainValidators: tx.payload.chainValidators,
         }),
       );
       ctx.events.push(new TextEncoder().encode(`app:registered:${tx.payload.appId}`));
@@ -358,9 +461,82 @@ function executePayload(
           version: tx.payload.version,
           contractAddress: tx.payload.contractAddress,
           metadataHash: tx.payload.metadataHash,
+          chainValidators: tx.payload.chainValidators,
         }),
       );
       ctx.events.push(new TextEncoder().encode(`app:updated:${tx.payload.appId}`));
+      return { error: null, fuelUsed: 0n };
+    }
+    case 'anchor': {
+      const payload = tx.payload;
+      const raw = overlay.getSync(appKey(payload.appId));
+      if (raw === undefined) {
+        return { error: `no such app: ${payload.appId}`, fuelUsed: 0n };
+      }
+      const entry = decodeAppEntry(raw);
+
+      const key = anchorKey(payload.appId);
+      const prevRaw = overlay.getSync(key);
+      const prevEpoch = prevRaw === undefined ? 0n : decodeAnchorRecord(prevRaw).epoch;
+      if (payload.epoch <= prevEpoch) {
+        return {
+          error: `stale anchor epoch: ${payload.epoch} (last anchored ${prevEpoch})`,
+          fuelUsed: 0n,
+        };
+      }
+
+      const sigError = verifyAnchorSignatures(tx.chainId, payload, entry.chainValidators);
+      if (sigError !== null) return { error: sigError, fuelUsed: 0n };
+
+      // The outcome call runs as the app; a failed call fails the whole
+      // payload so the epoch is not consumed by a bad outcome.
+      if (payload.call) {
+        const result = (() => {
+          try {
+            return runContract(overlay, ctx, {
+              contractId: payload.call.contract,
+              caller: appAddress(payload.appId),
+              action: payload.call.action,
+              args: payload.call.args,
+              value: 0n,
+              height,
+              fuel: ctx.meter.budget,
+              depth: 0,
+            });
+          } catch (err) {
+            if (err instanceof VmHostError && err.outOfFuel) {
+              return { error: 'out of fuel', fuelUsed: ctx.meter.budget };
+            }
+            throw err;
+          }
+        })();
+        if (result.error !== null) {
+          return {
+            error: `anchor outcome call failed: ${result.error}`,
+            fuelUsed: result.fuelUsed,
+          };
+        }
+        overlay.set(
+          key,
+          encodeAnchorRecord({
+            epoch: payload.epoch,
+            appHeight: payload.appHeight,
+            stateRoot: payload.stateRoot,
+          }),
+        );
+        ctx.events.push(new TextEncoder().encode(`anchor:${payload.appId}:${payload.epoch}`));
+        return { error: null, fuelUsed: result.fuelUsed };
+      }
+
+      overlay.set(
+        key,
+        encodeAnchorRecord({
+          epoch: payload.epoch,
+          appHeight: payload.appHeight,
+          stateRoot: payload.stateRoot,
+        }),
+      );
+      ctx.events.push(new TextEncoder().encode(`anchor:${payload.appId}:${payload.epoch}`));
       return { error: null, fuelUsed: 0n };
     }
   }

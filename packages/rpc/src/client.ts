@@ -1,6 +1,7 @@
 import RPC from '@hyperswarm/rpc';
 import type {
   AccountInfo,
+  AnchorInfo,
   AppInfo,
   BlockInfo,
   ContractStateEntry,
@@ -61,6 +62,11 @@ export class NodeRpcClient {
 
   getApp(appId: string): Promise<AppInfo | null> {
     return this.call('get_app', { appId });
+  }
+
+  /** Last accepted app-chain anchor for `appId`, or null. */
+  getAppAnchor(appId: string): Promise<AnchorInfo | null> {
+    return this.call('get_app_anchor', { appId });
   }
 
   getTx(hashHex: string): Promise<TxInfo | null> {

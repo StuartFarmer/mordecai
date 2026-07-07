@@ -29,11 +29,14 @@ import {
 } from '@hssn/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
 import {
+  anchorKey,
   appKey,
   applyTransaction,
   checkInclusion,
   contractStorageKey,
+  decodeAnchorRecord,
   decodeAppEntry,
+  type AnchorRecord,
   type AppEntry,
   type Receipt,
 } from './execution.js';
@@ -231,6 +234,12 @@ export class Chain {
   async getApp(appId: string): Promise<AppEntry | undefined> {
     const raw = await this.stateStore.get(appKey(appId));
     return raw === undefined ? undefined : decodeAppEntry(raw);
+  }
+
+  /** The last accepted app-chain anchor for `appId`, if any. */
+  async getAnchor(appId: string): Promise<AnchorRecord | undefined> {
+    const raw = await this.stateStore.get(anchorKey(appId));
+    return raw === undefined ? undefined : decodeAnchorRecord(raw);
   }
 
   /**

@@ -61,6 +61,16 @@ export interface AppInfo {
   version: string;
   contractAddress: string;
   metadataHash: string;
+  /** App-chain validator set (hex pubkeys); empty when the app has no chain. */
+  chainValidators: string[];
+}
+
+/** Last accepted app-chain anchor (app-chains spec §2.3). */
+export interface AnchorInfo {
+  appId: string;
+  epoch: string;
+  appHeight: string;
+  stateRoot: string;
 }
 
 /** One contract storage entry; the key is contract-internal (hex). */
@@ -78,4 +88,6 @@ export const RPC_METHODS = [
   'get_block',
   'get_tx',
   'get_contract_state',
+  'get_app',
+  'get_app_anchor',
 ] as const;

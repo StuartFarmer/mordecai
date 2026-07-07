@@ -133,6 +133,8 @@ export class Hssn {
     version: string;
     bundle: Uint8Array;
     contractAddress?: Uint8Array;
+    /** App-chain validator set (app-chains spec §2.4); omit for chainless apps. */
+    chainValidators?: Uint8Array[];
   }): Promise<{ pearKey: Uint8Array; tx: TxInfo }> {
     const feed = await this.network.createFeed(`bundle:${params.appId}`);
     if (feed.length === 0) await feed.append(params.bundle);
@@ -144,6 +146,7 @@ export class Hssn {
       version: params.version,
       contractAddress: params.contractAddress ?? new Uint8Array(32),
       metadataHash: blake2b256(params.bundle),
+      chainValidators: params.chainValidators ?? [],
     });
     if (!tx.success) throw new Error(`register_app failed: ${tx.error}`);
     return { pearKey: feed.key, tx };

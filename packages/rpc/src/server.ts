@@ -5,6 +5,7 @@ import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
 import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
 import type {
   AccountInfo,
+  AnchorInfo,
   AppInfo,
   BlockInfo,
   ContractStateEntry,
@@ -140,6 +141,18 @@ export class NodeRpcServer {
         version: entry.version,
         contractAddress: hex(entry.contractAddress),
         metadataHash: hex(entry.metadataHash),
+        chainValidators: entry.chainValidators.map(hex),
+      };
+    });
+
+    respond<AnchorInfo | null>('get_app_anchor', async (params: { appId: string }) => {
+      const record = await deps.chain.getAnchor(params.appId);
+      if (!record) return null;
+      return {
+        appId: params.appId,
+        epoch: record.epoch.toString(),
+        appHeight: record.appHeight.toString(),
+        stateRoot: hex(record.stateRoot),
       };
     });
 
