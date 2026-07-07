@@ -11,6 +11,7 @@
 - [The Settlement Chain](architecture/chain.md)
 - [Consensus](architecture/consensus.md)
 - [The Contract VM](architecture/vm.md)
+- [App Chains](architecture/app-chains.md)
 - [Wire Format & Protocol](architecture/protocol.md)
 - [Threat Model](architecture/threat-model.md)
 
@@ -20,6 +21,8 @@
 - [The SDK](apps/sdk.md)
 - [Wallets, Identity & Sessions](apps/identity.md)
 - [Publishing & Installing Apps](apps/publishing.md)
+- [The Web Gateway](apps/gateway.md)
+- [How-To: Run Your App on Its Own Chain](apps/app-chains.md)
 
 # Smart Contracts
 
@@ -33,6 +36,8 @@
 - [Chess: A Complete P2P App](examples/chess.md)
 - [The Marketplace Contract](examples/marketplace.md)
 - [Land: State Maps & Config](examples/land.md)
+- [Frontier in the Browser](examples/frontier-web.md)
+- [Outpost: An MMORTS Across Two Chains](examples/outpost.md)
 
 # Reference
 
