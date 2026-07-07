@@ -20,12 +20,15 @@ export default tseslint.config(
         process: 'readonly',
         console: 'readonly',
         Buffer: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        setTimeout: 'readonly',
       },
     },
   },
   {
-    // browser code (frontier web client): DOM globals, no node builtins
-    files: ['apps/frontier-web/**/*.js'],
+    // browser code (web clients): DOM globals, no node builtins
+    files: ['apps/*-web/**/*.js'],
     languageOptions: {
       globals: {
         fetch: 'readonly',

@@ -1,0 +1,50 @@
+# Goods market — the L1 half of the outpost demo. Buyers escrow HSSN
+# against goods that exist only in the game (on the app chain); the
+# escrow is released by the game's anchored outcome call — no bridge, no
+# wrapped assets, just `sender == config.game` (app-chains spec §2.1).
+# The seller is paid at the same address that delivered in-game: one
+# wallet identity across both chains.
+
+contract GoodsMarket:
+
+    config:
+        game: address
+
+    state Meta[int]:
+        next_id: int = 0
+
+    state Order[int]:
+        buyer: address
+        good: str
+        amount: int
+        price: int
+        # 0 = open, 1 = settled, 2 = cancelled
+        phase: int = 0
+
+    action place_order(good: str, amount: int):
+        require(value > 0, "attach the payment as value")
+        require(good == "wood" or good == "wheat", "unknown good")
+        require(amount > 0, "amount must be positive")
+
+        order_id = Meta[0].next_id
+        Meta[0].next_id += 1
+        Order[order_id] = Order(buyer=sender, good=good, amount=amount, price=value)
+        emit("order placed")
+
+    action cancel_order(order_id: int):
+        o = Order[order_id]
+        require(o.buyer == sender, "only the buyer can cancel")
+        require(o.phase == 0, "order is not open")
+
+        o.phase = 2
+        transfer(o.buyer, o.price)
+        emit("order cancelled")
+
+    action settle(order_id: int, seller: address):
+        require(sender == config.game, "only the game may settle deliveries")
+        o = Order[order_id]
+        require(o.phase == 0, "order is not open")
+
+        o.phase = 1
+        transfer(seller, o.price)
+        emit("order settled")
