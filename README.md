@@ -111,18 +111,19 @@ committed.
 git clone https://github.com/StuartFarmer/mordecai-2.git && cd mordecai-2
 pnpm install
 pnpm build      # typecheck + emit all packages
-pnpm test       # 194 tests: devnets, BFT, VM, app chains, gateways, e2e
+pnpm test       # 199 tests: devnets, BFT, VM, app chains, gateways, e2e
 ```
 
 ## Try everything
 
-| One command                                            | What you get                                                                                                                |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `node scripts/outpost-demo.mjs`                        | **The flagship**: MMORTS on an app chain + L1 goods market + anchored settlement, playable at `:8787`                       |
-| `node scripts/frontier-demo.mjs`                       | On-chain land game in the browser through the gateway                                                                       |
-| `node apps/devnet/devnet.mjs 4`                        | A 4-validator BFT devnet with a funded faucet                                                                               |
-| `npx vitest run packages/appchain/test/market.test.ts` | The cross-chain trade proven at the protocol level, adversarial cases included                                              |
-| `npx vitest run packages/appchain/test/season.test.ts` | A wagered season: stake on L1, play on an app chain, anchored payout, then _delete the app chain_ — the settlement survives |
+| One command                                            | What you get                                                                                                                                                        |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node scripts/outpost-demo.mjs`                        | **The flagship**: MMORTS on an app chain + L1 goods market + anchored settlement, playable at `:8787`                                                               |
+| `node scripts/hex-demo.mjs`                            | **Play strangers for money**: winner-takes-all Hex — rules + 3-minute forfeit clock on an app chain, escrow on L1, wallets generated in the page, join by game code |
+| `node scripts/frontier-demo.mjs`                       | On-chain land game in the browser through the gateway                                                                                                               |
+| `node apps/devnet/devnet.mjs 4`                        | A 4-validator BFT devnet with a funded faucet                                                                                                                       |
+| `npx vitest run packages/appchain/test/market.test.ts` | The cross-chain trade proven at the protocol level, adversarial cases included                                                                                      |
+| `npx vitest run packages/appchain/test/season.test.ts` | A wagered season: stake on L1, play on an app chain, anchored payout, then _delete the app chain_ — the settlement survives                                         |
 
 ## Documentation
 

@@ -1,0 +1,24 @@
+{
+  "name": "@hssn/example-hex-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hex web client: the game on a player-run app chain, winner-takes-all escrow on L1, wallet generated in the browser",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hssn/protocol": "workspace:*",
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "z32": "^1.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

@@ -1,0 +1,184 @@
+# Hex — a wagered board game on a player-run app chain. Anyone with a
+# browser creates or joins a game by code (the key of Game is a client-side
+# hash of the code); the matching stake lives in hex_escrow on L1 under the
+# same id, released to the winner by the app chain's anchored outcome call.
+#
+# The board is the classic 11×11 rhombus. The creator (side 0, red)
+# connects the top row to the bottom row; the opponent (side 1, blue)
+# connects the left column to the right column. Cells for a game live at
+# Cell[base + r*11 + c] where `base` is allocated per game in steps of 128
+# (the DSL has +/- only, so r*11 is written as eleven additions).
+#
+# Winning is proven on-chain, one adjacency-checked step at a time: the
+# winner walks the contract along a connected path of their own stones
+# from their starting edge to their target edge (prove_start/prove_step).
+# A walk can only be completed if a genuinely connected path exists, so
+# the rules of hex are fully enforced by consensus — the client merely
+# finds the path. Draws are impossible in hex.
+#
+# `time` is the block timestamp (ms). Every game action refreshes
+# `deadline`; once it passes, anyone may claim_timeout and the player to
+# move forfeits — the 3-minute inactivity rule, measured in wall time.
+
+contract Hex:
+
+    config:
+        timeout_ms: int
+
+    state Meta[int]:
+        next_base: int = 0
+
+    state Game[int]:
+        creator: address
+        opponent: address
+        winner: address
+        # 0 open, 1 active, 2 won (winner set), 3 cancelled
+        phase: int = 0
+        # 0 = creator (red) to move, 1 = opponent (blue) to move
+        turn: int = 0
+        moves: int = 0
+        base: int
+        deadline: int = 0
+        proof_player: address
+        proof_live: bool = False
+        proof_r: int = 0
+        proof_c: int = 0
+
+    state Cell[int]:
+        owner: address
+        side: int
+
+    action create(game_id: int):
+        require(not exists(Game[game_id]), "game code already taken")
+        base = Meta[0].next_base
+        Meta[0].next_base += 128
+        Game[game_id] = Game(
+            creator=sender,
+            opponent=sender,
+            winner=sender,
+            base=base,
+            proof_player=sender,
+        )
+        emit("game created")
+
+    action join(game_id: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 0, "game is not open")
+        require(sender != g.creator, "cannot play against yourself")
+        g.opponent = sender
+        g.phase = 1
+        g.deadline = time + config.timeout_ms
+        emit("game started")
+
+    action cancel(game_id: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 0, "game already started")
+        require(sender == g.creator, "only the creator can cancel")
+        g.phase = 3
+        emit("game cancelled")
+
+    action place(game_id: int, r: int, c: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 1, "game is not active")
+        require(r < 11 and c < 11, "off the board")
+        if g.turn == 0:
+            require(sender == g.creator, "not your turn")
+        else:
+            require(sender == g.opponent, "not your turn")
+
+        cell_key = g.base + r + r + r + r + r + r + r + r + r + r + r + c
+        require(not exists(Cell[cell_key]), "cell is occupied")
+
+        Cell[cell_key] = Cell(owner=sender, side=g.turn)
+        g.turn = 1 - g.turn
+        g.moves += 1
+        g.deadline = time + config.timeout_ms
+        emit("stone placed")
+
+    action prove_start(game_id: int, r: int, c: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 1, "game is not active")
+        require(r < 11 and c < 11, "off the board")
+
+        cell_key = g.base + r + r + r + r + r + r + r + r + r + r + r + c
+        require(exists(Cell[cell_key]), "no stone there")
+        cell = Cell[cell_key]
+        require(cell.owner == sender, "not your stone")
+        if sender == g.creator:
+            require(r == 0, "start on your own edge")
+        else:
+            require(c == 0, "start on your own edge")
+
+        g.proof_player = sender
+        g.proof_live = True
+        g.proof_r = r
+        g.proof_c = c
+        g.deadline = time + config.timeout_ms
+        emit("proof started")
+
+    action prove_step(game_id: int, r: int, c: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 1, "game is not active")
+        require(g.proof_live, "no proof in progress")
+        require(sender == g.proof_player, "not your proof")
+        require(r < 11 and c < 11, "off the board")
+
+        cell_key = g.base + r + r + r + r + r + r + r + r + r + r + r + c
+        require(exists(Cell[cell_key]), "no stone there")
+        cell = Cell[cell_key]
+        require(cell.owner == sender, "not your stone")
+
+        # Hex adjacency of (r, c) to the previous proof stone (pr, pc):
+        # (pr, pc±1), (pr±1, pc), (pr-1, pc+1), (pr+1, pc-1). Written with
+        # +1 on the smaller side so u64 arithmetic never underflows.
+        pr = g.proof_r
+        pc = g.proof_c
+        require(
+            (r == pr and (c == pc + 1 or c + 1 == pc))
+            or (r == pr + 1 and (c == pc or c + 1 == pc))
+            or (r + 1 == pr and (c == pc or c == pc + 1)),
+            "not adjacent to the previous proof stone")
+
+        g.proof_r = r
+        g.proof_c = c
+        g.deadline = time + config.timeout_ms
+        if sender == g.creator:
+            if r == 10:
+                g.phase = 2
+                g.winner = sender
+                emit("game won")
+        else:
+            if c == 10:
+                g.phase = 2
+                g.winner = sender
+                emit("game won")
+
+    action claim_timeout(game_id: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 1, "game is not active")
+        require(time > g.deadline, "the player to move still has time")
+        g.phase = 2
+        if g.turn == 0:
+            g.winner = g.opponent
+        else:
+            g.winner = g.creator
+        emit("game forfeited")
+
+    action resign(game_id: int):
+        require(exists(Game[game_id]), "no such game")
+        g = Game[game_id]
+        require(g.phase == 1, "game is not active")
+        require(sender == g.creator or sender == g.opponent,
+                "only the players can resign")
+        g.phase = 2
+        if sender == g.creator:
+            g.winner = g.opponent
+        else:
+            g.winner = g.creator
+        emit("game resigned")

@@ -36,6 +36,9 @@ export default tseslint.config(
         TextDecoder: 'readonly',
         DataView: 'readonly',
         setTimeout: 'readonly',
+        window: 'readonly',
+        localStorage: 'readonly',
+        crypto: 'readonly',
         process: 'readonly', // vite.config.js reads env at build time
       },
     },

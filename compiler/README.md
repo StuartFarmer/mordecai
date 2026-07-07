@@ -22,4 +22,5 @@ Pipeline: `.pysc` source → parse → typecheck → generated Rust against
 
 Language v1 (spec §21): int (u64) / str / bool / address scalars, state
 maps keyed by int or address, config, actions, require, if/elif/else,
-checked +/-, comparisons, and/or/not, exists(), `sender`, `height`.
+checked +/-, comparisons, and/or/not, exists(), `sender`, `height`,
+`time` (block timestamp in ms — the clock behind deadline/forfeit logic).

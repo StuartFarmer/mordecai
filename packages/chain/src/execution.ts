@@ -315,6 +315,7 @@ export async function applyTransaction(
   tx: Transaction,
   proposer: Uint8Array,
   height: bigint,
+  timeMs: bigint,
 ): Promise<Receipt> {
   const staticFee = computeFee(tx);
   const feeReserve = tx.payload.kind === 'transfer' ? staticFee : tx.maxFee;
@@ -337,7 +338,7 @@ export async function applyTransaction(
 
   // Payload effects revert as a unit on failure.
   const txOverlay = new Overlay(blockOverlay);
-  const outcome = executePayload(txOverlay, tx, ctx, height);
+  const outcome = executePayload(txOverlay, tx, ctx, height, timeMs);
 
   const fuelUsed = outcome.fuelUsed + ctx.meter.used;
   const actualFee = minBig(tx.maxFee, staticFee + ceilDiv(fuelUsed, FUEL_PER_FEE));
@@ -380,6 +381,7 @@ function executePayload(
   tx: Transaction,
   ctx: ExecCtx,
   height: bigint,
+  timeMs: bigint,
 ): { error: string | null; fuelUsed: bigint } {
   switch (tx.payload.kind) {
     case 'transfer': {
@@ -414,6 +416,7 @@ function executePayload(
           args: tx.payload.args,
           value: tx.payload.value,
           height,
+          timeMs,
           fuel: ctx.meter.budget,
           depth: 0,
         });
@@ -500,6 +503,7 @@ function executePayload(
               args: payload.call.args,
               value: 0n,
               height,
+              timeMs,
               fuel: ctx.meter.budget,
               depth: 0,
             });
@@ -549,6 +553,7 @@ interface CallParams {
   args: Uint8Array;
   value: bigint;
   height: bigint;
+  timeMs: bigint;
   fuel: bigint;
   depth: number;
 }
@@ -615,6 +620,7 @@ function runContract(
         args,
         value,
         height: params.height,
+        timeMs: params.timeMs,
         fuel: fuelRemaining,
         depth: params.depth + 1,
       });
@@ -631,6 +637,7 @@ function runContract(
     caller: params.caller,
     value: params.value,
     height: params.height,
+    timeMs: params.timeMs,
     fuel: params.fuel,
     host,
   });
