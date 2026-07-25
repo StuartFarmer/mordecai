@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import {
   Chain,
   FUEL_PER_FEE,
@@ -27,7 +27,7 @@ const floatyWasm = new Uint8Array(
   readFileSync(fileURLToPath(new URL('../../vm/test/fixtures/floaty.wasm', import.meta.url))),
 );
 
-const CHAIN_ID = 'hssn-contracts-test';
+const CHAIN_ID = 'mordecai-contracts-test';
 const cleanups: (() => Promise<void> | void)[] = [];
 
 afterEach(async () => {
@@ -51,7 +51,7 @@ function genesis(): Genesis {
 }
 
 async function openChain(): Promise<Chain> {
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-contracts-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-contracts-'));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const chain = await Chain.open(dir, genesis());
   cleanups.push(() => chain.close());

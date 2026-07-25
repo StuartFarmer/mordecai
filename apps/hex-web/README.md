@@ -8,7 +8,7 @@ the page, and plays.
 - **Game codes.** Players agree on any string out of band. Its hash keys
   both the app-chain `Game` and the L1 `Pot` — create a game by entering a
   new code, join one by entering a code whose game hasn't started.
-- **Escrow.** Creating a game stakes HSSN into `hex_escrow` on L1 (default
+- **Escrow.** Creating a game stakes CAI into `hex_escrow` on L1 (default
   1,000,000); joining matches it. The winner takes the whole pot, paid by
   the app chain's anchored `settle(game_id, winner)` outcome call.
 - **Rules on-chain.** `hex.pysc` enforces turns, occupancy, and bounds on
@@ -20,8 +20,8 @@ the page, and plays.
   claims the win.
 
 ```sh
-pnpm --filter @hssn/example-hex-web build
+pnpm --filter @mordecai/example-hex-web build
 node scripts/hex-demo.mjs        # → http://<host>:8787
 ```
 
-Dev mode against a running demo: `pnpm --filter @hssn/example-hex-web dev`.
+Dev mode against a running demo: `pnpm --filter @mordecai/example-hex-web dev`.

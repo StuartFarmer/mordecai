@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/consensus",
+  "name": "@mordecai/consensus",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,9 +18,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/chain": "workspace:*",
-    "@hssn/crypto": "workspace:*",
-    "@hssn/protocol": "workspace:*",
+    "@mordecai/chain": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
     "hyperswarm": "^4.17.0"
   },
   "devDependencies": {

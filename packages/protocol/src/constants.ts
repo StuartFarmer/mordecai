@@ -16,11 +16,11 @@ export const PAYLOAD_TAG_ANCHOR = 6;
 
 // Domain-separation prefixes for signing preimages. Signing bytes for one
 // message kind must never be a valid preimage for another.
-export const DOMAIN_TX = 'hssn:tx:v1';
-export const DOMAIN_BLOCK = 'hssn:block:v1';
-export const DOMAIN_VOTE = 'hssn:vote:v1';
-export const DOMAIN_ANCHOR = 'hssn:anchor:v1';
-export const DOMAIN_APP_SENDER = 'hssn:app-sender:v1';
+export const DOMAIN_TX = 'mordecai:tx:v1';
+export const DOMAIN_BLOCK = 'mordecai:block:v1';
+export const DOMAIN_VOTE = 'mordecai:vote:v1';
+export const DOMAIN_ANCHOR = 'mordecai:anchor:v1';
+export const DOMAIN_APP_SENDER = 'mordecai:app-sender:v1';
 
 // Protocol limits, enforced on both encode and decode.
 export const MAX_CHAIN_ID_BYTES = 32;

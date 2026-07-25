@@ -1,5 +1,5 @@
-import type { Feed } from '@hssn/networking';
-import type { Hssn } from '@hssn/sdk';
+import type { Feed } from '@mordecai/networking';
+import type { Mordecai } from '@mordecai/sdk';
 
 /**
  * A p2p chess match: each player owns one append-only move feed (signed,
@@ -18,20 +18,24 @@ export class ChessMatch {
   ) {}
 
   /** Host a match (plays white). Share `feedKey` with the opponent. */
-  static async host(app: Hssn, matchName: string): Promise<ChessMatch> {
+  static async host(app: Mordecai, matchName: string): Promise<ChessMatch> {
     const mine = await app.createFeed(`chess:${matchName}:white`);
     await app.joinFeed(mine);
     return new ChessMatch(mine, undefined as never, true);
   }
 
   /** The host learns the guest's feed key out of band (or via a lobby feed). */
-  async acceptOpponent(app: Hssn, guestFeedKey: Uint8Array): Promise<ChessMatch> {
+  async acceptOpponent(app: Mordecai, guestFeedKey: Uint8Array): Promise<ChessMatch> {
     const theirs = await app.openFeed(guestFeedKey);
     return new ChessMatch(this.mine, theirs, this.white);
   }
 
   /** Join a hosted match (plays black). */
-  static async join(app: Hssn, matchName: string, hostFeedKey: Uint8Array): Promise<ChessMatch> {
+  static async join(
+    app: Mordecai,
+    matchName: string,
+    hostFeedKey: Uint8Array,
+  ): Promise<ChessMatch> {
     const mine = await app.createFeed(`chess:${matchName}:black`);
     await app.joinFeed(mine);
     const theirs = await app.openFeed(hostFeedKey);

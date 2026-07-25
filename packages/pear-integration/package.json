@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/pear-integration",
+  "name": "@mordecai/pear-integration",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,9 +18,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/crypto": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/wallet": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/wallet": "workspace:*",
     "@hyperswarm/rpc": "^3.5.0"
   },
   "devDependencies": {

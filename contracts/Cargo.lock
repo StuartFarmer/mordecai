@@ -6,16 +6,16 @@ version = 4
 name = "counter"
 version = "0.1.0"
 dependencies = [
- "hssn-contract",
+ "mordecai-contract",
 ]
 
 [[package]]
-name = "hssn-contract"
+name = "mordecai-contract"
 version = "0.1.0"
 
 [[package]]
 name = "marketplace"
 version = "0.1.0"
 dependencies = [
- "hssn-contract",
+ "mordecai-contract",
 ]

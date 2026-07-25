@@ -1,6 +1,6 @@
 # What a P2P App Is (and Isn't)
 
-An HSSN application is **ordinary software that happens to be distributed**.
+A Mordecai application is **ordinary software that happens to be distributed**.
 It runs on the user's machine, renders its own UI, talks directly to other
 users' machines, and consults the blockchain only when money or ownership
 changes hands. If you have built a client-server app, the mental shift is:

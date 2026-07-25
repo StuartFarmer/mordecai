@@ -1,12 +1,12 @@
-import { encodeAddress, sign, type KeyPair } from '@hssn/crypto';
+import { encodeAddress, sign, type KeyPair } from '@mordecai/crypto';
 import {
   encodeTransaction,
   transactionSigningBytes,
   type AnchorCall,
   type AnchorSignature,
-} from '@hssn/protocol';
-import { NodeRpcClient, type TxInfo } from '@hssn/rpc';
-import { anchorQuorum, type Chain } from '@hssn/chain';
+} from '@mordecai/protocol';
+import { NodeRpcClient, type TxInfo } from '@mordecai/rpc';
+import { anchorQuorum, type Chain } from '@mordecai/chain';
 import { buildAttestation, signAttestation, type Attestation } from './attest.js';
 import { requestCosignature } from './cosign.js';
 

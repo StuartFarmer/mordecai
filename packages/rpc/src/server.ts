@@ -1,8 +1,8 @@
 import RPC from '@hyperswarm/rpc';
-import type { Chain, Mempool } from '@hssn/chain';
-import { blockHash } from '@hssn/chain';
-import { decodeAddress, encodeAddress, type KeyPair } from '@hssn/crypto';
-import { decodeTransaction, encodeTransaction, type Transaction } from '@hssn/protocol';
+import type { Chain, Mempool } from '@mordecai/chain';
+import { blockHash } from '@mordecai/chain';
+import { decodeAddress, encodeAddress, type KeyPair } from '@mordecai/crypto';
+import { decodeTransaction, encodeTransaction, type Transaction } from '@mordecai/protocol';
 import type {
   AccountInfo,
   AnchorInfo,

@@ -19,7 +19,7 @@ schedule, or talk to the network.
 `deploy_contract` with the WASM bytes. The module is validated (no floats /
 SIMD / threads, only ABI imports — see [The Contract VM](../architecture/vm.md))
 and stored in consensus state. The contract id is
-`H("hssn:contract:v1" ‖ sender ‖ nonce ‖ code)` — deterministic, returned in
+`H("mordecai:contract:v1" ‖ sender ‖ nonce ‖ code)` — deterministic, returned in
 the receipt's `returnData`.
 
 A contract id is also an **account**: contracts hold native currency

@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import {
   Chain,
   ChainError,
@@ -15,7 +15,7 @@ import {
   type Genesis,
 } from '../src/index.js';
 
-const CHAIN_ID = 'hssn-test-1';
+const CHAIN_ID = 'mordecai-test-1';
 const cleanups: (() => Promise<void> | void)[] = [];
 
 afterEach(async () => {
@@ -23,7 +23,7 @@ afterEach(async () => {
 });
 
 function tmp(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-chain-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-chain-'));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   return dir;
 }

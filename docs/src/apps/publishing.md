@@ -44,7 +44,7 @@ const { entry, bundle } = await app.installApp('com.example.chess');
 or from the command line:
 
 ```sh
-hssn-launcher install com.example.chess \
+mordecai-launcher install com.example.chess \
   --node <rpc-key-hex> --out ./chess [--bootstrap host:port]
 ```
 

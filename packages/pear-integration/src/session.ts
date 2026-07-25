@@ -1,5 +1,5 @@
-import type { Payload, Transaction } from '@hssn/protocol';
-import type { SignParams, Signer, Wallet } from '@hssn/wallet';
+import type { Payload, Transaction } from '@mordecai/protocol';
+import type { SignParams, Signer, Wallet } from '@mordecai/wallet';
 
 /**
  * Per-app wallet permissions (threat model: applications are trusted only

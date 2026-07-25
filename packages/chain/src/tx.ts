@@ -1,5 +1,5 @@
-import { blake2b256, verify } from '@hssn/crypto';
-import { encodeTransaction, transactionSigningBytes, type Transaction } from '@hssn/protocol';
+import { blake2b256, verify } from '@mordecai/crypto';
+import { encodeTransaction, transactionSigningBytes, type Transaction } from '@mordecai/protocol';
 
 /** Canonical transaction id: BLAKE2b-256 of the encoded transaction. */
 export function transactionHash(tx: Transaction): Uint8Array {

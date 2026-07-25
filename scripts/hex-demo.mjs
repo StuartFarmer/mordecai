@@ -5,7 +5,7 @@
  * web gateways); everyone else just visits the site, gets a wallet
  * generated in the page, and creates or joins games by code.
  *
- *   pnpm build && pnpm --filter @hssn/example-hex-web build
+ *   pnpm build && pnpm --filter @mordecai/example-hex-web build
  *   node scripts/hex-demo.mjs
  *
  * Starts: 3-validator L1 devnet · hex_escrow on L1 · a 2-validator app
@@ -38,7 +38,7 @@ import { Gateway } from '../packages/gateway/dist/index.js';
 import { AnchorDaemon, AppChain } from '../packages/appchain/dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const l1ChainId = 'hssn-hex-devnet';
+const l1ChainId = 'mordecai-hex-devnet';
 const APP = 'com.example.hex';
 const TIMEOUT_MS = BigInt(process.env.HEX_TIMEOUT_MS ?? 180_000); // 3-minute inactivity forfeit
 const L1_PORT = Number(process.env.PORT ?? 8787);
@@ -79,7 +79,7 @@ const genesis = {
     { address: encodeAddress(faucet.publicKey), balance: 100_000_000_000n },
   ],
 };
-const base = mkdtempSync(join(tmpdir(), 'hssn-hex-demo-'));
+const base = mkdtempSync(join(tmpdir(), 'mordecai-hex-demo-'));
 const nodes = [];
 for (const [i, keyPair] of validators.entries()) {
   nodes.push(

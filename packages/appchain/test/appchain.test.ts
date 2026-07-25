@@ -9,19 +9,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { genesisHash } from '@hssn/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { genesisHash } from '@mordecai/chain';
 import {
   encodeTransaction,
   transactionSigningBytes,
   type Payload,
   type Transaction,
-} from '@hssn/protocol';
-import { Node } from '@hssn/node';
-import { NodeRpcClient } from '@hssn/rpc';
+} from '@mordecai/protocol';
+import { Node } from '@mordecai/node';
+import { NodeRpcClient } from '@mordecai/rpc';
 import { AnchorDaemon, AppChain, appChainGenesis } from '../src/index.js';
 
-const L1_CHAIN = 'hssn-appchain-test';
+const L1_CHAIN = 'mordecai-appchain-test';
 const APP = 'com.example.game';
 
 const owner: KeyPair = keyPairFromSeed(generateSeed());
@@ -63,7 +63,7 @@ beforeAll(async () => {
   testnet = await createTestnet(3);
 
   l1 = await Node.start({
-    dir: tmp('hssn-ac-l1-'),
+    dir: tmp('mordecai-ac-l1-'),
     genesis: {
       chainId: L1_CHAIN,
       validators: [encodeAddress(l1Validator.publicKey)],
@@ -96,7 +96,7 @@ beforeAll(async () => {
     AppChain.start({
       appId: APP,
       chainValidators,
-      dir: tmp('hssn-ac-a-'),
+      dir: tmp('mordecai-ac-a-'),
       keyPair: alice,
       bootstrap: testnet.bootstrap,
       blockIntervalMs: 100,
@@ -104,7 +104,7 @@ beforeAll(async () => {
     AppChain.start({
       appId: APP,
       chainValidators,
-      dir: tmp('hssn-ac-b-'),
+      dir: tmp('mordecai-ac-b-'),
       keyPair: bob,
       bootstrap: testnet.bootstrap,
       blockIntervalMs: 100,

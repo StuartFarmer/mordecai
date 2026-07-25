@@ -1,7 +1,7 @@
 # Wire Format & Protocol
 
 Everything consensus-visible — transactions, blocks, votes, gossip — is
-encoded by `@hssn/protocol`, a zero-dependency canonical codec. **Canonical
+encoded by `@mordecai/protocol`, a zero-dependency canonical codec. **Canonical
 bytes are what get hashed and signed**, so the format's one rule is: every
 structure has exactly one valid byte representation, and decoding rejects
 anything encoding could not have produced.
@@ -21,22 +21,22 @@ anything encoding could not have produced.
 Signing preimages are prefixed with a domain tag so bytes signed for one
 purpose can never validate as another:
 
-| Domain          | Signs                               |
-| --------------- | ----------------------------------- |
-| `hssn:tx:v1`    | transactions (by the sender)        |
-| `hssn:block:v1` | block headers (by the proposer)     |
-| `hssn:vote:v1`  | consensus votes (by each validator) |
+| Domain              | Signs                               |
+| ------------------- | ----------------------------------- |
+| `mordecai:tx:v1`    | transactions (by the sender)        |
+| `mordecai:block:v1` | block headers (by the proposer)     |
+| `mordecai:vote:v1`  | consensus votes (by each validator) |
 
 Hashing is BLAKE2b-256 throughout. A transaction id is the hash of its full
 encoding; a block hash is the hash of its encoded header; a contract id is
-`H("hssn:contract:v1" ‖ sender ‖ nonce ‖ code)`.
+`H("mordecai:contract:v1" ‖ sender ‖ nonce ‖ code)`.
 
 ## Golden vectors
 
 `packages/protocol/test/vectors/golden.json` pins the exact bytes of every
 structure. **Any change to these vectors is a consensus-breaking protocol
 change** and must be treated as one (regenerate deliberately with
-`UPDATE_VECTORS=1 pnpm --filter @hssn/protocol test`). The vectors also
+`UPDATE_VECTORS=1 pnpm --filter @mordecai/protocol test`). The vectors also
 serve as a conformance target for future non-JS implementations.
 
 ## Gossip messages

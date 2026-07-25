@@ -11,17 +11,17 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Genesis } from '@hssn/chain';
-import { encodeAddress, generateSeed, keyPairFromSeed } from '@hssn/crypto';
-import { Node } from '@hssn/node';
-import { Hssn } from '@hssn/sdk';
-import { Wallet } from '@hssn/wallet';
+import type { Genesis } from '@mordecai/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed } from '@mordecai/crypto';
+import { Node } from '@mordecai/node';
+import { Mordecai } from '@mordecai/sdk';
+import { Wallet } from '@mordecai/wallet';
 import { ChessMatch, WagerClient } from '../src/index.js';
 
 const wagerWasm = new Uint8Array(
   readFileSync(fileURLToPath(new URL('../../../contracts/dist/chess_wager.wasm', import.meta.url))),
 );
-const CHAIN_ID = 'hssn-chess-1';
+const CHAIN_ID = 'mordecai-chess-1';
 const STAKE = 100_000n;
 const validators = [0, 1].map(() => keyPairFromSeed(generateSeed()));
 const { wallet: aliceWallet } = Wallet.create();
@@ -30,12 +30,12 @@ const { wallet: bobWallet } = Wallet.create();
 let testnet: Awaited<ReturnType<typeof createTestnet>>;
 const dirs: string[] = [];
 const nodes: Node[] = [];
-let alice: Hssn;
-let bob: Hssn;
+let alice: Mordecai;
+let bob: Mordecai;
 let contract: Uint8Array;
 
 const tmp = (tag: string) => {
-  const dir = mkdtempSync(join(tmpdir(), `hssn-chess-${tag}-`));
+  const dir = mkdtempSync(join(tmpdir(), `mordecai-chess-${tag}-`));
   dirs.push(dir);
   return dir;
 };
@@ -61,14 +61,14 @@ beforeAll(async () => {
       }),
     );
   }
-  alice = Hssn.connect({
+  alice = Mordecai.connect({
     wallet: aliceWallet,
     nodeKey: nodes[0]!.rpcPublicKey,
     storageDir: tmp('alice'),
     chainId: CHAIN_ID,
     bootstrap: testnet.bootstrap,
   });
-  bob = Hssn.connect({
+  bob = Mordecai.connect({
     wallet: bobWallet,
     nodeKey: nodes[1]!.rpcPublicKey,
     storageDir: tmp('bob'),

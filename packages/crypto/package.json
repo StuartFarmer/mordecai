@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/crypto",
+  "name": "@mordecai/crypto",
   "version": "0.1.0",
   "private": true,
   "type": "module",

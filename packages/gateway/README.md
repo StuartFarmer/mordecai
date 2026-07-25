@@ -1,4 +1,4 @@
-# @hssn/gateway — browser-facing HTTP edge
+# @mordecai/gateway — browser-facing HTTP edge
 
 Browsers can't join HyperDHT, so this package bridges them in: a small
 HTTP server that translates JSON requests into hyperswarm RPC calls
@@ -20,7 +20,7 @@ GET  /api/contract/<id>/state[?prefix=<hex>]   contract storage entries
 Run from code (`Gateway.start({...})`) or the CLI:
 
 ```sh
-hssn-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] \
+mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] \
              [--config <file.json>] [--bootstrap host:port,…]
 ```
 

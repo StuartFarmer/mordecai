@@ -1,4 +1,4 @@
-# HSSN — Holepunch Smart Settlement Network
+# Mordecai
 
 **A decentralized operating system for peer-to-peer software.** Apps get
 identity, payments, contracts, and distribution the way they get a
@@ -27,7 +27,7 @@ chain** (claim land, build, harvest — 300ms blocks, ~zero fees) and the
 **goods market runs on L1** (real currency, escrowed). One wallet identity
 acts on both. The trade in that screenshot:
 
-1. **bob (L1)** escrows 1000 HSSN for 10 wood — a good that _only exists
+1. **bob (L1)** escrows 1000 CAI for 10 wood — a good that _only exists
    inside the game_.
 2. **alice (app chain)** delivers the wood in-game, to the same address
    bob uses on L1.
@@ -35,14 +35,14 @@ acts on both. The trade in that screenshot:
    call — `settle(order_id, alice)` — and the L1 market releases the
    escrow.
 
-HSSN never left L1. Wood never left the game. The anchor carried
+CAI never left L1. Wood never left the game. The anchor carried
 _judgment_, not value — there is no bridge to hack, and a corrupt game
 can only ever touch what was voluntarily staked against it. Alice's L1
 balance ends at exactly +1000: her only L1 transaction was getting paid.
 
 ```sh
 pnpm install && pnpm build
-pnpm --filter @hssn/example-outpost-web build
+pnpm --filter @mordecai/example-outpost-web build
 node scripts/outpost-demo.mjs        # → http://127.0.0.1:8787
 ```
 
@@ -53,10 +53,10 @@ just packages. An app instantiates a blockchain the way it opens a
 database: derive a genesis from the on-chain registry entry, join the
 swarm, play. Seasons and matches get their own disposable chains; once
 anchored, the block history can evaporate while the outcome lives forever
-on L1. (`@hssn/appchain`, [docs](docs/src/architecture/app-chains.md))
+on L1. (`@mordecai/appchain`, [docs](docs/src/architecture/app-chains.md))
 
 **🐍 A Pythonic contract DSL.** Game rules, escrow, markets — written like
-Python, compiled to deterministic WASM (`hssnc`: parse → typecheck → Rust
+Python, compiled to deterministic WASM (`mordecaic`: parse → typecheck → Rust
 → wasm32), running identically on L1 and every app chain. The entire L1
 side of the outpost economy is this:
 
@@ -66,7 +66,7 @@ contract GoodsMarket:
         game: address              # appAddress(appId) — no private key exists
 
     action place_order(good: str, amount: int):
-        require(value > 0, "attach the payment as value")   # escrows attached HSSN
+        require(value > 0, "attach the payment as value")   # escrows attached CAI
         ...
 
     action settle(order_id: int, seller: address):

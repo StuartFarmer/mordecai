@@ -17,7 +17,7 @@ ecosystem, and because the settlement chain itself can dogfood it.
 - **Corestore** — manages many Hypercores in one storage directory and
   multiplexes them all over each swarm connection.
 
-## The `@hssn/networking` wrapper
+## The `@mordecai/networking` wrapper
 
 Applications use two classes:
 
@@ -48,7 +48,7 @@ The settlement chain has no separate TCP infrastructure:
 
 - Validators discover each other on a swarm topic derived from the **genesis
   hash** and gossip transactions, proposals, and votes over those
-  connections (`@hssn/consensus`).
+  connections (`@mordecai/consensus`).
 - Client RPC is **`@hyperswarm/rpc`**: applications dial a node by its
   public key over the DHT — no server URLs, works across NATs.
 - Lagging nodes catch up via `block_request`/`block_response` messages on

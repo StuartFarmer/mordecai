@@ -28,12 +28,12 @@ import re
 import token as T
 import tokenize
 
-from hssndsl.ast_nodes import (
+from mordecaidsl.ast_nodes import (
     Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
     Exists, FieldDef, If, Index, IntLit, Name, NotOp, Param, Program,
     Require, StateDef, Stmt, StrLit, TransferStmt,
 )
-from hssndsl.errors import DslError
+from mordecaidsl.errors import DslError
 
 SCALAR_TYPES = {"int", "str", "bool", "address"}
 COMPARE_OPS = {"==", "!=", "<", "<=", ">", ">="}

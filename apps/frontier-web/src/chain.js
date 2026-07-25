@@ -1,11 +1,11 @@
-// Chain access for the frontier web client. Talks JSON to an HSSN gateway
+// Chain access for the frontier web client. Talks JSON to a Mordecai gateway
 // (/api/*) and signs transactions right here in the browser: Ed25519 via
-// @noble/curves over @hssn/protocol's canonical signing bytes — the same
+// @noble/curves over @mordecai/protocol's canonical signing bytes — the same
 // bytes sodium signs in the wallet daemon. The gateway never sees a key.
 
 import { ed25519 } from '@noble/curves/ed25519';
 import z32 from 'z32';
-import { encodeTransaction, transactionSigningBytes } from '@hssn/protocol';
+import { encodeTransaction, transactionSigningBytes } from '@mordecai/protocol';
 
 const utf8 = new TextEncoder();
 

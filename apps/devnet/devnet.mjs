@@ -16,7 +16,7 @@ import { Wallet } from '../../packages/wallet/dist/index.js';
 import { Node } from '../../packages/node/dist/index.js';
 
 const count = Number(process.argv[2] ?? 4);
-const chainId = 'hssn-devnet';
+const chainId = 'mordecai-devnet';
 
 const testnet = await createTestnet(3);
 const validators = Array.from({ length: count }, () => keyPairFromSeed(generateSeed()));
@@ -28,7 +28,7 @@ const genesis = {
   allocations: [{ address: faucet.address, balance: 1_000_000_000n }],
 };
 
-const base = mkdtempSync(join(tmpdir(), 'hssn-devnet-'));
+const base = mkdtempSync(join(tmpdir(), 'mordecai-devnet-'));
 const nodes = [];
 for (const [i, keyPair] of validators.entries()) {
   const node = await Node.start({

@@ -1,4 +1,5 @@
-# The frontier economy (ported from the mordecai project's Phase 5 example):
+# The frontier economy (ported from the original CosmWasm mordecai's Phase 5
+# example):
 # everything the land contract does, plus a second building type and a
 # player-to-player market with escrowed orders.
 

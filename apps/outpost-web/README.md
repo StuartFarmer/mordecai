@@ -2,13 +2,13 @@
 
 A small MMORTS proving the app-chains design end to end: the **game runs
 on a player-run app chain** (claim land, build farms/lumbermills, harvest
-by block height), the **goods market runs on L1** (buyers escrow HSSN),
+by block height), the **goods market runs on L1** (buyers escrow CAI),
 and **one wallet identity acts on both** — the same Ed25519 key that
-holds HSSN on L1 owns tiles and wood in the game.
+holds CAI on L1 owns tiles and wood in the game.
 
 The trade loop, with no bridge anywhere:
 
-1. **bob (L1)** — `place_order(wood, 10)` with 1000 HSSN attached; the
+1. **bob (L1)** — `place_order(wood, 10)` with 1000 CAI attached; the
    market contract escrows it.
 2. **alice (app chain)** — earns wood in-game, clicks _deliver_: the game
    contract moves 10 wood from her account to bob's **at the same
@@ -18,13 +18,13 @@ The trade loop, with no bridge anywhere:
    call: `settle(order_id, alice)`. On L1 the market checks only
    `sender == config.game` and releases the escrow to alice.
 
-HSSN never left L1; wood never left the game; the anchor carried
+CAI never left L1; wood never left the game; the anchor carried
 judgment, not value (app-chains spec invariants 1–3).
 
 ## Run it
 
 ```sh
-pnpm build && pnpm --filter @hssn/example-outpost-web build
+pnpm build && pnpm --filter @mordecai/example-outpost-web build
 node scripts/outpost-demo.mjs
 ```
 

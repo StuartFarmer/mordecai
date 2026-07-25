@@ -1,7 +1,7 @@
 //! Test contract: exercises storage, args, returns, events, value,
 //! aborts, payouts, and runaway loops (fuel).
 
-use hssn_contract as c;
+use mordecai_contract as c;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn increment() -> i32 {

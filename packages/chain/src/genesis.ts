@@ -1,4 +1,4 @@
-import { blake2b256, decodeAddress } from '@hssn/crypto';
+import { blake2b256, decodeAddress } from '@mordecai/crypto';
 import {
   MAX_CHAIN_ID_BYTES,
   PROTOCOL_VERSION,
@@ -7,8 +7,8 @@ import {
   Writer,
   type Block,
   type BlockHeader,
-} from '@hssn/protocol';
-import { EMPTY_ROOT, computeStateRootWith, type Change, type StateStore } from '@hssn/state';
+} from '@mordecai/protocol';
+import { EMPTY_ROOT, computeStateRootWith, type Change, type StateStore } from '@mordecai/state';
 import { accountKey, encodeAccount } from './account.js';
 
 export interface GenesisAllocation {

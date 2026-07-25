@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress } from '@hssn/crypto';
-import { encodeTransaction } from '@hssn/protocol';
-import { NodeRpcClient } from '@hssn/rpc';
-import { Wallet } from '@hssn/wallet';
+import { encodeAddress } from '@mordecai/crypto';
+import { encodeTransaction } from '@mordecai/protocol';
+import { NodeRpcClient } from '@mordecai/rpc';
+import { Wallet } from '@mordecai/wallet';
 import { Node } from '../src/node.js';
 import { initNodeDir, loadNodeDir } from '../src/config.js';
 
@@ -19,10 +19,10 @@ const { wallet: bob } = Wallet.create();
 
 beforeAll(async () => {
   testnet = await createTestnet(3);
-  dir = mkdtempSync(join(tmpdir(), 'hssn-node-'));
+  dir = mkdtempSync(join(tmpdir(), 'mordecai-node-'));
   const config = initNodeDir({
     dir,
-    chainId: 'hssn-test-1',
+    chainId: 'mordecai-test-1',
     allocations: [{ address: alice.address, balance: 1_000_000n }],
   });
   node = await Node.start({
@@ -45,7 +45,7 @@ afterAll(async () => {
 describe('single-sequencer node over hyperswarm RPC (M3 acceptance)', () => {
   it('serves head and genesis balances', { timeout: 30_000 }, async () => {
     const head = await client.getHead();
-    expect(head.chainId).toBe('hssn-test-1');
+    expect(head.chainId).toBe('mordecai-test-1');
     expect(head.height).toBe('0');
     expect(await client.getAccount(alice.address)).toMatchObject({
       balance: '1000000',
@@ -55,7 +55,7 @@ describe('single-sequencer node over hyperswarm RPC (M3 acceptance)', () => {
 
   it('accepts a signed transfer, seals a block, and settles it', { timeout: 30_000 }, async () => {
     const tx = alice.signTransaction({
-      chainId: 'hssn-test-1',
+      chainId: 'mordecai-test-1',
       nonce: 0n,
       maxFee: 1_000n,
       payload: { kind: 'transfer', to: bob.publicKey, amount: 250_000n },

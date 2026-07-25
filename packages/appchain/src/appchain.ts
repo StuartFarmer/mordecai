@@ -1,7 +1,7 @@
-import { generateSeed, keyPairFromSeed, type KeyPair } from '@hssn/crypto';
-import { Node } from '@hssn/node';
-import type { NodeRpcClient } from '@hssn/rpc';
-import type { Chain, Genesis } from '@hssn/chain';
+import { generateSeed, keyPairFromSeed, type KeyPair } from '@mordecai/crypto';
+import { Node } from '@mordecai/node';
+import type { NodeRpcClient } from '@mordecai/rpc';
+import type { Chain, Genesis } from '@mordecai/chain';
 import { appChainGenesis } from './genesis.js';
 import { registerCosigner } from './cosign.js';
 

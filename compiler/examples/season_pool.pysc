@@ -1,4 +1,4 @@
-# Season wager pool (app-chains spec §3.5): players stake HSSN on L1,
+# Season wager pool (app-chains spec §3.5): players stake CAI on L1,
 # the season is played on the app's own chain, and the pot pays out when
 # the app chain's anchored quorum reports the winner. The only authority
 # this contract trusts is the app's derived sender address — set once in

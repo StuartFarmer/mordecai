@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/appchain",
+  "name": "@mordecai/appchain",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,11 +18,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/chain": "workspace:*",
-    "@hssn/crypto": "workspace:*",
-    "@hssn/node": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/rpc": "workspace:*",
+    "@mordecai/chain": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/node": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/rpc": "workspace:*",
     "@hyperswarm/rpc": "^3.5.0"
   },
   "devDependencies": {

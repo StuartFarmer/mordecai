@@ -1,4 +1,4 @@
-# Goods market — the L1 half of the outpost demo. Buyers escrow HSSN
+# Goods market — the L1 half of the outpost demo. Buyers escrow CAI
 # against goods that exist only in the game (on the app chain); the
 # escrow is released by the game's anchored outcome call — no bridge, no
 # wrapped assets, just `sender == config.game` (app-chains spec §2.1).

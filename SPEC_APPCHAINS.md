@@ -51,7 +51,7 @@ the wasmtime-on-Bare port is tracked separately).
 ### 2.1 App sender address
 
 ```
-appAddress(appId) = BLAKE2b-256( "hssn:app-sender:v1" ‖ utf8(appId) )
+appAddress(appId) = BLAKE2b-256( "mordecai:app-sender:v1" ‖ utf8(appId) )
 ```
 
 A 32-byte account key with no known private key. Contracts authorize app
@@ -61,7 +61,7 @@ outcomes with plain DSL: `require(sender == config.game, ...)`.
 
 ```
 anchorSigningBytes =
-  "hssn:anchor:v1" ‖ string(l1ChainId) ‖ string(appId) ‖ u64(epoch)
+  "mordecai:anchor:v1" ‖ string(l1ChainId) ‖ string(appId) ‖ u64(epoch)
   ‖ u64(appHeight) ‖ fixed32(stateRoot)
   ‖ u8(hasCall) [‖ fixed32(contract) ‖ string(action) ‖ bytes(args)]
 ```
@@ -145,7 +145,7 @@ allocations = each validator gets 1_000_000_000_000 (fee float; app-chain
 **Work**
 
 - `PAYLOAD_TAG_ANCHOR = 6`, `MAX_APP_VALIDATORS = 64`,
-  `DOMAIN_ANCHOR = 'hssn:anchor:v1'`.
+  `DOMAIN_ANCHOR = 'mordecai:anchor:v1'`.
 - `AnchorPayload` + read/write in the payload codec (strict: dedup and
   count limits enforced at decode where cheap, full checks in execution).
 - `chainValidators` appended to `AppRecord` read/write (u32 count +
@@ -223,7 +223,7 @@ tests in `packages/chain/test/`.
 - Rotation: update_app swaps validator set; old set's anchors rejected,
   new set's accepted.
 
-### Phase 3 — `@hssn/appchain`: run + attest + relay
+### Phase 3 — `@mordecai/appchain`: run + attest + relay
 
 **Where:** new `packages/appchain` (depends on node, chain, rpc,
 protocol, crypto).
@@ -294,7 +294,7 @@ small player-run chains hit immediately, fixed on this branch):
 **Work**
 
 - `publishApp({ ..., chainValidators? })` passes the set through;
-  `Hssn.appAddress(appId)` convenience; `Hssn.joinChain(appId, opts)` →
+  `Mordecai.appAddress(appId)` convenience; `Mordecai.joinChain(appId, opts)` →
   registry lookup + `AppChain.start`.
 - RPC: `AppInfo.chainValidators`, `get_app_anchor` (or fold into
   `get_app`); client methods.

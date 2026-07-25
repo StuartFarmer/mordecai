@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { blake2b256, sign, verify, decodeAddress, type KeyPair } from '@hssn/crypto';
+import { blake2b256, sign, verify, decodeAddress, type KeyPair } from '@mordecai/crypto';
 import {
   MAX_TXS_PER_BLOCK,
   MAX_VOTES_PER_CERT,
@@ -17,7 +17,7 @@ import {
   type BlockHeader,
   type Transaction,
   type Vote,
-} from '@hssn/protocol';
+} from '@mordecai/protocol';
 import {
   LevelStore,
   Overlay,
@@ -26,7 +26,7 @@ import {
   merkleRoot,
   type Change,
   type StateStore,
-} from '@hssn/state';
+} from '@mordecai/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
 import {
   anchorKey,

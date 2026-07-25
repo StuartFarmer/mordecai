@@ -58,7 +58,7 @@ records `an:<appId> → {epoch, appHeight, stateRoot}`, and — if an
 outcome call is present — runs it with a special sender:
 
 ```
-appAddress(appId) = BLAKE2b-256("hssn:app-sender:v1" ‖ appId)
+appAddress(appId) = BLAKE2b-256("mordecai:app-sender:v1" ‖ appId)
 ```
 
 A 32-byte account with no private key. Only an anchor quorum can act as

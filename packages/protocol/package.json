@@ -1,9 +1,9 @@
 {
-  "name": "@hssn/protocol",
+  "name": "@mordecai/protocol",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Canonical wire encoding and core protocol types (transactions, blocks, votes) for the Holepunch Smart Settlement Network",
+  "description": "Canonical wire encoding and core protocol types (transactions, blocks, votes) for Mordecai",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

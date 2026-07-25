@@ -13,18 +13,18 @@ zechariah/
     vm/              contract executor (wasmi-in-wasm) + runtime/ (Rust crate)
     chain/           genesis, execution, fees, mempool, blocks, registry
     consensus/       BFT engine, peer hub, certificates, block sync
-    node/            node orchestration + hssn-node CLI
+    node/            node orchestration + mordecai-node CLI
     rpc/             hyperswarm-RPC server + typed client
-    wallet/          Wallet, Signer, keystore files, hssn-wallet CLI
-    sdk/             Hssn (app runtime), ContractArgs, hssn-launcher
+    wallet/          Wallet, Signer, keystore files, mordecai-wallet CLI
+    sdk/             Mordecai (app runtime), ContractArgs, mordecai-launcher
     pear-integration/ WalletSession, WalletDaemon, RemoteSigner
   contracts/
-    runtime-rs/      hssn-contract: the Rust contract ABI bindings
+    runtime-rs/      mordecai-contract: the Rust contract ABI bindings
     counter/ marketplace/   hand-written Rust contracts
     dist/            committed .wasm artifacts (Rust + DSL examples)
   compiler/
-    hssnc            the DSL compiler CLI (Python 3, stdlib only)
-    hssndsl/         parser, typechecker, Rust codegen
+    mordecaic            the DSL compiler CLI (Python 3, stdlib only)
+    mordecaidsl/         parser, typechecker, Rust codegen
     examples/        land.pysc, chess_wager.pysc
   apps/
     devnet/          local devnet launcher

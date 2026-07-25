@@ -9,9 +9,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Node, initNodeDir } from '@hssn/node';
-import { Wallet } from '@hssn/wallet';
-import { encodeTransaction, type Payload } from '@hssn/protocol';
+import { Node, initNodeDir } from '@mordecai/node';
+import { Wallet } from '@mordecai/wallet';
+import { encodeTransaction, type Payload } from '@mordecai/protocol';
 import { Gateway } from '../src/gateway.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -34,7 +34,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 async function submit(payload: Payload): Promise<{ hash: string }> {
   const tx = alice.signTransaction({
-    chainId: 'hssn-gw-test',
+    chainId: 'mordecai-gw-test',
     nonce: nonce++,
     maxFee: 500_000n,
     payload,
@@ -57,10 +57,10 @@ async function waitForTx(hash: string): Promise<{ success: boolean; returnData: 
 
 beforeAll(async () => {
   testnet = await createTestnet(3);
-  dir = mkdtempSync(join(tmpdir(), 'hssn-gateway-'));
+  dir = mkdtempSync(join(tmpdir(), 'mordecai-gateway-'));
   const config = initNodeDir({
     dir,
-    chainId: 'hssn-gw-test',
+    chainId: 'mordecai-gw-test',
     allocations: [{ address: alice.address, balance: 10_000_000n }],
   });
   node = await Node.start({
@@ -73,7 +73,7 @@ beforeAll(async () => {
   gateway = await Gateway.start({
     nodeKey: node.rpcPublicKey,
     bootstrap: testnet.bootstrap,
-    config: { chainId: 'hssn-gw-test', hello: 'frontier' },
+    config: { chainId: 'mordecai-gw-test', hello: 'frontier' },
   });
   base = `http://127.0.0.1:${gateway.port}`;
 }, 60_000);
@@ -87,9 +87,9 @@ afterAll(async () => {
 
 describe('HTTP gateway to node RPC', () => {
   it('serves the operator config and chain head', { timeout: 30_000 }, async () => {
-    expect(await api('/api/config')).toEqual({ chainId: 'hssn-gw-test', hello: 'frontier' });
+    expect(await api('/api/config')).toEqual({ chainId: 'mordecai-gw-test', hello: 'frontier' });
     const head = await api<{ chainId: string; height: string }>('/api/head');
-    expect(head.chainId).toBe('hssn-gw-test');
+    expect(head.chainId).toBe('mordecai-gw-test');
   });
 
   it('serves accounts and settles a browser-signed transfer', { timeout: 30_000 }, async () => {

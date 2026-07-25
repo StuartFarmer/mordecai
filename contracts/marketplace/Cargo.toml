@@ -2,10 +2,10 @@
 name = "marketplace"
 version = "0.1.0"
 edition = "2024"
-description = "HSSN marketplace contract: list, buy, cancel, relist (spec Phase 4 milestone)"
+description = "Mordecai marketplace contract: list, buy, cancel, relist (spec Phase 4 milestone)"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-hssn-contract = { path = "../runtime-rs" }
+mordecai-contract = { path = "../runtime-rs" }

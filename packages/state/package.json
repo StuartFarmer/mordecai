@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/state",
+  "name": "@mordecai/state",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/crypto": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
     "classic-level": "^3.0.0"
   }
 }

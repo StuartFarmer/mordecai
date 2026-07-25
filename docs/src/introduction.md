@@ -1,6 +1,6 @@
 # Introduction
 
-HSSN is a decentralized platform for peer-to-peer software. It combines two
+Mordecai is a decentralized platform for peer-to-peer software. It combines two
 independent systems:
 
 ```text

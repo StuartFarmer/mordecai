@@ -1,4 +1,4 @@
-# Holepunch Smart Settlement Network
+# Mordecai
 
 ## A Decentralized Operating System for Peer-to-Peer Applications
 

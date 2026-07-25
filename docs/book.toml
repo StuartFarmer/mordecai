@@ -1,5 +1,5 @@
 [book]
-title = "HSSN — Holepunch Smart Settlement Network"
+title = "Mordecai"
 description = "A decentralized platform for peer-to-peer applications: Holepunch networking + a minimal settlement chain. Architecture, SDK, smart contracts, the Pythonic DSL, and examples."
 authors = ["Stuart Farmer"]
 language = "en"

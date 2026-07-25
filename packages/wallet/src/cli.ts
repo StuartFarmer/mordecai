@@ -3,15 +3,15 @@ import { parseArgs } from 'node:util';
 import { createWallet, showAddress, signTransfer } from './commands.js';
 import { promptPassphrase } from './prompt.js';
 
-const USAGE = `hssn-wallet — Holepunch Smart Settlement Network wallet
+const USAGE = `mordecai-wallet — Mordecai wallet
 
 Usage:
-  hssn-wallet create   --keystore <path> [--force]
-  hssn-wallet address  --keystore <path>
-  hssn-wallet transfer --keystore <path> --to <address> --amount <n>
+  mordecai-wallet create   --keystore <path> [--force]
+  mordecai-wallet address  --keystore <path>
+  mordecai-wallet transfer --keystore <path> --to <address> --amount <n>
                        --nonce <n> --chain-id <id> [--max-fee <n>]
 
-The passphrase is read from --passphrase, HSSN_WALLET_PASSPHRASE, or an
+The passphrase is read from --passphrase, Mordecai_WALLET_PASSPHRASE, or an
 interactive prompt, in that order.
 `;
 
@@ -45,7 +45,7 @@ async function resolvePassphrase(
   confirm: boolean,
 ): Promise<string> {
   if (typeof values.passphrase === 'string') return values.passphrase;
-  const fromEnv = process.env.HSSN_WALLET_PASSPHRASE;
+  const fromEnv = process.env.Mordecai_WALLET_PASSPHRASE;
   if (fromEnv) return fromEnv;
   const passphrase = await promptPassphrase('Passphrase: ');
   if (confirm) {

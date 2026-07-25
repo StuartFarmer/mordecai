@@ -10,8 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import { Chain, contractIdFor } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -27,7 +27,7 @@ function toolchainAvailable(): boolean {
 }
 
 const enabled = toolchainAvailable();
-const CHAIN_ID = 'hssn-hex-e2e';
+const CHAIN_ID = 'mordecai-hex-e2e';
 const TIMEOUT_MS = 180_000n;
 const alice: KeyPair = keyPairFromSeed(generateSeed()); // creator, side 0 (top↔bottom)
 const bob: KeyPair = keyPairFromSeed(generateSeed()); // opponent, side 1 (left↔right)
@@ -123,12 +123,12 @@ async function readGame(id: bigint) {
 }
 
 function buildContract(name: string): Uint8Array {
-  const build = mkdtempSync(join(tmpdir(), `hssn-${name}-`));
+  const build = mkdtempSync(join(tmpdir(), `mordecai-${name}-`));
   dirs.push(build);
   execFileSync(
     'python3',
     [
-      join(repoRoot, 'compiler/hssnc'),
+      join(repoRoot, 'compiler/mordecaic'),
       'build',
       join(repoRoot, `compiler/examples/${name}.pysc`),
       '-o',
@@ -145,7 +145,7 @@ beforeAll(async () => {
   const hexWasm = buildContract('hex');
   const escrowWasm = buildContract('hex_escrow');
 
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-hex-chain-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-hex-chain-'));
   dirs.push(dir);
   chain = await Chain.open(dir, {
     chainId: CHAIN_ID,

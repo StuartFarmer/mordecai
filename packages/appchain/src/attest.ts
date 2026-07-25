@@ -1,11 +1,11 @@
-import { sign, verify, type KeyPair } from '@hssn/crypto';
+import { sign, verify, type KeyPair } from '@mordecai/crypto';
 import {
   anchorSigningBytes,
   type AnchorCall,
   type AnchorPayload,
   type AnchorSignature,
-} from '@hssn/protocol';
-import type { Chain } from '@hssn/chain';
+} from '@mordecai/protocol';
+import type { Chain } from '@mordecai/chain';
 
 /** The attested fields of an anchor plus the L1 it is destined for. */
 export interface Attestation {

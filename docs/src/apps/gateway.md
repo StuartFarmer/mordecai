@@ -2,7 +2,7 @@
 
 Browsers can't join HyperDHT — no UDP, no holepunching — so nothing in
 the network is reachable from a web page by itself. The gateway
-(`@hssn/gateway`) is the browser-facing edge: a small HTTP server any
+(`@mordecai/gateway`) is the browser-facing edge: a small HTTP server any
 node operator can run that translates JSON into hyperswarm RPC and
 serves a static frontend bundle.
 
@@ -20,7 +20,7 @@ GET  /api/contract/<id>/state[?prefix=<hex>]   contract storage entries
 Run one from code (`Gateway.start({...})`) or the CLI:
 
 ```sh
-hssn-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] \
+mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] \
              [--config <file.json>] [--bootstrap host:port,…]
 ```
 

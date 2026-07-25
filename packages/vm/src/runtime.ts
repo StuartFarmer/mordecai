@@ -118,7 +118,7 @@ interface RuntimeExports {
   fuel_used(): bigint;
 }
 
-const wasmPath = fileURLToPath(new URL('../wasm/hssn_vm_runtime.wasm', import.meta.url));
+const wasmPath = fileURLToPath(new URL('../wasm/mordecai_vm_runtime.wasm', import.meta.url));
 
 let cachedModule: WebAssembly.Module | undefined;
 

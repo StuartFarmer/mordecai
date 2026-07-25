@@ -2,10 +2,10 @@
 
 Every node serves RPC over **`@hyperswarm/rpc`**: clients dial the node's
 public key through the DHT — no host/port, works across NATs. The typed
-client is `NodeRpcClient` (`@hssn/rpc`); the SDK wraps it further.
+client is `NodeRpcClient` (`@mordecai/rpc`); the SDK wraps it further.
 
 ```ts
-import { NodeRpcClient } from '@hssn/rpc';
+import { NodeRpcClient } from '@mordecai/rpc';
 const rpc = NodeRpcClient.connect(nodeKeyBytes, { bootstrap });
 ```
 
@@ -41,7 +41,7 @@ client's `waitForTx(hash, {timeoutMs, intervalMs})` polls this.
 ### `get_block { height } → BlockInfo | null`
 
 Header fields plus the canonical encoded transactions (hex) — decode with
-`@hssn/protocol` if you need their contents.
+`@mordecai/protocol` if you need their contents.
 
 ### `get_app { appId } → AppInfo | null`
 

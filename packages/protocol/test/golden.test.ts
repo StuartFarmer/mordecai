@@ -4,7 +4,7 @@
  * treated as such (new domain versions / protocol version bump).
  *
  * Regenerate after an intentional format change with:
- *   UPDATE_VECTORS=1 pnpm --filter @hssn/protocol test
+ *   UPDATE_VECTORS=1 pnpm --filter @mordecai/protocol test
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -57,7 +57,7 @@ function computeVectors(): Record<string, string> {
     tx_update_app: hex(encodeTransaction(updateAppTx())),
     tx_anchor: hex(encodeTransaction(anchorTx())),
     tx_anchor_no_call: hex(encodeTransaction(anchorTxNoCall())),
-    anchor_signing: hex(anchorSigningBytes('hssn-dev-1', anchorBody())),
+    anchor_signing: hex(anchorSigningBytes('mordecai-dev-1', anchorBody())),
     block_header: hex(encodeBlockHeader(header())),
     block_header_signing: hex(blockHeaderSigningBytes(header())),
     block: hex(encodeBlock(block())),

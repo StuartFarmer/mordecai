@@ -2,8 +2,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { decodeAddress, interactiveKdfLimits } from '@hssn/crypto';
-import { decodeTransaction } from '@hssn/protocol';
+import { decodeAddress, interactiveKdfLimits } from '@mordecai/crypto';
+import { decodeTransaction } from '@mordecai/protocol';
 import { createWallet, showAddress, signTransfer } from '../src/index.js';
 import { verifyTransactionSignature } from '../src/wallet.js';
 
@@ -12,7 +12,7 @@ let dir: string;
 let keystorePath: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'hssn-wallet-test-'));
+  dir = mkdtempSync(join(tmpdir(), 'mordecai-wallet-test-'));
   keystorePath = join(dir, 'keys', 'wallet.json');
 });
 
@@ -53,7 +53,7 @@ describe('wallet commands', () => {
       to: recipient.address,
       amount: 12_345n,
       nonce: 0n,
-      chainId: 'hssn-dev-1',
+      chainId: 'mordecai-dev-1',
       maxFee: 100n,
     });
 
@@ -78,7 +78,7 @@ describe('wallet commands', () => {
         to: showAddress(keystorePath),
         amount: 1n,
         nonce: 0n,
-        chainId: 'hssn-dev-1',
+        chainId: 'mordecai-dev-1',
         maxFee: 100n,
       }),
     ).toThrow(/passphrase/);

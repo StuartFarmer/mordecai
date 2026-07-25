@@ -1,7 +1,7 @@
 /**
  * The cross-chain goods market (outpost demo): L1 currency buys in-game
  * items with no bridge. One wallet identity acts on both chains — the
- * buyer's key escrows HSSN on L1 and receives wood in the game; the
+ * buyer's key escrows CAI on L1 and receives wood in the game; the
  * seller's key hands over wood in the game and is paid on L1 by the
  * anchored settle call.
  */
@@ -11,20 +11,20 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { appAddress, contractIdFor } from '@hssn/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { appAddress, contractIdFor } from '@mordecai/chain';
 import {
   encodeTransaction,
   transactionSigningBytes,
   type Payload,
   type Transaction,
-} from '@hssn/protocol';
-import { Node } from '@hssn/node';
-import { NodeRpcClient } from '@hssn/rpc';
+} from '@mordecai/protocol';
+import { Node } from '@mordecai/node';
+import { NodeRpcClient } from '@mordecai/rpc';
 import { AnchorDaemon, AppChain } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const L1_CHAIN = 'hssn-market-test';
+const L1_CHAIN = 'mordecai-market-test';
 const APP = 'com.example.outpost';
 const PRICE = 400_000n;
 
@@ -109,7 +109,7 @@ beforeAll(async () => {
   testnet = await createTestnet(3);
 
   l1 = await Node.start({
-    dir: tmp('hssn-market-l1-'),
+    dir: tmp('mordecai-market-l1-'),
     genesis: {
       chainId: L1_CHAIN,
       validators: [encodeAddress(l1Validator.publicKey)],
@@ -159,13 +159,13 @@ beforeAll(async () => {
   );
   [chainA, chainB] = await Promise.all([
     AppChain.join(l1Rpc, APP, {
-      dir: tmp('hssn-market-a-'),
+      dir: tmp('mordecai-market-a-'),
       keyPair: alice,
       bootstrap: testnet.bootstrap,
       blockIntervalMs: 100,
     }),
     AppChain.join(l1Rpc, APP, {
-      dir: tmp('hssn-market-b-'),
+      dir: tmp('mordecai-market-b-'),
       keyPair: bob,
       bootstrap: testnet.bootstrap,
       blockIntervalMs: 100,
@@ -206,7 +206,7 @@ afterAll(async () => {
 }, 120_000);
 
 describe('L1 currency for in-game goods, no bridge', () => {
-  it('bob escrows HSSN on L1 for wood that only exists in the game', async () => {
+  it('bob escrows CAI on L1 for wood that only exists in the game', async () => {
     const before = await balance(bob);
     const receipt = await submit(
       l1Rpc,

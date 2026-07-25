@@ -1,5 +1,5 @@
-import { encodeAddress } from '@hssn/crypto';
-import type { Genesis } from '@hssn/chain';
+import { encodeAddress } from '@mordecai/crypto';
+import type { Genesis } from '@mordecai/chain';
 
 /**
  * Fee float allocated to every app-chain validator at genesis. App-chain

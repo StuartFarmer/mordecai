@@ -55,13 +55,15 @@ describe('transaction encoding', () => {
     const base = transactionSigningBytes(transferTx());
     expect(transactionSigningBytes({ ...transferTx(), nonce: 8n })).not.toEqual(base);
     expect(transactionSigningBytes({ ...transferTx(), maxFee: 1_001n })).not.toEqual(base);
-    expect(transactionSigningBytes({ ...transferTx(), chainId: 'hssn-dev-2' })).not.toEqual(base);
+    expect(transactionSigningBytes({ ...transferTx(), chainId: 'mordecai-dev-2' })).not.toEqual(
+      base,
+    );
   });
 
   it('rejects unknown payload tags', () => {
     const bytes = encodeTransaction(transferTx());
-    // Payload tag sits right after chainId (4+10), nonce (8), sender (32), maxFee (8).
-    const tagOffset = 4 + 10 + 8 + 32 + 8;
+    // Payload tag sits right after chainId (4 + len), nonce (8), sender (32), maxFee (8).
+    const tagOffset = 4 + Buffer.byteLength(transferTx().chainId) + 8 + 32 + 8;
     expect(bytes[tagOffset]).toBe(1);
     bytes[tagOffset] = 99;
     expect(() => decodeTransaction(bytes)).toThrow(/unknown payload tag/);
@@ -135,7 +137,7 @@ describe('anchor signing bytes', () => {
     const { kind: _kind, signatures: _sigs, ...body } = anchorTx().payload as AnchorPayload;
     return body;
   };
-  const base = () => anchorSigningBytes('hssn-dev-1', payload());
+  const base = () => anchorSigningBytes('mordecai-dev-1', payload());
 
   it('is domain separated', () => {
     const prefix = new TextDecoder().decode(base().subarray(0, DOMAIN_ANCHOR.length));
@@ -143,19 +145,21 @@ describe('anchor signing bytes', () => {
   });
 
   it('binds every attested field', () => {
-    expect(anchorSigningBytes('hssn-dev-2', payload())).not.toEqual(base());
-    expect(anchorSigningBytes('hssn-dev-1', { ...payload(), appId: 'other' })).not.toEqual(base());
-    expect(anchorSigningBytes('hssn-dev-1', { ...payload(), epoch: 5n })).not.toEqual(base());
-    expect(anchorSigningBytes('hssn-dev-1', { ...payload(), appHeight: 1_025n })).not.toEqual(
+    expect(anchorSigningBytes('mordecai-dev-2', payload())).not.toEqual(base());
+    expect(anchorSigningBytes('mordecai-dev-1', { ...payload(), appId: 'other' })).not.toEqual(
+      base(),
+    );
+    expect(anchorSigningBytes('mordecai-dev-1', { ...payload(), epoch: 5n })).not.toEqual(base());
+    expect(anchorSigningBytes('mordecai-dev-1', { ...payload(), appHeight: 1_025n })).not.toEqual(
       base(),
     );
     expect(
-      anchorSigningBytes('hssn-dev-1', { ...payload(), stateRoot: fill(32, 0x5b) }),
+      anchorSigningBytes('mordecai-dev-1', { ...payload(), stateRoot: fill(32, 0x5b) }),
     ).not.toEqual(base());
     const { call: _call, ...noCall } = payload();
-    expect(anchorSigningBytes('hssn-dev-1', noCall)).not.toEqual(base());
+    expect(anchorSigningBytes('mordecai-dev-1', noCall)).not.toEqual(base());
     expect(
-      anchorSigningBytes('hssn-dev-1', {
+      anchorSigningBytes('mordecai-dev-1', {
         ...payload(),
         call: { ...payload().call!, action: 'refund' },
       }),
@@ -164,7 +168,7 @@ describe('anchor signing bytes', () => {
 
   it('excludes the signature set', () => {
     // Same body, different signature count → identical preimage.
-    const bytes = anchorSigningBytes('hssn-dev-1', payload());
+    const bytes = anchorSigningBytes('mordecai-dev-1', payload());
     expect(bytes).toEqual(base());
   });
 });

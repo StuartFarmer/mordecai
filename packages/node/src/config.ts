@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { encodeAddress, generateSeed, keyPairFromSeed, type KeyPair } from '@hssn/crypto';
-import { genesisToJson, parseGenesisJson, type Genesis } from '@hssn/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, type KeyPair } from '@mordecai/crypto';
+import { genesisToJson, parseGenesisJson, type Genesis } from '@mordecai/chain';
 
 export interface InitOptions {
   dir: string;

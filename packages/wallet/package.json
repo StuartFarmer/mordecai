@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/wallet",
+  "name": "@mordecai/wallet",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     }
   },
   "bin": {
-    "hssn-wallet": "./dist/cli.js"
+    "mordecai-wallet": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -21,7 +21,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/crypto": "workspace:*",
-    "@hssn/protocol": "workspace:*"
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*"
   }
 }

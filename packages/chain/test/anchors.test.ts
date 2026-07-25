@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
 import {
   anchorSigningBytes,
   transactionSigningBytes,
@@ -17,11 +17,11 @@ import {
   type AnchorSignature,
   type Payload,
   type Transaction,
-} from '@hssn/protocol';
+} from '@mordecai/protocol';
 import { Chain, anchorQuorum, appAddress, contractIdFor } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const CHAIN_ID = 'hssn-anchor-test';
+const CHAIN_ID = 'mordecai-anchor-test';
 const APP = 'com.example.game';
 
 const owner: KeyPair = keyPairFromSeed(generateSeed());
@@ -87,7 +87,7 @@ function registerPayload(appId: string, keys: KeyPair[]): Payload {
 }
 
 beforeAll(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'hssn-anchor-'));
+  dir = mkdtempSync(join(tmpdir(), 'mordecai-anchor-'));
   chain = await Chain.open(dir, {
     chainId: CHAIN_ID,
     validators: [encodeAddress(val.publicKey)],

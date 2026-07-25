@@ -1,4 +1,4 @@
-import { blake2b256 } from '@hssn/crypto';
+import { blake2b256 } from '@mordecai/crypto';
 
 export const EMPTY_ROOT = new Uint8Array(32);
 

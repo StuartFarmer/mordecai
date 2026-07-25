@@ -4,7 +4,7 @@
  * goods market on L1, one wallet identity across both, settlement via
  * anchored outcome calls (app-chains spec).
  *
- *   pnpm build && pnpm --filter @hssn/example-outpost-web build
+ *   pnpm build && pnpm --filter @mordecai/example-outpost-web build
  *   node scripts/outpost-demo.mjs
  *
  * Starts: 3-validator L1 devnet · goods_market on L1 · a 2-validator app
@@ -33,7 +33,7 @@ import { Gateway } from '../packages/gateway/dist/index.js';
 import { AnchorDaemon, AppChain } from '../packages/appchain/dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const l1ChainId = 'hssn-outpost-devnet';
+const l1ChainId = 'mordecai-outpost-devnet';
 const APP = 'com.example.outpost';
 const L1_PORT = Number(process.env.PORT ?? 8787);
 const APP_PORT = L1_PORT + 1;
@@ -70,7 +70,7 @@ const genesis = {
     { address: encodeAddress(relayer.publicKey), balance: 100_000_000n },
   ],
 };
-const base = mkdtempSync(join(tmpdir(), 'hssn-outpost-demo-'));
+const base = mkdtempSync(join(tmpdir(), 'mordecai-outpost-demo-'));
 const nodes = [];
 for (const [i, keyPair] of validators.entries()) {
   nodes.push(

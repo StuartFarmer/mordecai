@@ -3,12 +3,12 @@
 All CLIs live in package `dist/` directories after `pnpm build` (or via the
 package `bin` entries). Examples below use `node <path>` form.
 
-## `hssn-node` (`packages/node/dist/cli.js`)
+## `mordecai-node` (`packages/node/dist/cli.js`)
 
 ```sh
-hssn-node init  --dir <path> [--chain-id <id>] \
+mordecai-node init  --dir <path> [--chain-id <id>] \
                 [--alloc <address>=<amount>]... [--validator <address>]...
-hssn-node start --dir <path> [--block-interval <ms>] [--bootstrap host:port,...]
+mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap host:port,...]
 ```
 
 `init` generates a node key (plaintext seed in `node.key` — an operational
@@ -18,24 +18,24 @@ mode). With **more than one genesis validator, `start` runs BFT consensus
 automatically**; with one, the M3 sequencer loop. `start` prints the RPC
 key that wallets/SDKs dial.
 
-## `hssn-wallet` (`packages/wallet/dist/cli.js`)
+## `mordecai-wallet` (`packages/wallet/dist/cli.js`)
 
 ```sh
-hssn-wallet create   --keystore <path> [--force]
-hssn-wallet address  --keystore <path>
-hssn-wallet transfer --keystore <path> --to <address> --amount <n> \
+mordecai-wallet create   --keystore <path> [--force]
+mordecai-wallet address  --keystore <path>
+mordecai-wallet transfer --keystore <path> --to <address> --amount <n> \
                      --nonce <n> --chain-id <id> [--max-fee <n>]
 ```
 
-The passphrase comes from `--passphrase`, `HSSN_WALLET_PASSPHRASE`, or a
+The passphrase comes from `--passphrase`, `Mordecai_WALLET_PASSPHRASE`, or a
 hidden prompt. `create` prints the address and the 24-word mnemonic (write
 it down — it is the only backup). `transfer` prints the signed canonical
 transaction as hex plus its hash, ready for `submit_tx`.
 
-## `hssn-launcher` (`packages/sdk/dist/launcher-cli.js`)
+## `mordecai-launcher` (`packages/sdk/dist/launcher-cli.js`)
 
 ```sh
-hssn-launcher install <appId> --node <rpc-key-hex> --out <dir> \
+mordecai-launcher install <appId> --node <rpc-key-hex> --out <dir> \
                       [--bootstrap host:port,...]
 ```
 
@@ -43,11 +43,11 @@ Registry lookup → swarm fetch → **verify against the on-chain hash** →
 write `bundle.bin` + `app.json` (the registry entry) into `--out`. Refuses
 on any hash mismatch.
 
-## `hssnc` (`compiler/hssnc`, Python 3)
+## `mordecaic` (`compiler/mordecaic`, Python 3)
 
 ```sh
-./compiler/hssnc check <contract.pysc>
-./compiler/hssnc build <contract.pysc> -o <dir> [--wasm] [--runtime-path <p>]
+./compiler/mordecaic check <contract.pysc>
+./compiler/mordecaic build <contract.pysc> -o <dir> [--wasm] [--runtime-path <p>]
 ```
 
 See the [DSL reference](../contracts/dsl-reference.md).

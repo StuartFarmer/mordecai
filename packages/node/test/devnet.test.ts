@@ -3,14 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Genesis } from '@hssn/chain';
-import { encodeAddress, generateSeed, keyPairFromSeed } from '@hssn/crypto';
-import { encodeTransaction } from '@hssn/protocol';
-import { NodeRpcClient } from '@hssn/rpc';
-import { Wallet } from '@hssn/wallet';
+import type { Genesis } from '@mordecai/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed } from '@mordecai/crypto';
+import { encodeTransaction } from '@mordecai/protocol';
+import { NodeRpcClient } from '@mordecai/rpc';
+import { Wallet } from '@mordecai/wallet';
 import { Node } from '../src/node.js';
 
-const CHAIN_ID = 'hssn-devnet-test';
+const CHAIN_ID = 'mordecai-devnet-test';
 const validatorKeys = [0, 1, 2].map(() => keyPairFromSeed(generateSeed()));
 const { wallet: alice } = Wallet.create();
 const { wallet: bob } = Wallet.create();
@@ -29,7 +29,7 @@ let client: NodeRpcClient;
 beforeAll(async () => {
   testnet = await createTestnet(3);
   for (const keyPair of validatorKeys) {
-    const dir = mkdtempSync(join(tmpdir(), 'hssn-devnet-'));
+    const dir = mkdtempSync(join(tmpdir(), 'mordecai-devnet-'));
     dirs.push(dir);
     nodes.push(
       await Node.start({

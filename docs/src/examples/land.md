@@ -55,7 +55,7 @@ contract Land:
 
 ## Where it runs in CI
 
-`packages/chain/test/dsl-e2e.test.ts` compiles this file with `hssnc`
+`packages/chain/test/dsl-e2e.test.ts` compiles this file with `mordecaic`
 (when a Rust/Python toolchain is present), deploys the result, and asserts
 the require messages, the one-shot `init`, and the height-driven harvest
 behavior against a real chain — the spec Phase 7 milestone, executed on

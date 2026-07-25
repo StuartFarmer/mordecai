@@ -10,14 +10,14 @@ import {
   verify,
   type KdfLimits,
   type Keystore,
-} from '@hssn/crypto';
+} from '@mordecai/crypto';
 import {
   encodeTransaction,
   transactionSigningBytes,
   type Payload,
   type Transaction,
   type UnsignedTransaction,
-} from '@hssn/protocol';
+} from '@mordecai/protocol';
 
 export interface NewWallet {
   wallet: Wallet;
@@ -35,7 +35,7 @@ export interface SignParams {
 /**
  * What applications program against: something that can identify itself
  * and sign. The Wallet implements it directly; Pear apps get a
- * permission-scoped WalletSession (@hssn/pear-integration) instead.
+ * permission-scoped WalletSession (@mordecai/pear-integration) instead.
  */
 export interface Signer {
   readonly address: string;

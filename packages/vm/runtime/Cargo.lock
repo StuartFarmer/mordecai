@@ -53,7 +53,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hssn_vm_runtime"
+name = "mordecai_vm_runtime"
 version = "0.1.0"
 dependencies = [
  "wasmi",

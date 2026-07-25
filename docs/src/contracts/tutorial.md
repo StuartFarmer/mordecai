@@ -112,8 +112,8 @@ complete shipped contract.
 ## 5. Compile, deploy, drive it
 
 ```sh
-./compiler/hssnc check  compiler/examples/chess_wager.pysc
-./compiler/hssnc build  compiler/examples/chess_wager.pysc -o build/wager --wasm
+./compiler/mordecaic check  compiler/examples/chess_wager.pysc
+./compiler/mordecaic build  compiler/examples/chess_wager.pysc -o build/wager --wasm
 ```
 
 ```ts

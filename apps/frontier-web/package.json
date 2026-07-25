@@ -1,16 +1,16 @@
 {
-  "name": "@hssn/example-frontier-web",
+  "name": "@mordecai/example-frontier-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Frontier example web client (ported from mordecai): plays the frontier contract through an HSSN gateway",
+  "description": "Frontier example web client (ported from the original CosmWasm mordecai): plays the frontier contract through a Mordecai gateway",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hssn/protocol": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
     "@noble/curves": "^1.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

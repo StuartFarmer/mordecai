@@ -1,8 +1,8 @@
-import { blake2b256, decodeAddress } from '@hssn/crypto';
-import { Feed, Network } from '@hssn/networking';
-import { DOMAIN_APP_SENDER, encodeTransaction, type Payload } from '@hssn/protocol';
-import { NodeRpcClient, type AccountInfo, type AppInfo, type TxInfo } from '@hssn/rpc';
-import type { Signer } from '@hssn/wallet';
+import { blake2b256, decodeAddress } from '@mordecai/crypto';
+import { Feed, Network } from '@mordecai/networking';
+import { DOMAIN_APP_SENDER, encodeTransaction, type Payload } from '@mordecai/protocol';
+import { NodeRpcClient, type AccountInfo, type AppInfo, type TxInfo } from '@mordecai/rpc';
+import type { Signer } from '@mordecai/wallet';
 
 export interface SdkOptions {
   wallet: Signer;
@@ -25,7 +25,7 @@ export interface InstalledApp {
 /**
  * The L1 sender address of an app's anchored outcome calls (app-chains
  * spec §2.1). Contracts gate on it with `require(sender == config.game)`.
- * Matches `appAddress` in @hssn/chain; kept dependency-light here so the
+ * Matches `appAddress` in @mordecai/chain; kept dependency-light here so the
  * SDK stays Bare-compatible (no node/storage imports).
  */
 export function appAddress(appId: string): Uint8Array {
@@ -37,7 +37,7 @@ export function appAddress(appId: string): Uint8Array {
  * payments, contracts, registry install, and replicated shared state,
  * without running any infrastructure of its own.
  */
-export class Hssn {
+export class Mordecai {
   private constructor(
     readonly wallet: Signer,
     readonly network: Network,
@@ -46,7 +46,7 @@ export class Hssn {
     private readonly defaultMaxFee: bigint,
   ) {}
 
-  static connect(options: SdkOptions): Hssn {
+  static connect(options: SdkOptions): Mordecai {
     const network = Network.create({
       storageDir: options.storageDir,
       ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
@@ -55,7 +55,7 @@ export class Hssn {
       options.nodeKey,
       options.bootstrap ? { bootstrap: options.bootstrap } : {},
     );
-    return new Hssn(
+    return new Mordecai(
       options.wallet,
       network,
       rpc,

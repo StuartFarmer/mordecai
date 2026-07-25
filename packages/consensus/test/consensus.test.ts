@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Chain, Mempool, genesisHash, type Genesis } from '@hssn/chain';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Transaction } from '@hssn/protocol';
+import { Chain, Mempool, genesisHash, type Genesis } from '@mordecai/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Transaction } from '@mordecai/protocol';
 import { ConsensusEngine, PeerHub } from '../src/index.js';
 
-const CHAIN_ID = 'hssn-consensus-test';
+const CHAIN_ID = 'mordecai-consensus-test';
 const kp = (): KeyPair => keyPairFromSeed(generateSeed());
 
 const alice = kp();
@@ -34,7 +34,7 @@ const dirs: string[] = [];
 const nodes: TestNode[] = [];
 
 async function makeNode(keyPair: KeyPair): Promise<TestNode> {
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-consensus-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-consensus-'));
   dirs.push(dir);
   const chain = await Chain.open(dir, genesis);
   const mempool = new Mempool(chain);

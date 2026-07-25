@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { interactiveKdfLimits, verify } from '@hssn/crypto';
-import { decodeTransaction, encodeTransaction, transactionSigningBytes } from '@hssn/protocol';
+import { interactiveKdfLimits, verify } from '@mordecai/crypto';
+import { decodeTransaction, encodeTransaction, transactionSigningBytes } from '@mordecai/protocol';
 import { Wallet, transactionHash, verifyTransactionSignature } from '../src/index.js';
 
-const CHAIN_ID = 'hssn-dev-1';
+const CHAIN_ID = 'mordecai-dev-1';
 
 function signedTransfer(wallet: Wallet, amount = 500n) {
   const { wallet: recipient } = Wallet.create();

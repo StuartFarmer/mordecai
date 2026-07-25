@@ -7,14 +7,14 @@ one key serves as: the wallet (signs transactions), the feed owner (signs
 shared state), and the login (signs app challenges). The address is the
 z32-encoded public key.
 
-`@hssn/wallet` manages keys:
+`@mordecai/wallet` manages keys:
 
 - `Wallet.create()` → wallet + a 24-word BIP39 mnemonic (the only backup —
   shown once, never stored).
 - Keystore files encrypt the seed with argon2id + XChaCha20-Poly1305; the
   address is stored in the clear so tools can display it without the
   passphrase.
-- `hssn-wallet` CLI: `create`, `address`, `transfer` (see
+- `mordecai-wallet` CLI: `create`, `address`, `transfer` (see
   [CLI Tools](../reference/cli.md)).
 
 ## The Signer boundary
@@ -34,14 +34,14 @@ A local `Wallet` implements it directly (fine for tools and tests). Real
 apps get a **`RemoteSigner`** instead — a proxy whose keys live in another
 process.
 
-## The wallet daemon (`@hssn/pear-integration`)
+## The wallet daemon (`@mordecai/pear-integration`)
 
 The threat model's rule is _auto-authenticate must never mean auto-sign_,
 and it is enforced by a process boundary:
 
 ```text
 ┌────────────── app process ──────────────┐   ┌────────── wallet daemon ─────────┐
-│ Hssn.connect({ wallet: remoteSigner })  │──▶│ WalletDaemon                      │
+│ Mordecai.connect({ wallet: remoteSigner })  │──▶│ WalletDaemon                      │
 │ RemoteSigner (no key material)          │IPC│  · unlocked Wallet (the keys)     │
 └─────────────────────────────────────────┘   │  · per-app SessionGrant           │
                                               │  · allowance meter                │
@@ -59,7 +59,7 @@ const daemon = await WalletDaemon.start({
 
 // app side
 const signer = await RemoteSigner.connect(daemon.publicKey, 'com.example.chess');
-const app = Hssn.connect({ wallet: signer, ... });
+const app = Mordecai.connect({ wallet: signer, ... });
 ```
 
 Enforcement is entirely daemon-side:

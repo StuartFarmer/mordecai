@@ -13,7 +13,7 @@ Against the spec's phased roadmap (SPEC_PT_03 §27):
 | 4 Smart contracts          | ✅ wasmi-in-wasm VM, marketplace contract                   |
 | 5 Application registry     | ✅ on-chain registry + verified install                     |
 | 6 Pear runtime integration | ✅ SDK, wallet daemon + RemoteSigner (shell UI pending)     |
-| 7 Pythonic DSL             | ✅ hssnc: parse → verify → Rust → wasm32                    |
+| 7 Pythonic DSL             | ✅ mordecaic: parse → verify → Rust → wasm32                |
 | 8 Example applications     | ◐ chess shipped; marketplace/reddit/AI/wiki pending         |
 | 9 Economic primitives      | ◐ escrow + marketplace as patterns; no reusable library yet |
 | 10 Platform ecosystem      | ◐ CLIs + this book; explorer/package manager pending        |

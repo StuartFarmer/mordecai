@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/chain",
+  "name": "@mordecai/chain",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,9 +18,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/crypto": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/state": "workspace:*",
-    "@hssn/vm": "workspace:*"
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/state": "workspace:*",
+    "@mordecai/vm": "workspace:*"
   }
 }

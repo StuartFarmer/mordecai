@@ -14,7 +14,10 @@ let bob: Network;
 
 beforeAll(async () => {
   testnet = await createTestnet(3);
-  dirs = [mkdtempSync(join(tmpdir(), 'hssn-net-a-')), mkdtempSync(join(tmpdir(), 'hssn-net-b-'))];
+  dirs = [
+    mkdtempSync(join(tmpdir(), 'mordecai-net-a-')),
+    mkdtempSync(join(tmpdir(), 'mordecai-net-b-')),
+  ];
   alice = Network.create({ storageDir: dirs[0]!, bootstrap: testnet.bootstrap });
   bob = Network.create({ storageDir: dirs[1]!, bootstrap: testnet.bootstrap });
 }, 60_000);

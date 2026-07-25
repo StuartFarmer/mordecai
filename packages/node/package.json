@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/node",
+  "name": "@mordecai/node",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     }
   },
   "bin": {
-    "hssn-node": "./dist/cli.js"
+    "mordecai-node": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -21,14 +21,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/chain": "workspace:*",
-    "@hssn/consensus": "workspace:*",
-    "@hssn/crypto": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/rpc": "workspace:*"
+    "@mordecai/chain": "workspace:*",
+    "@mordecai/consensus": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@hssn/wallet": "workspace:*",
+    "@mordecai/wallet": "workspace:*",
     "hyperdht": "^6.32.0"
   }
 }

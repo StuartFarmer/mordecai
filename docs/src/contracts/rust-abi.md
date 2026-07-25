@@ -2,13 +2,13 @@
 
 The DSL is a frontend; the actual contract interface is a small WASM ABI
 that any language can target. Rust contracts use the
-`hssn-contract` crate (`contracts/runtime-rs`) — the shipped `counter` and
+`mordecai-contract` crate (`contracts/runtime-rs`) — the shipped `counter` and
 `marketplace` contracts are written this way.
 
 ## Shape of a contract
 
 ```rust
-use hssn_contract as c;
+use mordecai_contract as c;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn buy() -> i32 {          // one export per action
@@ -30,7 +30,7 @@ Compile with `crate-type = ["cdylib"]` to `wasm32-unknown-unknown`
 export its memory (Rust cdylibs do by default) and import nothing beyond
 the ABI below — validation enforces this at deploy.
 
-## The `hssn-contract` API
+## The `mordecai-contract` API
 
 | Function                                         | Meaning                                           |
 | ------------------------------------------------ | ------------------------------------------------- |
@@ -67,7 +67,7 @@ Hand-written Rust must self-enforce what the DSL compiler guarantees:
 
 ## Testing without a chain
 
-`@hssn/vm` executes a module directly against an in-memory host — see
+`@mordecai/vm` executes a module directly against an in-memory host — see
 `packages/vm/test/vm.test.ts` for the pattern (map-backed storage, captured
 events, fuel assertions). Full-chain tests deploy through a real `Chain`
 as in `packages/chain/test/contracts.test.ts`.

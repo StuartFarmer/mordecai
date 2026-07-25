@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize } from 'node:path';
-import { NodeRpcClient } from '@hssn/rpc';
+import { NodeRpcClient } from '@mordecai/rpc';
 
 /**
  * Browser-facing edge of the network (web tier of the frontend-flow design):

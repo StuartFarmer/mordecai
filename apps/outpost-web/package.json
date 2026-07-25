@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/example-outpost-web",
+  "name": "@mordecai/example-outpost-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hssn/protocol": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
     "@noble/curves": "^1.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

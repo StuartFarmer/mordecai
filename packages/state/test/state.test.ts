@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 function levelStore(): LevelStore {
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-state-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-state-'));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   return new LevelStore(dir);
 }

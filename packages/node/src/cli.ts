@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { encodeAddress } from '@hssn/crypto';
+import { encodeAddress } from '@mordecai/crypto';
 import { initNodeDir, loadNodeDir } from './config.js';
 import { Node } from './node.js';
 
-const USAGE = `hssn-node — Holepunch Smart Settlement Network node
+const USAGE = `mordecai-node — Mordecai node
 
 Usage:
-  hssn-node init  --dir <path> [--chain-id <id>] [--alloc <address>=<amount>]...
+  mordecai-node init  --dir <path> [--chain-id <id>] [--alloc <address>=<amount>]...
                   [--validator <address>]...
-  hssn-node start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
+  mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
 
 init creates a node key and genesis.json (this node is the default validator).
 start runs the sequencer and serves RPC on the node's public key.
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     args: rest,
     options: {
       dir: { type: 'string' },
-      'chain-id': { type: 'string', default: 'hssn-dev-1' },
+      'chain-id': { type: 'string', default: 'mordecai-dev-1' },
       alloc: { type: 'string', multiple: true, default: [] },
       validator: { type: 'string', multiple: true, default: [] },
       'block-interval': { type: 'string', default: '500' },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { verify } from '@hssn/crypto';
-import { transactionSigningBytes } from '@hssn/protocol';
-import { Wallet } from '@hssn/wallet';
+import { verify } from '@mordecai/crypto';
+import { transactionSigningBytes } from '@mordecai/protocol';
+import { Wallet } from '@mordecai/wallet';
 import { PermissionDeniedError, WalletSession, type ApprovalRequest } from '../src/index.js';
 
 const { wallet } = Wallet.create();

@@ -22,8 +22,8 @@ with. It follows the security boundaries in SPEC_PT_03 §26.
 
 Every state transition is a signed transaction. Nothing unsigned is accepted.
 
-- Signing preimages are domain-separated (`hssn:tx:v1`, `hssn:block:v1`,
-  `hssn:vote:v1`) so bytes signed for one purpose can never validate as
+- Signing preimages are domain-separated (`mordecai:tx:v1`, `mordecai:block:v1`,
+  `mordecai:vote:v1`) so bytes signed for one purpose can never validate as
   another.
 - `chain_id` in every signed message prevents cross-network replay; per-sender
   nonces prevent same-network replay.

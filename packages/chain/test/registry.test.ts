@@ -9,11 +9,11 @@ import {
   keyPairFromSeed,
   sign,
   type KeyPair,
-} from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+} from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import { Chain, type Genesis } from '../src/index.js';
 
-const CHAIN_ID = 'hssn-registry-test';
+const CHAIN_ID = 'mordecai-registry-test';
 const cleanups: (() => Promise<void> | void)[] = [];
 
 afterEach(async () => {
@@ -26,7 +26,7 @@ const other = kp();
 const val = kp();
 
 async function openChain(): Promise<Chain> {
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-registry-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-registry-'));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const genesis: Genesis = {
     chainId: CHAIN_ID,

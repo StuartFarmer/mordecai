@@ -1,8 +1,8 @@
 import RPC from '@hyperswarm/rpc';
-import type { KeyPair } from '@hssn/crypto';
-import type { AnchorSignature } from '@hssn/protocol';
-import type { NodeRpcServer } from '@hssn/rpc';
-import type { Chain } from '@hssn/chain';
+import type { KeyPair } from '@mordecai/crypto';
+import type { AnchorSignature } from '@mordecai/protocol';
+import type { NodeRpcServer } from '@mordecai/rpc';
+import type { Chain } from '@mordecai/chain';
 import {
   decodeAttestation,
   encodeAttestation,

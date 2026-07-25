@@ -1,7 +1,7 @@
 [package]
-name = "hssn-contract"
+name = "mordecai-contract"
 version = "0.1.0"
 edition = "2024"
-description = "Contract-side ABI bindings for HSSN WASM contracts"
+description = "Contract-side ABI bindings for Mordecai WASM contracts"
 
 [lib]

@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/vm",
+  "name": "@mordecai/vm",
   "version": "0.1.0",
   "private": true,
   "type": "module",

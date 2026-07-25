@@ -1,13 +1,13 @@
 # The Contract VM
 
 Contract execution must be **bit-identical on every validator** — any
-divergence forks the chain. HSSN gets this with an unusual but simple
+divergence forks the chain. Mordecai gets this with an unusual but simple
 construction: **the wasmi interpreter, itself compiled to WebAssembly,
 running inside the node's JS engine.**
 
 ```text
 V8 (node process)
- └─ hssn_vm_runtime.wasm        ← wasmi interpreter + validation (Rust)
+ └─ mordecai_vm_runtime.wasm        ← wasmi interpreter + validation (Rust)
      └─ contract.wasm           ← the contract, INTERPRETED by wasmi
           imports "env.*"  → bridged to →  "host.*" → JS state overlay
 ```

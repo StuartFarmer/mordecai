@@ -34,7 +34,7 @@ address and RPC keys.
 ## 2. Create a wallet and move money
 
 ```sh
-export HSSN_WALLET_PASSPHRASE=dev
+export Mordecai_WALLET_PASSPHRASE=dev
 node packages/wallet/dist/cli.js create --keystore alice.json
 node packages/wallet/dist/cli.js address --keystore alice.json
 ```
@@ -44,7 +44,7 @@ Sign a transfer (the CLI prints the canonical signed transaction as hex):
 ```sh
 node packages/wallet/dist/cli.js transfer \
   --keystore alice.json --to <address> --amount 1000 \
-  --nonce 0 --chain-id hssn-devnet
+  --nonce 0 --chain-id mordecai-devnet
 ```
 
 Programmatic submission goes through the SDK (next step) or the RPC client;
@@ -53,15 +53,15 @@ see [CLI Tools](reference/cli.md) for the full command reference.
 ## 3. Talk to the chain from code
 
 ```js
-import { Hssn } from '@hssn/sdk';
-import { Wallet } from '@hssn/wallet';
+import { Mordecai } from '@mordecai/sdk';
+import { Wallet } from '@mordecai/wallet';
 
 const { wallet, mnemonic } = Wallet.create(); // or Wallet.fromMnemonic(faucet)
-const app = Hssn.connect({
+const app = Mordecai.connect({
   wallet,
   nodeKey: Buffer.from('<rpc key hex>', 'hex'),
   storageDir: './app-data',
-  chainId: 'hssn-devnet',
+  chainId: 'mordecai-devnet',
   bootstrap: [{ host: '127.0.0.1', port: 49737 }],
 });
 
@@ -72,8 +72,8 @@ console.log(receipt.success, receipt.height); // finalized, with block height
 ## 4. Deploy a contract written in Python-like DSL
 
 ```sh
-./compiler/hssnc check compiler/examples/chess_wager.pysc
-./compiler/hssnc build compiler/examples/chess_wager.pysc -o build/wager --wasm
+./compiler/mordecaic check compiler/examples/chess_wager.pysc
+./compiler/mordecaic build compiler/examples/chess_wager.pysc -o build/wager --wasm
 ```
 
 ```js

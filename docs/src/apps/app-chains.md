@@ -1,6 +1,6 @@
 # How-To: Run Your App on Its Own Chain
 
-This walks through the whole app-chain lifecycle with `@hssn/appchain`:
+This walks through the whole app-chain lifecycle with `@mordecai/appchain`:
 register, join, play, anchor, settle. The finished version of every step
 is `packages/appchain/test/market.test.ts` and `scripts/outpost-demo.mjs`.
 
@@ -19,7 +19,7 @@ The registry entry is the root of trust. For a match or guild world, the
 validators are simply the players' wallet keys:
 
 ```ts
-await hssn.publishApp({
+await mordecai.publishApp({
   appId: 'com.example.outpost',
   version: '1.0.0',
   bundle,
@@ -35,7 +35,7 @@ set at execution time judges each anchor.
 Every peer derives the same genesis from the registry entry alone:
 
 ```ts
-import { AppChain } from '@hssn/appchain';
+import { AppChain } from '@mordecai/appchain';
 
 const game = await AppChain.join(l1Rpc, 'com.example.outpost', {
   dir: './outpost-chain',
@@ -63,7 +63,7 @@ One validator runs the daemon (any validator; several is fine — epochs
 come from L1, so they converge):
 
 ```ts
-import { AnchorDaemon } from '@hssn/appchain';
+import { AnchorDaemon } from '@mordecai/appchain';
 
 const daemon = new AnchorDaemon({
   chain: game.chain,
@@ -100,8 +100,8 @@ contract GoodsMarket:
         ...
 ```
 
-`appAddress(appId)` is exported by `@hssn/chain` (node side) and
-`@hssn/sdk` (app side, Bare-safe). Design the contract so the app's
+`appAddress(appId)` is exported by `@mordecai/chain` (node side) and
+`@mordecai/sdk` (app side, Bare-safe). Design the contract so the app's
 authority is _scoped_: it can report outcomes, never touch stakes it
 wasn't given, and a `cancel_after(deadline)` refund path covers the
 quorum dissolving without reporting.

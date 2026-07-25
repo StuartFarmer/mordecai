@@ -1,5 +1,5 @@
-import { Chain, Mempool, blockHash, type VerifiedBlock } from '@hssn/chain';
-import { decodeAddress, sign, verify, type KeyPair } from '@hssn/crypto';
+import { Chain, Mempool, blockHash, type VerifiedBlock } from '@mordecai/chain';
+import { decodeAddress, sign, verify, type KeyPair } from '@mordecai/crypto';
 import {
   MAX_BLOCKS_PER_RESPONSE,
   decodeBlock,
@@ -12,7 +12,7 @@ import {
   type GossipMessage,
   type Transaction,
   type Vote,
-} from '@hssn/protocol';
+} from '@mordecai/protocol';
 import type { PeerHub } from './peer-hub.js';
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');

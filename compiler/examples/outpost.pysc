@@ -4,7 +4,7 @@
 # order that escrowed L1 currency, and records the delivery so the anchor
 # outcome can settle the escrow (app-chains spec). One wallet identity
 # plays on both chains: buyer/seller addresses here are the same Ed25519
-# keys that hold HSSN on L1.
+# keys that hold CAI on L1.
 
 contract Outpost:
 

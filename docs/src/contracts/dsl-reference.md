@@ -1,8 +1,8 @@
 # DSL Language Reference
 
-The HSSN contract language is a small, deliberately constrained,
+The Mordecai contract language is a small, deliberately constrained,
 Python-like language (spec §21). Source files use the `.pysc` extension and
-compile through `hssnc`: **parse → static verification → generated Rust →
+compile through `mordecaic`: **parse → static verification → generated Rust →
 wasm32**. Only verified deterministic code reaches the chain; the compiler
 guarantees checked arithmetic (overflow aborts), per-map storage prefixes,
 atomic revert on failure, and write-once config — regardless of what the
@@ -102,9 +102,9 @@ emitted as events or made derivable (e.g. sequential).
 ## Compiler CLI
 
 ```sh
-./compiler/hssnc check  contract.pysc          # parse + verify only
-./compiler/hssnc build  contract.pysc -o out/  # emit the cargo project
-./compiler/hssnc build  contract.pysc -o out/ --wasm   # …and compile it
+./compiler/mordecaic check  contract.pysc          # parse + verify only
+./compiler/mordecaic build  contract.pysc -o out/  # emit the cargo project
+./compiler/mordecaic build  contract.pysc -o out/ --wasm   # …and compile it
 ```
 
 Reserved words you can't use as identifiers include the statement keywords,

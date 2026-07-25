@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { decodeAddress, type KdfLimits, type Keystore } from '@hssn/crypto';
-import { encodeTransaction } from '@hssn/protocol';
+import { decodeAddress, type KdfLimits, type Keystore } from '@mordecai/crypto';
+import { encodeTransaction } from '@mordecai/protocol';
 import { Wallet, transactionHash } from './wallet.js';
 
 const toHex = (b: Uint8Array) => Buffer.from(b).toString('hex');

@@ -1,7 +1,7 @@
 import type { Block, BlockHeader, Transaction, Vote } from '../src/index.js';
 import { PROTOCOL_VERSION } from '../src/index.js';
 
-export const CHAIN_ID = 'hssn-dev-1';
+export const CHAIN_ID = 'mordecai-dev-1';
 
 /** Deterministic filler bytes so fixtures (and golden vectors) are reproducible. */
 export function fill(size: number, byte: number): Uint8Array {

@@ -1,6 +1,6 @@
 # The Two Planes
 
-Most blockchains try to be the application platform. HSSN deliberately does
+Most blockchains try to be the application platform. Mordecai deliberately does
 not. It splits the world into an **application plane** (fast, free,
 peer-to-peer, scaled by the users themselves) and a **settlement plane**
 (small, deterministic, globally agreed).
@@ -27,14 +27,14 @@ peer-to-peer, scaled by the users themselves) and a **settlement plane**
 
 ## Layer map
 
-| Layer (spec §25)     | What it does                      | Package(s)                                                     |
-| -------------------- | --------------------------------- | -------------------------------------------------------------- |
-| L5 Applications      | UI, game logic, media, simulation | `apps/*`                                                       |
-| L4 SDKs              | wallet, payments, feeds, install  | `@hssn/sdk`, `@hssn/wallet`, `@hssn/pear-integration`          |
-| L3 Smart contracts   | escrow, ownership, marketplaces   | `@hssn/vm`, `contracts/*`, `compiler/`                         |
-| L2 Settlement chain  | accounts, blocks, consensus, RPC  | `@hssn/protocol`, `state`, `chain`, `consensus`, `node`, `rpc` |
-| L1 Holepunch network | discovery, transport, replication | `@hssn/networking`                                             |
-| L0 Cryptography      | Ed25519, BLAKE2b, keystores       | `@hssn/crypto`                                                 |
+| Layer (spec §25)     | What it does                      | Package(s)                                                         |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| L5 Applications      | UI, game logic, media, simulation | `apps/*`                                                           |
+| L4 SDKs              | wallet, payments, feeds, install  | `@mordecai/sdk`, `@mordecai/wallet`, `@mordecai/pear-integration`  |
+| L3 Smart contracts   | escrow, ownership, marketplaces   | `@mordecai/vm`, `contracts/*`, `compiler/`                         |
+| L2 Settlement chain  | accounts, blocks, consensus, RPC  | `@mordecai/protocol`, `state`, `chain`, `consensus`, `node`, `rpc` |
+| L1 Holepunch network | discovery, transport, replication | `@mordecai/networking`                                             |
+| L0 Cryptography      | Ed25519, BLAKE2b, keystores       | `@mordecai/crypto`                                                 |
 
 Each layer depends only on the ones beneath it. Applications never touch
 consensus; consensus never executes application logic.

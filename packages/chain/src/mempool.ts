@@ -1,5 +1,5 @@
-import type { Transaction } from '@hssn/protocol';
-import { VALIDATE_OK, VmRuntime, validationError } from '@hssn/vm';
+import type { Transaction } from '@mordecai/protocol';
+import { VALIDATE_OK, VmRuntime, validationError } from '@mordecai/vm';
 import type { Chain } from './chain.js';
 import { checkStateless, requiredBalance } from './execution.js';
 import { transactionHash } from './tx.js';

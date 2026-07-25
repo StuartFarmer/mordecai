@@ -10,13 +10,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Genesis } from '@hssn/chain';
-import { encodeAddress, generateSeed, keyPairFromSeed, verify } from '@hssn/crypto';
-import { Node } from '@hssn/node';
-import { Wallet } from '@hssn/wallet';
-import { Hssn } from '../src/index.js';
+import type { Genesis } from '@mordecai/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, verify } from '@mordecai/crypto';
+import { Node } from '@mordecai/node';
+import { Wallet } from '@mordecai/wallet';
+import { Mordecai } from '../src/index.js';
 
-const CHAIN_ID = 'hssn-vertical-1';
+const CHAIN_ID = 'mordecai-vertical-1';
 const APP_ID = 'com.example.chess';
 const BUNDLE = new TextEncoder().encode('{"name":"chess","main":"app.js"} <bundle bytes>');
 
@@ -27,11 +27,11 @@ const { wallet: user } = Wallet.create();
 let testnet: Awaited<ReturnType<typeof createTestnet>>;
 const dirs: string[] = [];
 const nodes: Node[] = [];
-let dev: Hssn;
-let app: Hssn;
+let dev: Mordecai;
+let app: Mordecai;
 
 const tmp = (tag: string) => {
-  const dir = mkdtempSync(join(tmpdir(), `hssn-vert-${tag}-`));
+  const dir = mkdtempSync(join(tmpdir(), `mordecai-vert-${tag}-`));
   dirs.push(dir);
   return dir;
 };
@@ -57,14 +57,14 @@ beforeAll(async () => {
       }),
     );
   }
-  dev = Hssn.connect({
+  dev = Mordecai.connect({
     wallet: developer,
     nodeKey: nodes[0]!.rpcPublicKey,
     storageDir: tmp('dev'),
     chainId: CHAIN_ID,
     bootstrap: testnet.bootstrap,
   });
-  app = Hssn.connect({
+  app = Mordecai.connect({
     wallet: user,
     nodeKey: nodes[1]!.rpcPublicKey,
     storageDir: tmp('user'),

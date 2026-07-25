@@ -7,7 +7,7 @@ of the web tier: **open a URL, click a tile, own land**, with no wallet
 extension and no backend beyond a [gateway](../apps/gateway.md).
 
 ```sh
-pnpm build && pnpm --filter @hssn/example-frontier-web build
+pnpm build && pnpm --filter @mordecai/example-frontier-web build
 node scripts/frontier-demo.mjs     # → http://127.0.0.1:8787
 ```
 

@@ -9,20 +9,20 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { appAddress, contractIdFor } from '@hssn/chain';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { appAddress, contractIdFor } from '@mordecai/chain';
 import {
   encodeTransaction,
   transactionSigningBytes,
   type Payload,
   type Transaction,
-} from '@hssn/protocol';
-import { Node } from '@hssn/node';
-import { NodeRpcClient } from '@hssn/rpc';
+} from '@mordecai/protocol';
+import { Node } from '@mordecai/node';
+import { NodeRpcClient } from '@mordecai/rpc';
 import { AnchorDaemon, AppChain } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const L1_CHAIN = 'hssn-season-test';
+const L1_CHAIN = 'mordecai-season-test';
 const APP = 'com.example.mmo-season-1';
 const STAKE = 50_000n;
 
@@ -85,7 +85,7 @@ beforeAll(async () => {
   testnet = await createTestnet(3);
 
   l1 = await Node.start({
-    dir: tmp('hssn-season-l1-'),
+    dir: tmp('mordecai-season-l1-'),
     genesis: {
       chainId: L1_CHAIN,
       validators: [encodeAddress(l1Validator.publicKey)],
@@ -156,13 +156,13 @@ describe('a wagered season (acceptance)', () => {
     // Both players join from the registry entry alone.
     [chainA, chainB] = await Promise.all([
       AppChain.join(l1Rpc, APP, {
-        dir: tmp('hssn-season-a-'),
+        dir: tmp('mordecai-season-a-'),
         keyPair: alice,
         bootstrap: testnet.bootstrap,
         blockIntervalMs: 100,
       }),
       AppChain.join(l1Rpc, APP, {
-        dir: tmp('hssn-season-b-'),
+        dir: tmp('mordecai-season-b-'),
         keyPair: bob,
         bootstrap: testnet.bootstrap,
         blockIntervalMs: 100,

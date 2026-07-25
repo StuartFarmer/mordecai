@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * One-command frontier demo — the mordecai frontier game on HSSN, played
+ * One-command frontier demo — the frontier game (from the original CosmWasm
+ * mordecai) on Mordecai, played
  * from a browser through the HTTP gateway:
  *
- *   pnpm build && pnpm --filter @hssn/example-frontier-web build
+ *   pnpm build && pnpm --filter @mordecai/example-frontier-web build
  *   node scripts/frontier-demo.mjs
  *
  * Starts a 3-validator devnet, deploys the frontier contract
@@ -28,12 +29,12 @@ import { Node } from '../packages/node/dist/index.js';
 import { Gateway } from '../packages/gateway/dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const chainId = 'hssn-frontier-devnet';
+const chainId = 'mordecai-frontier-devnet';
 const validatorCount = 3;
 const port = Number(process.env.PORT ?? 8787);
 
 // dev accounts: fresh keys each run, funded at genesis, seeds handed to the
-// browser via /api/config (devnet-only custody model, like mordecai's)
+// browser via /api/config (devnet-only custody model, as in the original CosmWasm mordecai)
 const seeds = { alice: generateSeed(), bob: generateSeed() };
 const keys = Object.fromEntries(
   Object.entries(seeds).map(([name, seed]) => [name, keyPairFromSeed(seed)]),
@@ -50,7 +51,7 @@ const genesis = {
   })),
 };
 
-const base = mkdtempSync(join(tmpdir(), 'hssn-frontier-demo-'));
+const base = mkdtempSync(join(tmpdir(), 'mordecai-frontier-demo-'));
 const nodes = [];
 for (const [i, keyPair] of validators.entries()) {
   nodes.push(

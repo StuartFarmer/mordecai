@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/example-chess",
+  "name": "@mordecai/example-chess",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,15 +18,15 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/crypto": "workspace:*",
-    "@hssn/networking": "workspace:*",
-    "@hssn/sdk": "workspace:*",
-    "@hssn/rpc": "workspace:*"
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/networking": "workspace:*",
+    "@mordecai/sdk": "workspace:*",
+    "@mordecai/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@hssn/chain": "workspace:*",
-    "@hssn/node": "workspace:*",
-    "@hssn/wallet": "workspace:*",
+    "@mordecai/chain": "workspace:*",
+    "@mordecai/node": "workspace:*",
+    "@mordecai/wallet": "workspace:*",
     "hyperdht": "^6.32.0"
   }
 }

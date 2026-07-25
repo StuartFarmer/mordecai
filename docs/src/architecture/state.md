@@ -1,6 +1,6 @@
 # Three Kinds of State
 
-Every piece of data in an HSSN application belongs to exactly one of three
+Every piece of data in a Mordecai application belongs to exactly one of three
 categories (spec §3). Getting this classification right is the most
 important design decision an app developer makes.
 

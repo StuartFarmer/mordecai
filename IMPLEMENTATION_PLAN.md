@@ -1,4 +1,4 @@
-# V1 Implementation Plan — Holepunch Smart Settlement Network
+# V1 Implementation Plan — Mordecai
 
 This plan turns SPEC_PT_01–03 into a buildable v1. It follows the spec's phased
 roadmap (§27) and defines **v1 as spec Phases 0–6**, culminating in the First

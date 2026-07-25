@@ -8,8 +8,8 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from hssndsl import check, generate, parse
-from hssndsl.errors import DslError
+from mordecaidsl import check, generate, parse
+from mordecaidsl.errors import DslError
 
 LAND = (pathlib.Path(__file__).parent.parent / "examples" / "land.pysc").read_text()
 

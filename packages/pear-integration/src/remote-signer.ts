@@ -1,6 +1,6 @@
 import RPC from '@hyperswarm/rpc';
-import { decodeTransaction, encodePayload, type Transaction } from '@hssn/protocol';
-import type { SignParams, Signer } from '@hssn/wallet';
+import { decodeTransaction, encodePayload, type Transaction } from '@mordecai/protocol';
+import type { SignParams, Signer } from '@mordecai/wallet';
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');
 const fromHex = (h: string) => new Uint8Array(Buffer.from(h, 'hex'));
@@ -10,7 +10,7 @@ type Envelope<T> = { ok: true; result: T } | { ok: false; error: string };
 /**
  * The app side of the trust boundary: a Signer whose key lives in the
  * wallet daemon, reached over hyperswarm RPC. Drop-in for the SDK —
- * `Hssn.connect({ wallet: remoteSigner, ... })`.
+ * `Mordecai.connect({ wallet: remoteSigner, ... })`.
  */
 export class RemoteSigner implements Signer {
   private constructor(

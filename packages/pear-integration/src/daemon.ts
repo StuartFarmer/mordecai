@@ -1,7 +1,7 @@
 import RPC from '@hyperswarm/rpc';
-import type { KeyPair } from '@hssn/crypto';
-import { decodePayload, encodeTransaction } from '@hssn/protocol';
-import type { Wallet } from '@hssn/wallet';
+import type { KeyPair } from '@mordecai/crypto';
+import { decodePayload, encodeTransaction } from '@mordecai/protocol';
+import type { Wallet } from '@mordecai/wallet';
 import { WalletSession, type ApprovalPrompt, type SessionGrant } from './session.js';
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');

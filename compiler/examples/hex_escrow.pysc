@@ -1,5 +1,5 @@
 # Hex escrow — the L1 half of the hex demo. Both players stake the same
-# amount of HSSN into a pot keyed by the game id (the same client-side
+# amount of CAI into a pot keyed by the game id (the same client-side
 # code hash the app-chain Hex contract uses); the winner takes all. Only
 # the game's derived app address may settle, via the app chain's anchored
 # outcome call (app-chains spec §2.1) — no bridge, no wrapped assets.

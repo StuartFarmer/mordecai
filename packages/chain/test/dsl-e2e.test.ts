@@ -1,6 +1,6 @@
 /**
  * Spec Phase 7 milestone: compile a Python-like contract into deployable
- * WASM (hssnc: parse -> typecheck -> Rust -> wasm32) and execute it
+ * WASM (mordecaic: parse -> typecheck -> Rust -> wasm32) and execute it
  * on-chain. Skipped when the Rust/Python toolchain isn't available (CI).
  */
 import { execFileSync } from 'node:child_process';
@@ -9,8 +9,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import { Chain, contractIdFor } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -26,7 +26,7 @@ function toolchainAvailable(): boolean {
 }
 
 const enabled = toolchainAvailable();
-const CHAIN_ID = 'hssn-dsl-e2e';
+const CHAIN_ID = 'mordecai-dsl-e2e';
 const alice: KeyPair = keyPairFromSeed(generateSeed());
 const val: KeyPair = keyPairFromSeed(generateSeed());
 const dirs: string[] = [];
@@ -55,12 +55,12 @@ async function run(nonce: bigint, action: string, args: Uint8Array) {
 
 beforeAll(async () => {
   if (!enabled) return;
-  const build = mkdtempSync(join(tmpdir(), 'hssn-dsl-'));
+  const build = mkdtempSync(join(tmpdir(), 'mordecai-dsl-'));
   dirs.push(build);
   execFileSync(
     'python3',
     [
-      join(repoRoot, 'compiler/hssnc'),
+      join(repoRoot, 'compiler/mordecaic'),
       'build',
       join(repoRoot, 'compiler/examples/land.pysc'),
       '-o',
@@ -71,7 +71,7 @@ beforeAll(async () => {
   );
   wasm = new Uint8Array(readFileSync(join(build, 'land.wasm')));
 
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-dsl-chain-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-dsl-chain-'));
   dirs.push(dir);
   chain = await Chain.open(dir, {
     chainId: CHAIN_ID,

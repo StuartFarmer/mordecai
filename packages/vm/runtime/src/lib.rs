@@ -1,4 +1,4 @@
-//! HSSN contract execution runtime.
+//! Mordecai contract execution runtime.
 //!
 //! This crate compiles to wasm32-unknown-unknown and runs *inside* the
 //! node's JS WebAssembly host. It embeds the wasmi interpreter to execute

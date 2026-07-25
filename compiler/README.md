@@ -1,16 +1,16 @@
-# compiler/ — hssnc, the Pythonic contract compiler (spec §21)
+# compiler/ — mordecaic, the Pythonic contract compiler (spec §21)
 
 Pipeline: `.pysc` source → parse → typecheck → generated Rust against
 `contracts/runtime-rs` → wasm32 → deploy.
 
 ```sh
-./compiler/hssnc check compiler/examples/land.pysc
-./compiler/hssnc build compiler/examples/land.pysc -o build/land --wasm
+./compiler/mordecaic check compiler/examples/land.pysc
+./compiler/mordecaic build compiler/examples/land.pysc -o build/land --wasm
 ```
 
-- `hssndsl/` — pure-stdlib Python package: `parser.py` (tokenizer +
+- `mordecaidsl/` — pure-stdlib Python package: `parser.py` (tokenizer +
   recursive descent) and `typecheck.py` (static verifier) are ported from
-  the mordsl compiler (mordecai project); `codegen.py` targets the HSSN
+  the mordsl compiler (the original CosmWasm mordecai); `codegen.py` targets the Mordecai
   contract ABI. Guarantees regardless of source: checked arithmetic
   (overflow aborts), per-map key prefixes, atomic revert via abort,
   write-once config through the generated `init` action.

@@ -1,7 +1,7 @@
 # Consensus
 
-HSSN v1 runs a deliberately simple fixed-validator BFT protocol
-(`@hssn/consensus`). The goals, in order: **safety** (no two conflicting
+Mordecai v1 runs a deliberately simple fixed-validator BFT protocol
+(`@mordecai/consensus`). The goals, in order: **safety** (no two conflicting
 finalized blocks), **immediate finality** (no reorgs, ever), and
 simplicity. Open participation is explicitly out of scope for v1.
 

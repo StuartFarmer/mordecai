@@ -36,26 +36,26 @@ importers:
 
   apps/chess:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
-      '@hssn/networking':
+      '@mordecai/networking':
         specifier: workspace:*
         version: link:../../packages/networking
-      '@hssn/rpc':
+      '@mordecai/rpc':
         specifier: workspace:*
         version: link:../../packages/rpc
-      '@hssn/sdk':
+      '@mordecai/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
     devDependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../../packages/chain
-      '@hssn/node':
+      '@mordecai/node':
         specifier: workspace:*
         version: link:../../packages/node
-      '@hssn/wallet':
+      '@mordecai/wallet':
         specifier: workspace:*
         version: link:../../packages/wallet
       hyperdht:
@@ -64,7 +64,7 @@ importers:
 
   apps/frontier-web:
     dependencies:
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       '@noble/curves':
@@ -89,7 +89,7 @@ importers:
 
   apps/hex-web:
     dependencies:
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       '@noble/curves':
@@ -117,7 +117,7 @@ importers:
 
   apps/outpost-web:
     dependencies:
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       '@noble/curves':
@@ -142,19 +142,19 @@ importers:
 
   packages/appchain:
     dependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/node':
+      '@mordecai/node':
         specifier: workspace:*
         version: link:../node
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/rpc':
+      '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
       '@hyperswarm/rpc':
@@ -167,28 +167,28 @@ importers:
 
   packages/chain:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/state':
+      '@mordecai/state':
         specifier: workspace:*
         version: link:../state
-      '@hssn/vm':
+      '@mordecai/vm':
         specifier: workspace:*
         version: link:../vm
 
   packages/consensus:
     dependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
       hyperswarm:
@@ -213,23 +213,23 @@ importers:
 
   packages/gateway:
     dependencies:
-      '@hssn/rpc':
+      '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
     devDependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/node':
+      '@mordecai/node':
         specifier: workspace:*
         version: link:../node
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/wallet':
+      '@mordecai/wallet':
         specifier: workspace:*
         version: link:../wallet
       hyperdht:
@@ -253,23 +253,23 @@ importers:
 
   packages/node:
     dependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/consensus':
+      '@mordecai/consensus':
         specifier: workspace:*
         version: link:../consensus
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/rpc':
+      '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
     devDependencies:
-      '@hssn/wallet':
+      '@mordecai/wallet':
         specifier: workspace:*
         version: link:../wallet
       hyperdht:
@@ -278,13 +278,13 @@ importers:
 
   packages/pear-integration:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/wallet':
+      '@mordecai/wallet':
         specifier: workspace:*
         version: link:../wallet
       '@hyperswarm/rpc':
@@ -299,13 +299,13 @@ importers:
 
   packages/rpc:
     dependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
       '@hyperswarm/rpc':
@@ -314,26 +314,26 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/networking':
+      '@mordecai/networking':
         specifier: workspace:*
         version: link:../networking
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hssn/rpc':
+      '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
-      '@hssn/wallet':
+      '@mordecai/wallet':
         specifier: workspace:*
         version: link:../wallet
     devDependencies:
-      '@hssn/chain':
+      '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@hssn/node':
+      '@mordecai/node':
         specifier: workspace:*
         version: link:../node
       hyperdht:
@@ -342,7 +342,7 @@ importers:
 
   packages/state:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
       classic-level:
@@ -353,10 +353,10 @@ importers:
 
   packages/wallet:
     dependencies:
-      '@hssn/crypto':
+      '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@hssn/protocol':
+      '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
 

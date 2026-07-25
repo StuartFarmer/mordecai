@@ -1,4 +1,4 @@
-//! Contract-side bindings for the HSSN contract ABI.
+//! Contract-side bindings for the Mordecai contract ABI.
 //!
 //! Contracts compile to wasm32-unknown-unknown, export one
 //! `extern "C" fn <action>() -> i32` per action (0 = success), and talk to

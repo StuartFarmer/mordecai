@@ -257,7 +257,7 @@ export default function App() {
               <b>{account.wheat}</b> 🌾 wheat
             </div>
             <div>
-              <b>{balances[current] ?? '…'}</b> 🪙 HSSN
+              <b>{balances[current] ?? '…'}</b> 🪙 CAI
             </div>
           </div>
 

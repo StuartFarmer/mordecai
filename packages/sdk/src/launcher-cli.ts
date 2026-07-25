@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * hssn-launcher — deterministic app install (spec §17).
+ * mordecai-launcher — deterministic app install (spec §17).
  *
- *   hssn-launcher install <appId> --node <rpc-key-hex> --out <dir>
+ *   mordecai-launcher install <appId> --node <rpc-key-hex> --out <dir>
  *                 [--bootstrap host:port,...]
  *
  * Registry lookup → fetch the bundle over the swarm from whoever has it →
@@ -14,9 +14,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { blake2b256 } from '@hssn/crypto';
-import { Network } from '@hssn/networking';
-import { NodeRpcClient } from '@hssn/rpc';
+import { blake2b256 } from '@mordecai/crypto';
+import { Network } from '@mordecai/networking';
+import { NodeRpcClient } from '@mordecai/rpc';
 
 function fail(message: string): never {
   process.stderr.write(`error: ${message}\n`);
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   const [command, appId, ...rest] = process.argv.slice(2);
   if (command !== 'install' || !appId) {
     process.stdout.write(
-      'usage: hssn-launcher install <appId> --node <rpc-key-hex> --out <dir> ' +
+      'usage: mordecai-launcher install <appId> --node <rpc-key-hex> --out <dir> ' +
         '[--bootstrap host:port,...]\n',
     );
     process.exit(command ? 1 : 0);
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     new Uint8Array(Buffer.from(values.node, 'hex')),
     bootstrap ? { bootstrap } : {},
   );
-  const cache = mkdtempSync(join(tmpdir(), 'hssn-launcher-'));
+  const cache = mkdtempSync(join(tmpdir(), 'mordecai-launcher-'));
   const network = Network.create({ storageDir: cache, ...(bootstrap ? { bootstrap } : {}) });
   try {
     const entry = await rpc.getApp(appId);

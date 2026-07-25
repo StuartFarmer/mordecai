@@ -1,4 +1,4 @@
-# Holepunch Smart Settlement Network
+# Mordecai
 
 ## Part 3 — Developer Platform, Roadmap, Repository Structure, and Design Principles
 

@@ -2,18 +2,18 @@
 
 Outpost is the app-chains capstone: a small MMORTS where the **game runs
 on a player-run app chain**, the **goods market runs on L1**, and **one
-wallet identity acts on both** — the Ed25519 key that holds HSSN on L1
+wallet identity acts on both** — the Ed25519 key that holds CAI on L1
 is the same key that owns tiles and wood in the game. L1 currency buys
 in-game items with no bridge anywhere.
 
 ```sh
-pnpm build && pnpm --filter @hssn/example-outpost-web build
+pnpm build && pnpm --filter @mordecai/example-outpost-web build
 node scripts/outpost-demo.mjs      # → http://127.0.0.1:8787
 ```
 
 ## The trade loop
 
-1. **bob (L1)** — `place_order("wood", 10)` with 1000 HSSN attached.
+1. **bob (L1)** — `place_order("wood", 10)` with 1000 CAI attached.
    `goods_market.pysc` escrows it. Wood does not exist on L1; the order
    is a claim on something that only exists in the game.
 2. **alice (app chain)** — claims land, harvests, clicks _deliver_:
@@ -24,7 +24,7 @@ node scripts/outpost-demo.mjs      # → http://127.0.0.1:8787
    call: `settle(order_id, alice)`. The market contract checks only
    `sender == config.game` and releases the escrow to alice.
 
-HSSN never left L1. Wood never left the game. The anchor carried
+CAI never left L1. Wood never left the game. The anchor carried
 _judgment_ — "order 0 was delivered by alice" — not value. Alice's L1
 balance after the demo is her starting balance + exactly 1000: her only
 L1 transaction ever was being paid.

@@ -1,4 +1,4 @@
-# Holepunch Smart Settlement Network
+# Mordecai
 
 ## Part 2 — Settlement Layer, Smart Contracts, and Application Model
 

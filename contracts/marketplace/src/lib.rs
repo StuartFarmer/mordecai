@@ -6,7 +6,7 @@
 //! flips ownership atomically — any failure reverts the whole call,
 //! including the attached value.
 
-use hssn_contract as c;
+use mordecai_contract as c;
 
 const NEXT_ID: &[u8] = b"next_id";
 

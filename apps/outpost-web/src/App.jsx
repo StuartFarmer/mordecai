@@ -288,7 +288,7 @@ export default function App() {
               <b>{goods.wheat}</b> 🌾 wheat <small>(game)</small>
             </div>
             <div>
-              <b>{balances[current] ?? '…'}</b> 🪙 HSSN <small>(L1)</small>
+              <b>{balances[current] ?? '…'}</b> 🪙 CAI <small>(L1)</small>
             </div>
           </div>
 

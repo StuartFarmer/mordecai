@@ -1,4 +1,4 @@
-import { PUBKEY_SIZE, Reader, Writer } from '@hssn/protocol';
+import { PUBKEY_SIZE, Reader, Writer } from '@mordecai/protocol';
 
 export interface Account {
   balance: bigint;

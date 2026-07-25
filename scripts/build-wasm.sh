@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 cargo build --release --target wasm32-unknown-unknown \
   --manifest-path packages/vm/runtime/Cargo.toml
 mkdir -p packages/vm/wasm
-cp packages/vm/runtime/target/wasm32-unknown-unknown/release/hssn_vm_runtime.wasm \
+cp packages/vm/runtime/target/wasm32-unknown-unknown/release/mordecai_vm_runtime.wasm \
   packages/vm/wasm/
 
 cargo build --release --target wasm32-unknown-unknown \
@@ -21,7 +21,7 @@ ls -la packages/vm/wasm/*.wasm contracts/dist/*.wasm
 # DSL example contracts (compiler/examples/*.pysc) — also committed.
 for src in compiler/examples/*.pysc; do
   name=$(basename "$src" .pysc)
-  ./compiler/hssnc build "$src" -o "compiler/build/$name" --wasm >/dev/null
+  ./compiler/mordecaic build "$src" -o "compiler/build/$name" --wasm >/dev/null
   cp "compiler/build/$name/$name.wasm" contracts/dist/
 done
 ls -la contracts/dist/*.wasm

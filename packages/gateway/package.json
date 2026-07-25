@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/gateway",
+  "name": "@mordecai/gateway",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     }
   },
   "bin": {
-    "hssn-gateway": "dist/cli.js"
+    "mordecai-gateway": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -21,14 +21,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hssn/rpc": "workspace:*"
+    "@mordecai/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@hssn/chain": "workspace:*",
-    "@hssn/crypto": "workspace:*",
-    "@hssn/node": "workspace:*",
-    "@hssn/protocol": "workspace:*",
-    "@hssn/wallet": "workspace:*",
+    "@mordecai/chain": "workspace:*",
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/node": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/wallet": "workspace:*",
     "hyperdht": "^6.32.0"
   }
 }

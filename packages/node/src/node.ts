@@ -1,9 +1,9 @@
 import { join } from 'node:path';
-import { Chain, Mempool, genesisHash } from '@hssn/chain';
-import { ConsensusEngine, PeerHub } from '@hssn/consensus';
-import type { KeyPair } from '@hssn/crypto';
-import type { Genesis } from '@hssn/chain';
-import { NodeRpcServer } from '@hssn/rpc';
+import { Chain, Mempool, genesisHash } from '@mordecai/chain';
+import { ConsensusEngine, PeerHub } from '@mordecai/consensus';
+import type { KeyPair } from '@mordecai/crypto';
+import type { Genesis } from '@mordecai/chain';
+import { NodeRpcServer } from '@mordecai/rpc';
 
 export interface NodeOptions {
   dir: string;

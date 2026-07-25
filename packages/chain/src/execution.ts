@@ -1,4 +1,4 @@
-import { blake2b256, verify } from '@hssn/crypto';
+import { blake2b256, verify } from '@mordecai/crypto';
 import {
   DOMAIN_APP_SENDER,
   MAX_APP_VALIDATORS,
@@ -8,8 +8,8 @@ import {
   encodeTransaction,
   type AnchorPayload,
   type Transaction,
-} from '@hssn/protocol';
-import { Overlay, type StateReader } from '@hssn/state';
+} from '@mordecai/protocol';
+import { Overlay, type StateReader } from '@mordecai/state';
 import {
   EXEC_OK,
   VALIDATE_OK,
@@ -17,7 +17,7 @@ import {
   VmRuntime,
   validationError,
   type VmHost,
-} from '@hssn/vm';
+} from '@mordecai/vm';
 import {
   EMPTY_ACCOUNT,
   accountKey,
@@ -83,7 +83,7 @@ export function contractStorageKey(contractId: Uint8Array, inner: Uint8Array): U
 export function contractIdFor(sender: Uint8Array, nonce: bigint, code: Uint8Array): Uint8Array {
   const nonceBytes = new Uint8Array(8);
   new DataView(nonceBytes.buffer).setBigUint64(0, nonce, true);
-  return blake2b256(new TextEncoder().encode('hssn:contract:v1'), sender, nonceBytes, code);
+  return blake2b256(new TextEncoder().encode('mordecai:contract:v1'), sender, nonceBytes, code);
 }
 
 /**

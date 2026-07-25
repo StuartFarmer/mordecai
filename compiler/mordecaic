@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""hssnc — the HSSN Pythonic contract compiler (spec §21).
+"""mordecaic — the Mordecai Pythonic contract compiler (spec §21).
 
 Usage:
-  hssnc check <contract.pysc>
-  hssnc build <contract.pysc> -o <outdir> [--runtime-path <path>] [--wasm]
+  mordecaic check <contract.pysc>
+  mordecaic build <contract.pysc> -o <outdir> [--runtime-path <path>] [--wasm]
 
 `build` emits a cargo project; `--wasm` also runs cargo (wasm32 target)
 and copies the artifact to <outdir>/<name>.wasm.
@@ -16,9 +16,9 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from hssndsl import check, generate, parse  # noqa: E402
-from hssndsl.codegen import snake  # noqa: E402
-from hssndsl.errors import DslError  # noqa: E402
+from mordecaidsl import check, generate, parse  # noqa: E402
+from mordecaidsl.codegen import snake  # noqa: E402
+from mordecaidsl.errors import DslError  # noqa: E402
 
 DEFAULT_RUNTIME = pathlib.Path(__file__).resolve().parent.parent / "contracts" / "runtime-rs"
 
@@ -30,7 +30,7 @@ def load(path: str):
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(prog="hssnc")
+    ap = argparse.ArgumentParser(prog="mordecaic")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p_check = sub.add_parser("check")
     p_check.add_argument("file")

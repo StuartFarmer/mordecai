@@ -29,8 +29,8 @@ structure. Rules:
 - Strings are UTF-8, decoded in fatal mode.
 - Decode consumes every byte or fails — each structure has exactly one valid
   byte representation, which is what gets hashed and signed.
-- Signing preimages are prefixed with a domain tag (`hssn:tx:v1`,
-  `hssn:block:v1`, `hssn:vote:v1`).
+- Signing preimages are prefixed with a domain tag (`mordecai:tx:v1`,
+  `mordecai:block:v1`, `mordecai:vote:v1`).
 
 Golden vectors in `packages/protocol/test/vectors/golden.json` pin the exact
 bytes; changing them is a consensus-breaking protocol change.

@@ -1,6 +1,6 @@
-import { decodeAddress } from '@hssn/crypto';
-import { ContractArgs, type Hssn } from '@hssn/sdk';
-import type { TxInfo } from '@hssn/rpc';
+import { decodeAddress } from '@mordecai/crypto';
+import { ContractArgs, type Mordecai } from '@mordecai/sdk';
+import type { TxInfo } from '@mordecai/rpc';
 
 /**
  * Client for the ChessWager escrow contract
@@ -10,7 +10,7 @@ import type { TxInfo } from '@hssn/rpc';
  */
 export class WagerClient {
   constructor(
-    private readonly app: Hssn,
+    private readonly app: Mordecai,
     private readonly contract: Uint8Array,
   ) {}
 

@@ -1,17 +1,17 @@
 # The SDK
 
-`@hssn/sdk` is the application-facing runtime (spec §22): one object that
+`@mordecai/sdk` is the application-facing runtime (spec §22): one object that
 gives an app its identity, payments, contracts, app distribution, and
 replicated state.
 
 ```ts
-import { Hssn } from '@hssn/sdk';
+import { Mordecai } from '@mordecai/sdk';
 
-const app = Hssn.connect({
+const app = Mordecai.connect({
   wallet, // any Signer: a local Wallet, or a RemoteSigner (see Identity)
   nodeKey, // RPC public key of any chain node (32 bytes)
   storageDir, // where this app's feeds live
-  chainId, // e.g. 'hssn-devnet'
+  chainId, // e.g. 'mordecai-devnet'
   bootstrap, // optional; defaults to the public DHT
 });
 ```
@@ -57,7 +57,7 @@ address is a length-prefixed 32-byte key.)
 
 ```ts
 const auth = await app.authenticate(challengeBytes);
-// { address, publicKey, signature } — verify with @hssn/crypto verify()
+// { address, publicKey, signature } — verify with @mordecai/crypto verify()
 ```
 
 Use this for app-level login: the counterparty sends a fresh challenge, the
@@ -85,7 +85,7 @@ Details in [Publishing & Installing Apps](publishing.md).
 
 ## Patterns
 
-- **One `Hssn` per app instance.** It owns a Corestore and an RPC session.
+- **One `Mordecai` per app instance.** It owns a Corestore and an RPC session.
 - **Sequential transactions per wallet.** Nonces are strictly ordered;
   `submit` queries the account nonce each time, so awaiting each call is
   the simple correct pattern.

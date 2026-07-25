@@ -4,12 +4,12 @@ names, type mismatches, struct values escaping into expressions, writes to
 config, rebinding state handles, and identifiers that would collide with the
 generated Rust."""
 
-from hssndsl.ast_nodes import (
+from mordecaidsl.ast_nodes import (
     Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
     Exists, If, Index, IntLit, Name, NotOp, Program, Require, StrLit,
     TransferStmt,
 )
-from hssndsl.errors import DslError
+from mordecaidsl.errors import DslError
 
 SCALARS = {"int", "str", "bool", "address"}
 U64_MAX = 2**64 - 1

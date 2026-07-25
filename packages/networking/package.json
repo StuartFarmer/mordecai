@@ -1,5 +1,5 @@
 {
-  "name": "@hssn/networking",
+  "name": "@mordecai/networking",
   "version": "0.1.0",
   "private": true,
   "type": "module",

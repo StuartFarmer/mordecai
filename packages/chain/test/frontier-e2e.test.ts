@@ -1,5 +1,6 @@
 /**
- * The frontier example (ported from mordecai) on-chain: two players claim
+ * The frontier example (ported from the original CosmWasm mordecai) on-chain:
+ * two players claim
  * land, build both building kinds, harvest, and trade through the escrowed
  * order book. Skipped when the Rust/Python toolchain isn't available (CI).
  */
@@ -9,8 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@hssn/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@hssn/protocol';
+import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
 import { Chain, contractIdFor } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -26,7 +27,7 @@ function toolchainAvailable(): boolean {
 }
 
 const enabled = toolchainAvailable();
-const CHAIN_ID = 'hssn-frontier-e2e';
+const CHAIN_ID = 'mordecai-frontier-e2e';
 const alice: KeyPair = keyPairFromSeed(generateSeed());
 const bob: KeyPair = keyPairFromSeed(generateSeed());
 const val: KeyPair = keyPairFromSeed(generateSeed());
@@ -106,12 +107,12 @@ async function account(who: KeyPair): Promise<{ wood: bigint; wheat: bigint }> {
 
 beforeAll(async () => {
   if (!enabled) return;
-  const build = mkdtempSync(join(tmpdir(), 'hssn-frontier-'));
+  const build = mkdtempSync(join(tmpdir(), 'mordecai-frontier-'));
   dirs.push(build);
   execFileSync(
     'python3',
     [
-      join(repoRoot, 'compiler/hssnc'),
+      join(repoRoot, 'compiler/mordecaic'),
       'build',
       join(repoRoot, 'compiler/examples/frontier.pysc'),
       '-o',
@@ -122,7 +123,7 @@ beforeAll(async () => {
   );
   const wasm = new Uint8Array(readFileSync(join(build, 'frontier.wasm')));
 
-  const dir = mkdtempSync(join(tmpdir(), 'hssn-frontier-chain-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mordecai-frontier-chain-'));
   dirs.push(dir);
   chain = await Chain.open(dir, {
     chainId: CHAIN_ID,

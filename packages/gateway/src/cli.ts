@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * hssn-gateway — run a browser-facing HTTP gateway against any chain node.
+ * mordecai-gateway — run a browser-facing HTTP gateway against any chain node.
  *
- *   hssn-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>]
+ *   mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>]
  *                [--config <file.json>] [--bootstrap host:port[,host:port…]]
  */
 import { readFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ function arg(flag: string): string | undefined {
 const nodeKey = arg('--node');
 if (!nodeKey || !/^[0-9a-fA-F]{64}$/.test(nodeKey)) {
   console.error(
-    'usage: hssn-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] ' +
+    'usage: mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] ' +
       '[--config <file.json>] [--bootstrap host:port[,host:port…]]',
   );
   process.exit(1);
