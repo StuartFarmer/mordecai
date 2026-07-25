@@ -125,6 +125,140 @@ pnpm test       # 199 tests: devnets, BFT, VM, app chains, gateways, e2e
 | `npx vitest run packages/appchain/test/market.test.ts` | The cross-chain trade proven at the protocol level, adversarial cases included                                                                                      |
 | `npx vitest run packages/appchain/test/season.test.ts` | A wagered season: stake on L1, play on an app chain, anchored payout, then _delete the app chain_ — the settlement survives                                         |
 
+## Deploy on Railway
+
+Nothing here _needs_ hosting — that's the point. But an always-on peer is
+useful: an app chain whose players come and go still wants a validator
+that never sleeps, and browsers need a gateway to reach the DHT at all.
+
+There are **three** roles, and they sync different things:
+
+| Role                     | Syncs                | Volume | HTTP port     | L1 relationship |
+| ------------------------ | -------------------- | ------ | ------------- | --------------- |
+| **L1 node**              | the settlement chain | yes    | no            | _is_ L1         |
+| **App-chain peer**       | one app's chain      | yes    | no            | RPC client only |
+| **Gateway** (app server) | nothing              | no     | yes (`$PORT`) | RPC client only |
+
+> **An app-chain peer does not sync L1.** It runs the node stack against
+> the app's own genesis, derived from the registry entry. Its only L1
+> contact is a `NodeRpcClient` — reading the registry entry when it joins,
+> and submitting ~100-byte anchors if it's the one running the daemon. If
+> you want a replica of the settlement chain, that's the separate L1-node
+> role below. Running both means running two services.
+
+### Build settings (all three roles)
+
+Node ≥ 20 with corepack. The WASM runtime and contracts are committed, so
+Railway needs no Rust or Python toolchain.
+
+```
+Build:  corepack enable && pnpm install --frozen-lockfile && pnpm build
+```
+
+Roles that keep a chain need a **Railway Volume** mounted at `/data`. The
+node directory holds `node.key` — the Ed25519 seed that _is_ this node's
+RPC address and validator identity — plus `genesis.json` and `chain/`. On
+an ephemeral filesystem you get a new identity and a full resync on every
+deploy, which for a validator means the quorum silently loses a member.
+
+### 1. Gateway — the "app server"
+
+The only role that takes public HTTP traffic. It translates browser JSON
+into swarm RPC and serves your SPA bundle; it holds no keys and syncs no
+chain, so it's stateless and safe to scale or redeploy freely. Point it at
+whichever node's RPC key you want to read — an L1 node for wallet/market
+views, an app-chain peer for game state.
+
+```
+Start:  node packages/gateway/dist/cli.js \
+          --node $NODE_RPC_KEY \
+          --port $PORT \
+          --static apps/outpost-web/dist
+```
+
+`--port $PORT` is required — Railway assigns it. The server binds all
+interfaces, so ingress works with no extra config; the `127.0.0.1` in its
+startup log is cosmetic. Add `--config` for an operator-supplied
+`/api/config`. Gateways are interchangeable and untrusted: transactions
+arrive signed and state is decoded client-side, so a hostile gateway can
+refuse service but cannot forge or tamper.
+
+### 2. L1 node — a settlement-chain replica
+
+Joining an existing chain means reproducing its genesis **byte for byte** —
+the genesis hash is the swarm topic, so a mismatch just lands you on an
+empty network of one. Mint a key, then overwrite the generated genesis with
+the network's canonical file:
+
+```sh
+node packages/node/dist/cli.js init --dir /data/l1 --chain-id <id>
+cp genesis.json /data/l1/genesis.json     # the network's canonical copy
+node packages/node/dist/cli.js start --dir /data/l1
+```
+
+A node whose address is _not_ in `validators` follows the chain and serves
+RPC — that's what you want unless the existing validator set has agreed to
+include you. `start` prints the `rpc key`; that hex string is what gateways
+and peers connect to, and it is stable only as long as the volume is.
+
+There's no `mordecai-node join` yet — the `init`-then-replace-genesis dance
+above is the current path, and an obvious thing to smooth over.
+
+### 3. App-chain peer — an always-on validator for your app
+
+There's no CLI for this role yet; `AppChain` is a library API (the demos in
+`scripts/` wire it up). A peer entrypoint is about fifteen lines:
+
+```js
+// peer.mjs — an always-on peer for one app chain
+// Relative dist imports, as in scripts/ — the workspace root doesn't link @mordecai/*.
+import { AppChain } from './packages/appchain/dist/index.js';
+import { NodeRpcClient } from './packages/rpc/dist/index.js';
+import { keyPairFromSeed } from './packages/crypto/dist/index.js';
+import { readFileSync } from 'node:fs';
+
+const l1 = NodeRpcClient.connect(Buffer.from(process.env.L1_NODE_KEY, 'hex'));
+const seed = Buffer.from(readFileSync('/data/app/peer.key', 'utf8').trim(), 'hex');
+
+const app = await AppChain.join(l1, process.env.APP_ID, {
+  dir: '/data/app',
+  keyPair: keyPairFromSeed(new Uint8Array(seed)),
+  blockIntervalMs: 300,
+});
+console.log(`joined ${app.genesis.chainId} — validator: ${app.isValidator}`);
+console.log(`rpc key: ${Buffer.from(app.rpcPublicKey).toString('hex')}`);
+```
+
+`join` reads the app's registry entry from L1, derives the genesis from the
+registered validator set, and starts the node — the registry is the whole
+root of trust, no other coordination needed. If your key is in that set the
+peer produces blocks and answers `anchor_sign`; otherwise it follows and
+serves reads. Persist `peer.key` on the volume: for a validator, losing it
+means losing a quorum member. Mint it once, before the app is registered —
+its public key is what goes into the registered validator set:
+
+```sh
+node -e "import('./packages/crypto/dist/index.js').then(c => {
+  const seed = c.generateSeed();
+  console.log('seed:   ', Buffer.from(seed).toString('hex'));
+  console.log('pubkey: ', Buffer.from(c.keyPairFromSeed(seed).publicKey).toString('hex'));
+})"
+```
+
+To also relay anchors to L1, construct an `AnchorDaemon` alongside it with a
+funded `relayer` account — see `scripts/hex-demo.mjs`. Only one peer needs
+to; the co-signing endpoints keep it honest, and concurrent daemons converge
+because the epoch counter comes from L1.
+
+### The one thing to verify
+
+These are **DHT peers, not servers** — they need no inbound ports, but they
+do need hyperswarm's UDP hole punching to work outbound from Railway's NAT.
+Connections are outbound-initiated, so this generally works, but it isn't
+something to assume: check `waitForPeers()` resolves, or that `height` is
+advancing, before trusting a deployment. Omit `bootstrap` and you get the
+public DHT; pass it only for private testnets.
+
 ## Documentation
 
 The [mdBook](docs/) covers all of it — serve with `mdbook serve docs`:
