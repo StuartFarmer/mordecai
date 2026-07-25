@@ -46,17 +46,17 @@ The last two dictate almost everything in Parts III and IV.
 
 Grounded in the current code, because two of these are load-bearing gaps.
 
-| Property           | L1                            | App chain                                       |
-| ------------------ | ----------------------------- | ----------------------------------------------- |
-| Validator set      | `genesis.validators`, fixed   | `chainValidators` in the registry entry          |
-| Set is decided by  | whoever wrote genesis         | the app owner (`update_app`)                     |
-| Consensus quorum   | `floor(2n/3)+1`               | same                                             |
-| Anchor quorum      | —                             | `anchorQuorum()`, `execution.ts:185`             |
-| Entry / exit       | none                          | owner-gated rotation                             |
-| Stake              | none                          | none                                             |
-| Slashing           | none                          | none                                             |
-| Rewards            | tx fees → proposer            | fees → proposer, in valueless currency           |
-| Supply             | fixed at genesis              | fixed float                                      |
+| Property          | L1                          | App chain                               |
+| ----------------- | --------------------------- | --------------------------------------- |
+| Validator set     | `genesis.validators`, fixed | `chainValidators` in the registry entry |
+| Set is decided by | whoever wrote genesis       | the app owner (`update_app`)            |
+| Consensus quorum  | `floor(2n/3)+1`             | same                                    |
+| Anchor quorum     | —                           | `anchorQuorum()`, `execution.ts:185`    |
+| Entry / exit      | none                        | owner-gated rotation                    |
+| Stake             | none                        | none                                    |
+| Slashing          | none                        | none                                    |
+| Rewards           | tx fees → proposer          | fees → proposer, in valueless currency  |
+| Supply            | fixed at genesis            | fixed float                             |
 
 ### 1.1 The rotation gap
 
