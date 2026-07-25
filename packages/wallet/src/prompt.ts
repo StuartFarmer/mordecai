@@ -7,7 +7,7 @@ export async function promptPassphrase(question: string): Promise<string> {
   const input = process.stdin;
   const output = process.stderr;
   if (!input.isTTY) {
-    throw new Error('stdin is not a TTY; pass --passphrase or set Mordecai_WALLET_PASSPHRASE');
+    throw new Error('stdin is not a TTY; pass --passphrase or set MORDECAI_WALLET_PASSPHRASE');
   }
   output.write(question);
   return new Promise((resolve, reject) => {

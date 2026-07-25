@@ -8,6 +8,7 @@ package `bin` entries). Examples below use `node <path>` form.
 ```sh
 mordecai-node init  --dir <path> [--chain-id <id>] \
                 [--alloc <address>=<amount>]... [--validator <address>]...
+mordecai-node join  --dir <path> --genesis <file>
 mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap host:port,...]
 ```
 
@@ -18,6 +19,36 @@ mode). With **more than one genesis validator, `start` runs BFT consensus
 automatically**; with one, the M3 sequencer loop. `start` prints the RPC
 key that wallets/SDKs dial.
 
+`join` is `init` for an **existing** network: it mints a node key but takes
+the genesis from the network's own `genesis.json` instead of writing one.
+Both commands print the `genesisHash` — that hash is the swarm topic, so
+compare it against the network's before starting; a mismatch doesn't error,
+it silently puts you on an empty mesh of one. `join` also reports whether
+the new key landed in the validator set (`validator`) or not (`follower`),
+the latter being the normal case for a replica.
+
+## `mordecai-peer` (`packages/appchain/dist/cli.js`)
+
+```sh
+mordecai-peer keygen --dir <path>
+mordecai-peer start  --dir <path> --app <appId> --l1-node <rpc-key-hex> \
+                 [--bootstrap host:port,...] [--block-interval <ms>] \
+                 [--anchor --l1-chain-id <id> --relayer <file> [--epoch-interval <ms>]]
+```
+
+An always-on peer on one app's chain. `keygen` writes `peer.key` and prints
+the public key that belongs in the app's registered validator set — run it
+**before** `register_app`, since that set is what the genesis is derived
+from.
+
+`start` reads the registry entry from L1, derives the app-chain genesis
+from it, and runs the node: a key in the set produces blocks and answers
+`anchor_sign`, anything else follows and serves reads. It syncs the **app
+chain only** — its sole L1 contact is an RPC client. `--anchor` adds an
+[`AnchorDaemon`](../architecture/app-chains.md) relaying state roots to L1
+under `--relayer`'s account; outcome calls are app-specific and still need
+the library's `outcome` hook.
+
 ## `mordecai-wallet` (`packages/wallet/dist/cli.js`)
 
 ```sh
@@ -27,7 +58,7 @@ mordecai-wallet transfer --keystore <path> --to <address> --amount <n> \
                      --nonce <n> --chain-id <id> [--max-fee <n>]
 ```
 
-The passphrase comes from `--passphrase`, `Mordecai_WALLET_PASSPHRASE`, or a
+The passphrase comes from `--passphrase`, `MORDECAI_WALLET_PASSPHRASE`, or a
 hidden prompt. `create` prints the address and the 24-word mnemonic (write
 it down — it is the only backup). `transfer` prints the signed canonical
 transaction as hex plus its hash, ready for `submit_tx`.

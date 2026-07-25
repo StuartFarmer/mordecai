@@ -111,7 +111,7 @@ committed.
 git clone https://github.com/StuartFarmer/mordecai-2.git && cd mordecai-2
 pnpm install
 pnpm build      # typecheck + emit all packages
-pnpm test       # 199 tests: devnets, BFT, VM, app chains, gateways, e2e
+pnpm test       # 207 tests: devnets, BFT, VM, app chains, gateways, CLIs, e2e
 ```
 
 ## Try everything
@@ -186,69 +186,65 @@ refuse service but cannot forge or tamper.
 ### 2. L1 node — a settlement-chain replica
 
 Joining an existing chain means reproducing its genesis **byte for byte** —
-the genesis hash is the swarm topic, so a mismatch just lands you on an
-empty network of one. Mint a key, then overwrite the generated genesis with
-the network's canonical file:
+the genesis hash is the swarm topic, so a mismatch doesn't error, it just
+lands you on an empty network of one. `join` mints a node key against the
+network's `genesis.json` and prints the resulting hash so you can compare
+before starting:
 
 ```sh
-node packages/node/dist/cli.js init --dir /data/l1 --chain-id <id>
-cp genesis.json /data/l1/genesis.json     # the network's canonical copy
+node packages/node/dist/cli.js join --dir /data/l1 --genesis ./genesis.json
 node packages/node/dist/cli.js start --dir /data/l1
 ```
 
-A node whose address is _not_ in `validators` follows the chain and serves
-RPC — that's what you want unless the existing validator set has agreed to
-include you. `start` prints the `rpc key`; that hex string is what gateways
-and peers connect to, and it is stable only as long as the volume is.
+```json
+{
+  "chainId": "mordecai-dev-1",
+  "address": "6i5yyuyn…",
+  "genesisHash": "0af5795e77458991eb26d0101ad5e6f34117ae74ad366883009dc6221f2f5286",
+  "role": "follower"
+}
+```
 
-There's no `mordecai-node join` yet — the `init`-then-replace-genesis dance
-above is the current path, and an obvious thing to smooth over.
+A node whose address is _not_ in `validators` follows the chain and serves
+RPC — that's what you want unless the existing set has agreed to include
+you, and `join` reports which you got. `start` prints the `rpc key`; that
+hex string is what gateways and peers connect to, and it's stable only as
+long as the volume is.
 
 ### 3. App-chain peer — an always-on validator for your app
 
-There's no CLI for this role yet; `AppChain` is a library API (the demos in
-`scripts/` wire it up). A peer entrypoint is about fifteen lines:
-
-```js
-// peer.mjs — an always-on peer for one app chain
-// Relative dist imports, as in scripts/ — the workspace root doesn't link @mordecai/*.
-import { AppChain } from './packages/appchain/dist/index.js';
-import { NodeRpcClient } from './packages/rpc/dist/index.js';
-import { keyPairFromSeed } from './packages/crypto/dist/index.js';
-import { readFileSync } from 'node:fs';
-
-const l1 = NodeRpcClient.connect(Buffer.from(process.env.L1_NODE_KEY, 'hex'));
-const seed = Buffer.from(readFileSync('/data/app/peer.key', 'utf8').trim(), 'hex');
-
-const app = await AppChain.join(l1, process.env.APP_ID, {
-  dir: '/data/app',
-  keyPair: keyPairFromSeed(new Uint8Array(seed)),
-  blockIntervalMs: 300,
-});
-console.log(`joined ${app.genesis.chainId} — validator: ${app.isValidator}`);
-console.log(`rpc key: ${Buffer.from(app.rpcPublicKey).toString('hex')}`);
-```
-
-`join` reads the app's registry entry from L1, derives the genesis from the
-registered validator set, and starts the node — the registry is the whole
-root of trust, no other coordination needed. If your key is in that set the
-peer produces blocks and answers `anchor_sign`; otherwise it follows and
-serves reads. Persist `peer.key` on the volume: for a validator, losing it
-means losing a quorum member. Mint it once, before the app is registered —
-its public key is what goes into the registered validator set:
+Mint the peer's key **before registering the app** — the public key it
+prints is what goes into the registered validator set, and the set is
+baked into the genesis:
 
 ```sh
-node -e "import('./packages/crypto/dist/index.js').then(c => {
-  const seed = c.generateSeed();
-  console.log('seed:   ', Buffer.from(seed).toString('hex'));
-  console.log('pubkey: ', Buffer.from(c.keyPairFromSeed(seed).publicKey).toString('hex'));
-})"
+node packages/appchain/dist/cli.js keygen --dir /data/app
+# → { "publicKey": "6f1d1819…", "address": "phqtogkr…" }
 ```
 
-To also relay anchors to L1, construct an `AnchorDaemon` alongside it with a
-funded `relayer` account — see `scripts/hex-demo.mjs`. Only one peer needs
-to; the co-signing endpoints keep it honest, and concurrent daemons converge
-because the epoch counter comes from L1.
+Then run it. The peer looks the app up on L1, derives the genesis from the
+registered validator set, and starts the node — the registry entry is the
+whole root of trust, no other coordination needed:
+
+```
+Start:  node packages/appchain/dist/cli.js start \
+          --dir /data/app \
+          --app com.example.game \
+          --l1-node $L1_NODE_RPC_KEY
+```
+
+If the key is in the registered set the peer produces blocks and answers
+`anchor_sign`; otherwise it follows and serves reads. Either way it prints
+its own `rpc key`, which is what a gateway points at for game state. Keep
+`peer.key` on the volume — for a validator, losing it means losing a quorum
+member.
+
+Add `--anchor --l1-chain-id <id> --relayer <file>` to also relay anchors to
+L1, paid for by that funded account. Only one peer needs to; the co-signing
+endpoints keep it honest, and concurrent daemons converge because the epoch
+counter comes from L1. That flag anchors the **state root alone** — outcome
+calls like `settle(order_id, winner)` are app-specific, so those still need
+`AnchorDaemon`'s `outcome` hook from a script (see `scripts/hex-demo.mjs`).
 
 ### The one thing to verify
 

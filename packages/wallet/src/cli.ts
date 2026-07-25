@@ -11,7 +11,7 @@ Usage:
   mordecai-wallet transfer --keystore <path> --to <address> --amount <n>
                        --nonce <n> --chain-id <id> [--max-fee <n>]
 
-The passphrase is read from --passphrase, Mordecai_WALLET_PASSPHRASE, or an
+The passphrase is read from --passphrase, MORDECAI_WALLET_PASSPHRASE, or an
 interactive prompt, in that order.
 `;
 
@@ -45,7 +45,7 @@ async function resolvePassphrase(
   confirm: boolean,
 ): Promise<string> {
   if (typeof values.passphrase === 'string') return values.passphrase;
-  const fromEnv = process.env.Mordecai_WALLET_PASSPHRASE;
+  const fromEnv = process.env.MORDECAI_WALLET_PASSPHRASE;
   if (fromEnv) return fromEnv;
   const passphrase = await promptPassphrase('Passphrase: ');
   if (confirm) {

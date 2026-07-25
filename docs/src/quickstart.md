@@ -34,7 +34,7 @@ address and RPC keys.
 ## 2. Create a wallet and move money
 
 ```sh
-export Mordecai_WALLET_PASSPHRASE=dev
+export MORDECAI_WALLET_PASSPHRASE=dev
 node packages/wallet/dist/cli.js create --keystore alice.json
 node packages/wallet/dist/cli.js address --keystore alice.json
 ```

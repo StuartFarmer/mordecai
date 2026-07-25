@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import { genesisHash, parseGenesisJson } from '@mordecai/chain';
 import { encodeAddress } from '@mordecai/crypto';
-import { initNodeDir, loadNodeDir } from './config.js';
+import { initNodeDir, joinNodeDir, loadNodeDir } from './config.js';
 import { Node } from './node.js';
 
 const USAGE = `mordecai-node — Mordecai node
@@ -9,9 +11,13 @@ const USAGE = `mordecai-node — Mordecai node
 Usage:
   mordecai-node init  --dir <path> [--chain-id <id>] [--alloc <address>=<amount>]...
                   [--validator <address>]...
+  mordecai-node join  --dir <path> --genesis <file>
   mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
 
 init creates a node key and genesis.json (this node is the default validator).
+join creates a node key against an existing network's genesis.json; it prints
+     the genesis hash, which is the swarm topic — compare it with the network's
+     before starting, since a mismatch lands you on an empty mesh of one.
 start runs the sequencer and serves RPC on the node's public key.
 `;
 
@@ -36,6 +42,7 @@ async function main(): Promise<void> {
       validator: { type: 'string', multiple: true, default: [] },
       'block-interval': { type: 'string', default: '500' },
       bootstrap: { type: 'string' },
+      genesis: { type: 'string' },
     },
   });
   const dir = values.dir;
@@ -56,8 +63,42 @@ async function main(): Promise<void> {
         ...(validators.length > 0 ? { validators } : {}),
       });
       process.stdout.write(
-        JSON.stringify({ dir, chainId: config.genesis.chainId, address: config.address }, null, 2) +
-          '\n',
+        JSON.stringify(
+          {
+            dir,
+            chainId: config.genesis.chainId,
+            address: config.address,
+            genesisHash: Buffer.from(genesisHash(config.genesis)).toString('hex'),
+          },
+          null,
+          2,
+        ) + '\n',
+      );
+      break;
+    }
+    case 'join': {
+      if (!values.genesis) fail('--genesis <file> is required');
+      let genesis;
+      try {
+        genesis = parseGenesisJson(readFileSync(values.genesis, 'utf8'));
+      } catch (err) {
+        fail(`could not read genesis from ${values.genesis}: ${(err as Error).message}`);
+      }
+      const config = joinNodeDir({ dir, genesis });
+      // Not in the validator set = follower: syncs and serves RPC, no blocks.
+      const isValidator = genesis.validators.includes(config.address);
+      process.stdout.write(
+        JSON.stringify(
+          {
+            dir,
+            chainId: genesis.chainId,
+            address: config.address,
+            genesisHash: Buffer.from(genesisHash(genesis)).toString('hex'),
+            role: isValidator ? 'validator' : 'follower',
+          },
+          null,
+          2,
+        ) + '\n',
       );
       break;
     }
