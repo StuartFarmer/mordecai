@@ -63,6 +63,7 @@ export function registerAppTx(): Transaction {
       version: '1.0.0',
       contractAddress: fill(32, 0x00),
       metadataHash: fill(32, 0xbb),
+      chainValidators: [fill(32, 0xa1), fill(32, 0xa2)],
     },
     signature: fill(64, 0xcc),
   };
@@ -75,6 +76,41 @@ export function updateAppTx(): Transaction {
     nonce: 2n,
     payload: { ...base.payload, kind: 'update_app', version: '1.1.0' } as Transaction['payload'],
   };
+}
+
+export function anchorTx(): Transaction {
+  return {
+    chainId: CHAIN_ID,
+    nonce: 3n,
+    sender: fill(32, 0x12),
+    maxFee: 7_500n,
+    payload: {
+      kind: 'anchor',
+      appId: 'com.example.chess',
+      epoch: 4n,
+      appHeight: 1_024n,
+      stateRoot: fill(32, 0x5a),
+      call: {
+        contract: fill(32, 0x6b),
+        action: 'payout',
+        args: Uint8Array.from([9, 8, 7]),
+      },
+      signatures: [
+        { validator: fill(32, 0xa1), signature: fill(64, 0xb1) },
+        { validator: fill(32, 0xa2), signature: fill(64, 0xb2) },
+      ],
+    },
+    signature: fill(64, 0x13),
+  };
+}
+
+export function anchorTxNoCall(): Transaction {
+  const base = anchorTx();
+  const { call: _call, ...payload } = base.payload as Extract<
+    Transaction['payload'],
+    { kind: 'anchor' }
+  >;
+  return { ...base, payload };
 }
 
 export function header(): BlockHeader {

@@ -435,6 +435,8 @@ class _CodeGen:
                 return "sender"
             if e.kind == "height":
                 return "c::block_height()"
+            if e.kind == "time":
+                return "c::block_time_ms()"
             if e.kind == "value":
                 return "c::attached_value()"
             if e.ty == "str":

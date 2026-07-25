@@ -15,6 +15,7 @@ mod abi {
         pub fn caller_addr(dst_ptr: *mut u8);
         pub fn attached_value() -> i64;
         pub fn block_height() -> i64;
+        pub fn block_time_ms() -> i64;
         pub fn arg_len() -> i32;
         pub fn arg_read(dst_ptr: *mut u8);
         pub fn set_return(ptr: *const u8, len: i32);
@@ -66,6 +67,11 @@ pub fn attached_value() -> u64 {
 /// Height of the block containing this transaction.
 pub fn block_height() -> u64 {
     (unsafe { abi::block_height() }) as u64
+}
+
+/// Timestamp (ms since epoch) of the block containing this transaction.
+pub fn block_time_ms() -> u64 {
+    (unsafe { abi::block_time_ms() }) as u64
 }
 
 pub fn args() -> Vec<u8> {

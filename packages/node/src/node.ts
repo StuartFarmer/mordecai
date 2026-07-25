@@ -94,6 +94,16 @@ export class Node {
     return this.rpc.publicKey;
   }
 
+  /** The node's RPC server, for registering additional methods on its endpoint. */
+  get rpcServer(): NodeRpcServer {
+    return this.rpc;
+  }
+
+  /** Connected consensus peers (0 in single-sequencer mode). */
+  get peerCount(): number {
+    return this.hub?.peerCount ?? 0;
+  }
+
   private async tick(): Promise<void> {
     if (this.producing || this.mempool.size === 0) return;
     this.producing = true;

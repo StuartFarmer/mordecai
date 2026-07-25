@@ -46,6 +46,7 @@ function run(action: string, host = mapHost(), args = new Uint8Array(0), fuel = 
     caller: CALLER,
     value: 0n,
     height: 7n,
+    timeMs: 1_700_000_000_000n,
     fuel,
     host,
   });

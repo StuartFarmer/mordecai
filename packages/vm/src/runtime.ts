@@ -69,6 +69,8 @@ export interface ExecuteParams {
   value: bigint;
   /** Height of the block being executed. */
   height: bigint;
+  /** Timestamp (ms) of the block being executed. */
+  timeMs: bigint;
   fuel: bigint;
   host: VmHost;
 }
@@ -106,6 +108,7 @@ interface RuntimeExports {
     callerPtr: number,
     value: bigint,
     height: bigint,
+    timeMs: bigint,
     fuel: bigint,
   ): number;
   ret_ptr(): number;
@@ -220,6 +223,7 @@ export class VmRuntime {
         callerPtr,
         params.value,
         params.height,
+        params.timeMs,
         params.fuel,
       );
       const ret = new Uint8Array(exports.memory.buffer).slice(

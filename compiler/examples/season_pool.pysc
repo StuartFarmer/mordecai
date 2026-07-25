@@ -1,0 +1,28 @@
+# Season wager pool (app-chains spec §3.5): players stake HSSN on L1,
+# the season is played on the app's own chain, and the pot pays out when
+# the app chain's anchored quorum reports the winner. The only authority
+# this contract trusts is the app's derived sender address — set once in
+# config to appAddress(appId).
+
+contract SeasonPool:
+
+    config:
+        game: address
+
+    state Pot[int]:
+        total: int = 0
+        paid: bool = False
+
+    action stake():
+        require(value > 0, "attach a stake")
+        require(not Pot[0].paid, "season already settled")
+        Pot[0].total += value
+        emit("staked")
+
+    action payout(winner: address):
+        require(sender == config.game, "only the game may report the winner")
+        require(not Pot[0].paid, "season already settled")
+        require(Pot[0].total > 0, "nothing staked")
+        Pot[0].paid = True
+        transfer(winner, Pot[0].total)
+        emit("season settled")

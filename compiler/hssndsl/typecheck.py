@@ -24,7 +24,7 @@ RUST_KEYWORDS = {
 # names the generated Rust already uses
 RESERVED_IDENTS = RUST_KEYWORDS | {
     "deps", "env", "info", "msg", "config", "sender", "height", "value",
-    "storage", "key", "addr",
+    "time", "storage", "key", "addr",
 }
 RESERVED_TYPE_NAMES = {
     "Config", "InstantiateMsg", "ExecuteMsg", "QueryMsg", "ContractError",
@@ -157,7 +157,7 @@ class _Checker:
         # local = ... (binding or scalar)
         if isinstance(target, Name):
             self.check_ident(target.id, "variable", target)
-            if target.id in ("sender", "height", "value"):
+            if target.id in ("sender", "height", "value", "time"):
                 self.fail(f"cannot assign to builtin {target.id!r}", target)
             if target.id in action.params_set:
                 self.fail("cannot reassign an action parameter", target)
@@ -285,6 +285,9 @@ class _Checker:
                 return "address"
             if expr.id == "height":
                 expr.kind = "height"
+                return "int"
+            if expr.id == "time":
+                expr.kind = "time"
                 return "int"
             if expr.id == "value":
                 expr.kind = "value"

@@ -29,10 +29,14 @@ import {
 } from '@hssn/state';
 import { decodeAccount, accountKey, EMPTY_ACCOUNT, type Account } from './account.js';
 import {
+  anchorKey,
   appKey,
   applyTransaction,
   checkInclusion,
+  contractStorageKey,
+  decodeAnchorRecord,
   decodeAppEntry,
+  type AnchorRecord,
   type AppEntry,
   type Receipt,
 } from './execution.js';
@@ -232,9 +236,38 @@ export class Chain {
     return raw === undefined ? undefined : decodeAppEntry(raw);
   }
 
+  /** The last accepted app-chain anchor for `appId`, if any. */
+  async getAnchor(appId: string): Promise<AnchorRecord | undefined> {
+    const raw = await this.stateStore.get(anchorKey(appId));
+    return raw === undefined ? undefined : decodeAnchorRecord(raw);
+  }
+
+  /**
+   * A contract's storage entries as [inner key, value] pairs, optionally
+   * narrowed to inner keys starting with `prefix`. Full scan of the state
+   * store — fine at devnet scale, same trade-off as computeStateRoot.
+   */
+  async getContractState(
+    contractId: Uint8Array,
+    prefix: Uint8Array = new Uint8Array(0),
+  ): Promise<[Uint8Array, Uint8Array][]> {
+    const base = contractStorageKey(contractId, prefix);
+    const out: [Uint8Array, Uint8Array][] = [];
+    const skip = base.length - prefix.length;
+    for await (const [key, value] of this.stateStore.entries()) {
+      if (key.length < base.length) continue;
+      if (Buffer.compare(Buffer.from(key.subarray(0, base.length)), Buffer.from(base)) !== 0) {
+        continue;
+      }
+      out.push([key.subarray(skip), value]);
+    }
+    return out;
+  }
+
   private async executeTxs(
     txs: readonly Transaction[],
     proposer: Uint8Array,
+    blockTimeMs: bigint,
     mode: 'produce' | 'verify',
   ): Promise<ExecOutcome> {
     const overlay = new Overlay(this.stateStore);
@@ -248,7 +281,9 @@ export class Chain {
         skipped.push({ tx, reason });
         continue;
       }
-      receipts.push(await applyTransaction(overlay, tx, proposer, this.head.height + 1n));
+      receipts.push(
+        await applyTransaction(overlay, tx, proposer, this.head.height + 1n, blockTimeMs),
+      );
       included.push(tx);
     }
     return { overlay, included, receipts, skipped };
@@ -266,14 +301,17 @@ export class Chain {
     if (!this.isValidator(proposer.publicKey)) {
       throw new ChainError('proposer is not in the validator set');
     }
-    const outcome = await this.executeTxs(txs, proposer.publicKey, 'produce');
+    // The block timestamp is part of the execution environment (contracts
+    // read it as `time`), so it is fixed before any transaction runs.
     const now = timestampMs ?? BigInt(Date.now());
+    const blockTimeMs = now > this.head.timestampMs ? now : this.head.timestampMs;
+    const outcome = await this.executeTxs(txs, proposer.publicKey, blockTimeMs, 'produce');
     const header: BlockHeader = {
       version: PROTOCOL_VERSION,
       chainId: this.chainId,
       height: this.head.height + 1n,
       prevHash: this.headHash,
-      timestampMs: now > this.head.timestampMs ? now : this.head.timestampMs,
+      timestampMs: blockTimeMs,
       proposer: proposer.publicKey,
       txsRoot: merkleRoot(outcome.included.map(transactionHash)),
       stateRoot: await computeStateRootWith(this.stateStore, outcome.overlay.changes()),
@@ -323,7 +361,7 @@ export class Chain {
       throw new ChainError('invalid proposer signature');
     }
 
-    const outcome = await this.executeTxs(block.txs, h.proposer, 'verify');
+    const outcome = await this.executeTxs(block.txs, h.proposer, h.timestampMs, 'verify');
     const txsRoot = merkleRoot(block.txs.map(transactionHash));
     if (Buffer.compare(txsRoot, h.txsRoot) !== 0) throw new ChainError('txsRoot mismatch');
     const stateRoot = await computeStateRootWith(this.stateStore, outcome.overlay.changes());

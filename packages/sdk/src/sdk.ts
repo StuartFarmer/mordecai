@@ -1,6 +1,6 @@
 import { blake2b256, decodeAddress } from '@hssn/crypto';
 import { Feed, Network } from '@hssn/networking';
-import { encodeTransaction, type Payload } from '@hssn/protocol';
+import { DOMAIN_APP_SENDER, encodeTransaction, type Payload } from '@hssn/protocol';
 import { NodeRpcClient, type AccountInfo, type AppInfo, type TxInfo } from '@hssn/rpc';
 import type { Signer } from '@hssn/wallet';
 
@@ -20,6 +20,16 @@ export interface InstalledApp {
   entry: AppInfo;
   /** The verified application bundle (feed block 0). */
   bundle: Uint8Array;
+}
+
+/**
+ * The L1 sender address of an app's anchored outcome calls (app-chains
+ * spec §2.1). Contracts gate on it with `require(sender == config.game)`.
+ * Matches `appAddress` in @hssn/chain; kept dependency-light here so the
+ * SDK stays Bare-compatible (no node/storage imports).
+ */
+export function appAddress(appId: string): Uint8Array {
+  return blake2b256(new TextEncoder().encode(DOMAIN_APP_SENDER), new TextEncoder().encode(appId));
 }
 
 /**
@@ -98,6 +108,18 @@ export class Hssn {
     return this.rpc.getAccount(address);
   }
 
+  /**
+   * Read a contract's storage (spec §22 `query`): [inner key, value] pairs,
+   * optionally narrowed by inner-key prefix (e.g. the DSL's `s:Tile:`).
+   */
+  async query(contract: Uint8Array, prefix?: Uint8Array): Promise<[Uint8Array, Uint8Array][]> {
+    const entries = await this.rpc.getContractState(contract, prefix);
+    return entries.map(({ key, value }) => [
+      new Uint8Array(Buffer.from(key, 'hex')),
+      new Uint8Array(Buffer.from(value, 'hex')),
+    ]);
+  }
+
   // --------------------------------------------------- identity / auth
 
   /** App-level authentication: prove control of the wallet key. */
@@ -121,6 +143,8 @@ export class Hssn {
     version: string;
     bundle: Uint8Array;
     contractAddress?: Uint8Array;
+    /** App-chain validator set (app-chains spec §2.4); omit for chainless apps. */
+    chainValidators?: Uint8Array[];
   }): Promise<{ pearKey: Uint8Array; tx: TxInfo }> {
     const feed = await this.network.createFeed(`bundle:${params.appId}`);
     if (feed.length === 0) await feed.append(params.bundle);
@@ -132,6 +156,7 @@ export class Hssn {
       version: params.version,
       contractAddress: params.contractAddress ?? new Uint8Array(32),
       metadataHash: blake2b256(params.bundle),
+      chainValidators: params.chainValidators ?? [],
     });
     if (!tx.success) throw new Error(`register_app failed: ${tx.error}`);
     return { pearKey: feed.key, tx };

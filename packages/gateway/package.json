@@ -1,0 +1,34 @@
+{
+  "name": "@hssn/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-facing HTTP gateway: JSON/HTTP bridge to hyperswarm node RPC plus static frontend serving",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "hssn-gateway": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hssn/rpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@hssn/chain": "workspace:*",
+    "@hssn/crypto": "workspace:*",
+    "@hssn/node": "workspace:*",
+    "@hssn/protocol": "workspace:*",
+    "@hssn/wallet": "workspace:*",
+    "hyperdht": "^6.32.0"
+  }
+}
