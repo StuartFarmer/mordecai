@@ -1,5 +1,7 @@
 # Mordecai
 
+![Mordecai](static/mordecai-image.jpg)
+
 **A decentralized operating system for peer-to-peer software.** Apps get
 identity, payments, contracts, and distribution the way they get a
 filesystem — by asking the runtime. Holepunch/Pear provides networking,
