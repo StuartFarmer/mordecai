@@ -1,6 +1,7 @@
 # Summary
 
 [Introduction](introduction.md)
+[Field Guide](field-guide.md)
 [Quickstart](quickstart.md)
 
 # Architecture

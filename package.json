@@ -11,7 +11,8 @@
   },
   "scripts": {
     "mordecai": "node bin/mordecai.mjs",
-    "build": "tsc -b",
+    "build": "tsc -b && mdbook build docs",
+    "build:docs": "mdbook build docs",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",

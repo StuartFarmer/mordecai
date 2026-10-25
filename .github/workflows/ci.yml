@@ -16,6 +16,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: cargo install mdbook --version 0.5.2 --locked
       - run: pnpm build
       - run: pnpm lint
       - run: pnpm format:check

@@ -5,6 +5,9 @@ authors = ["Stuart Farmer"]
 language = "en"
 src = "src"
 
+[build]
+build-dir = "../packages/gateway/public/docs"
+
 [output.html]
 default-theme = "ayu"
 preferred-dark-theme = "ayu"

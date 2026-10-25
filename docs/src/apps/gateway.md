@@ -25,16 +25,23 @@ print its HTTP URL; library callers use `node.gateway.port` (or
 customize it. Without a port, the library chooses an available one.
 
 Without a custom `staticDir` (CLI: `--static`), the gateway serves a built-in
-Mordecai landing page at `/`. Its artwork and assets are bundled locally, and
+Mordecai landing page at `/`. Its assets are bundled locally, and
 the page polls `/api/head` for the chain ID, height, and latest block hash.
 If chain data cannot be fetched, the readout shows the node as unavailable
 and retries automatically. Custom frontends continue to use SPA fallback;
 unknown paths on the default page return 404.
 
-The landing page links to `/guide`, a bundled CLI field guide with copyable
-examples for joining the network, creating a wallet, starting an app network,
-joining an app, and signing and submitting a payment. It also works without
-JavaScript; a custom `staticDir` replaces both built-in pages.
+The landing page links to the full mdBook at `/docs/`, including the
+[Field Guide](../field-guide.md) for joining the network, creating a wallet,
+starting an app network, joining an app, and signing and submitting a payment.
+The old `/guide`, `/guide/`, and `/guide.html` URLs redirect to that chapter.
+A custom `staticDir` replaces both the built-in homepage and documentation.
+
+`pnpm build` builds the packages and bundles the book in
+`packages/gateway/public/docs/`. Install mdBook 0.5.2 on the build machine;
+running the built node needs no mdBook process. After documentation edits,
+`pnpm build:docs` refreshes the bundled book. Missing documentation pages and
+assets return 404 rather than falling back to the homepage.
 
 A separate gateway is still available when you want an independent web edge.
 Run one from code (`Gateway.start({...})`) or the CLI:

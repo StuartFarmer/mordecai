@@ -33,19 +33,25 @@ zechariah/
 
 ## Toolchains
 
-- **Node ≥ 20 + corepack** — the only hard requirement. pnpm is pinned via
+- **Node ≥ 20 + corepack** — required for the packages. pnpm is pinned via
   `packageManager`; `pnpm install && pnpm build && pnpm test`.
 - **Rust (wasm32-unknown-unknown) + Python 3** — only to _rebuild_ wasm
   artifacts (`scripts/build-wasm.sh`) or compile your own DSL contracts.
-  All shipped artifacts are committed, so JS-only development works out of
-  the box; tests that need the toolchain self-skip without it.
-- **mdBook** for this book: `mdbook serve docs`.
+  All shipped WASM artifacts are committed; tests that need the contract
+  toolchain self-skip without it.
+- **mdBook 0.5.2** — required by `pnpm build` to bundle this book into
+  `packages/gateway/public/docs/`. Install a prebuilt mdBook release, or use
+  `cargo install mdbook --version 0.5.2 --locked` if Rust is available.
+  Run `pnpm build:docs` after documentation edits, or `mdbook serve docs`
+  for live-reloading author previews. Built nodes serve the book at `/docs/`
+  without a separate documentation server or mdBook installation.
 
 ## Testing conventions
 
 - Unit + integration tests are vitest, colocated in each package's `test/`
   (plus `apps/*/test/`). Tests import package _sources_ via aliases in
-  `vitest.config.ts`, so no build step is needed to run them.
+  `vitest.config.ts`. Build first for CLI integration tests and bundled
+  documentation route tests, which also exercise generated artifacts.
 - Integration tests spin up real components: in-process DHT testnets
   (`hyperdht/testnet`), real multi-validator consensus, real RPC over the
   swarm. Nothing chain-related is mocked.
@@ -60,5 +66,5 @@ zechariah/
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs install → build → lint →
-format check → tests on every push/PR. CI has no Rust/Python, which is why
-artifacts are committed and toolchain-dependent tests self-skip.
+format check → tests on every push/PR. CI installs mdBook 0.5.2 before the
+build; prebuilt WASM keeps the contract toolchain optional.

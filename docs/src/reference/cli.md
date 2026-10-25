@@ -138,6 +138,7 @@ lives in a fresh temp dir per run; Ctrl-C tears everything down.
 
 ```sh
 pnpm build | test | lint | format      # workspace-wide
+pnpm build:docs                       # refresh the book bundled with each node
 ./scripts/build-wasm.sh                # rebuild ALL wasm artifacts:
                                        #   VM runtime, Rust contracts,
                                        #   DSL examples → contracts/dist

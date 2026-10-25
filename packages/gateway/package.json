@@ -18,7 +18,7 @@
     "public"
   ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && mdbook build ../../docs",
     "test": "vitest run"
   },
   "dependencies": {

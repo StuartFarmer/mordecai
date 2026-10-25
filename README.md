@@ -105,15 +105,17 @@ escrow touching consensus.
 
 ## Install
 
-Node ≥ 20 with corepack (pnpm is pinned via `packageManager`). Rust and
+Node ≥ 20 with corepack (pnpm is pinned via `packageManager`) and mdBook 0.5.2
+for the bundled documentation. Install a prebuilt mdBook release, or run
+`cargo install mdbook --version 0.5.2 --locked` with Rust installed. Rust and
 Python are only needed to rebuild WASM artifacts — prebuilt contracts are
 committed.
 
 ```sh
-git clone https://github.com/StuartFarmer/mordecai-2.git && cd mordecai-2
+git clone https://github.com/StuartFarmer/mordecai.git && cd mordecai
 pnpm install
-pnpm build      # typecheck + emit all packages
-pnpm test       # 207 tests: devnets, BFT, VM, app chains, gateways, CLIs, e2e
+pnpm build      # typecheck + emit packages and bundle the documentation
+pnpm test       # devnets, BFT, VM, app chains, gateways, CLIs, e2e
 ```
 
 ## Try everything
@@ -144,7 +146,8 @@ chain: it reads the app's registration through settlement RPC.
 
 ### Build and storage
 
-Node ≥ 20 with corepack. The WASM runtime and contracts are committed.
+Node ≥ 20 with corepack. Install mdBook 0.5.2 in the build environment;
+it is not needed at runtime. The WASM runtime and contracts are committed.
 
 ```
 Build: corepack enable && pnpm install --frozen-lockfile && pnpm build
@@ -248,8 +251,11 @@ public DHT; pass it only for private testnets.
 
 ## Documentation
 
-The [mdBook](docs/) covers all of it — serve with `mdbook serve docs`:
+Every built node serves the [mdBook](docs/) at `/docs/`, linked from its compact
+homepage. `pnpm build` bundles the book; `pnpm build:docs` refreshes it after
+edits. For live-reloading author previews, use `mdbook serve docs`.
 
+- [Field Guide](docs/src/field-guide.md): join a network, create a wallet, start or join an app, and send a payment.
 - [Architecture](docs/src/architecture/overview.md) · [Three (four) kinds of state](docs/src/architecture/state.md) · [App chains](docs/src/architecture/app-chains.md) · [Consensus](docs/src/architecture/consensus.md) · [Threat model](docs/src/architecture/threat-model.md)
 - [Building p2p apps](docs/src/apps/what-is-a-p2p-app.md) · [The SDK](docs/src/apps/sdk.md) · [The web gateway](docs/src/apps/gateway.md) · [**How-to: run your app on its own chain**](docs/src/apps/app-chains.md)
 - [The DSL](docs/src/contracts/dsl-reference.md) · [Contract tutorial](docs/src/contracts/tutorial.md)

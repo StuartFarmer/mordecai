@@ -1,6 +1,7 @@
 # Quickstart
 
-Requirements: Node ≥ 20 with corepack. Rust (with the
+Requirements: Node ≥ 20 with corepack and mdBook 0.5.2 for building the bundled
+documentation (see [toolchains](reference/repo.md#toolchains)). Rust (with the
 `wasm32-unknown-unknown` target) and Python 3 are only needed if you want to
 rebuild WASM artifacts or compile DSL contracts — prebuilt artifacts are
 committed.
@@ -8,7 +9,7 @@ committed.
 ```sh
 git clone <repo> && cd zechariah
 pnpm install
-pnpm build        # typecheck + emit all packages
+pnpm build        # typecheck + emit all packages and bundle documentation
 pnpm test         # the full suite: 150+ tests incl. multi-validator devnets
 ```
 

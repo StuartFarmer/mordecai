@@ -17,18 +17,23 @@ GET  /api/contract/<id>/state[?prefix=<hex>]   contract storage entries
 /*                                   staticDir (SPA fallback)
 ```
 
-Without `staticDir`, `/` serves the built-in Mordecai landing page: locally
-bundled guardian artwork and a live chain readout from `/api/head`. No frontend
-build or external asset service is required. The readout checks every ten seconds,
-times out after five seconds, and clears stale values if the node is unavailable.
-`--static <dir>` replaces the page with your own frontend, including SPA fallback.
-Unknown paths on the built-in page return 404.
+Without `staticDir`, `/` serves a compact Mordecai homepage with the tagline
+“P2P toolkit for a distributed world” and live node details from `/api/head`.
+The readout checks every ten seconds, times out after five seconds, and clears
+stale values if the node is unavailable.
 
-The bundled `/guide` field guide covers building the CLI, joining L1, creating
-a wallet, starting and joining app networks, and signing/submitting payments.
-It includes a complete app starter and copy buttons with a native selection
-fallback for HTTP peers without clipboard access. All instructions remain
-readable without JavaScript. Custom frontends take precedence over this route too.
+`/docs/` serves the bundled mdBook, including the six-part field guide at
+`/docs/field-guide.html`. The old `/guide`, `/guide/`, and `/guide.html` URLs
+redirect to that chapter. The book provides navigation, search, and code copying;
+its instructions remain readable without JavaScript.
+
+Install mdBook 0.5.2 on the build machine. `pnpm build` compiles the packages
+and writes the book to `packages/gateway/public/docs/`, which is included in
+this package's `public` assets. `pnpm build:docs` rebuilds only the book.
+Running a built node needs no mdBook installation or separate book server.
+
+`--static <dir>` replaces the homepage and documentation with your own
+frontend, including SPA fallback. Unknown paths on the built-in site return 404.
 
 Run from code (`Gateway.start({...})`) or the CLI:
 
@@ -39,12 +44,3 @@ mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] \
 
 See `scripts/frontier-demo.mjs` for the full devnet + contract + gateway
 wiring, and `apps/frontier-web` for a client.
-
-## Landing artwork
-
-`public/guardian.jpg` was generated with the built-in image-generation tool,
-using the gold armour, ivory robes, and stone arches of the
-[visual reference](https://pt.pinterest.com/pin/1008876754062576636/) as inspiration.
-The generated PNG was converted to JPEG for delivery. Generation prompt:
-
-> Use case: stylized-concept. Asset type: original website hero artwork for Mordecai, a layer-one blockchain. Create a tall portrait 1024x1536 painterly oil illustration of a mysterious crowned guardian in intricately engraved antique gold armor and heavy ivory robes standing beneath a monumental Romanesque stone arch. Face entirely concealed behind a beautiful closed gold helmet. Hands rest on the hilt of a long ceremonial sword pointed down. Strong symmetrical architectural composition, guardian seen from knees upward, crown fully visible, broad arch framing the silhouette. Dramatic warm sunlight brushes the gold and fabric from upper left, deep near-black umber shadows behind. Restrained gilded medieval manuscript meets fine-art fantasy book cover; tangible brushwork and aged gold texture, quiet and dignified rather than aggressive. Palette: antique gold, warm ivory, charcoal, muted brown. Dark edges blend into a charcoal webpage. Fill the frame with the guardian and arch; no wide empty margins. No text, lettering, logos, watermark, UI, modern objects, blue glow, or extra people. Make an original composition, not a reproduction.

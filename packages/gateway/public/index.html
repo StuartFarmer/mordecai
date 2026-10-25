@@ -3,102 +3,50 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#141410" />
-    <meta
-      name="description"
-      content="Mordecai. A foundation for worlds. Explore the chain behind this node."
-    />
-    <title>Mordecai — A foundation for worlds</title>
+    <meta name="theme-color" content="#0f1419" />
+    <meta name="description" content="Mordecai. P2P toolkit for a distributed world." />
+    <title>Mordecai — Node</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./mordecai.css" />
     <script src="./mordecai.js" defer></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-    <div class="page">
-      <header class="header">
-        <a class="brand" href="./" aria-label="Mordecai home">
-          <svg viewBox="0 0 40 40" aria-hidden="true">
-            <path d="M20 2 38 20 20 38 2 20Z" />
-            <path d="M12 27V13l8 10 8-10v14M20 2v8M20 30v8" />
-          </svg>
-          <span>Mordecai</span>
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="#network">The network</a>
-          <a href="./guide">Field guide</a>
-          <a href="./api/head">Chain API <span aria-hidden="true">↗</span></a>
+    <main>
+      <header>
+        <h1>Mordecai</h1>
+        <p class="tagline">P2P toolkit for a distributed world.</p>
+        <nav aria-label="Resources">
+          <a href="./docs/">Read the documentation</a>
+          <a href="./api/head">View chain API</a>
         </nav>
       </header>
 
-      <main id="main">
-        <section class="hero" aria-labelledby="title">
-          <figure class="guardian">
-            <img
-              src="./guardian.jpg"
-              width="1024"
-              height="1536"
-              alt="A crowned guardian in gold armour and ivory robes, standing beneath an ancient stone arch."
-              fetchpriority="high"
-            />
-            <figcaption><span>I</span> The guardian at the gate</figcaption>
-          </figure>
-          <div class="hero-copy">
-            <p class="eyebrow"><span class="rule"></span> A peer in a greater world</p>
-            <h1 id="title">Mordecai</h1>
-            <div class="hero-detail">
-              <p class="tagline">A foundation<br />for <em>worlds.</em></p>
-              <p class="intro">
-                Independent worlds. A shared foundation.<br class="desktop-break" />
-                A peer-to-peer network for applications<br class="desktop-break" />
-                with a life of their own.
-              </p>
-              <a class="button" href="#network"
-                >Explore this node <span aria-hidden="true">↘</span></a
-              >
-            </div>
+      <section aria-labelledby="node-title">
+        <div class="section-heading">
+          <h2 id="node-title">This node</h2>
+          <p id="status" role="status" aria-live="polite" data-state="checking">Checking node</p>
+        </div>
+        <dl>
+          <div>
+            <dt>Network</dt>
+            <dd id="chain-id">—</dd>
           </div>
-          <p class="hero-note"><span aria-hidden="true">✧</span> Many worlds. One foundation.</p>
-        </section>
-
-        <section class="network" id="network" aria-labelledby="network-title">
-          <div class="section-heading">
-            <h2 id="network-title"><span class="section-number">01 /</span> From this node</h2>
-            <p class="status" id="status" role="status" aria-live="polite" data-state="checking">
-              Checking node
-            </p>
+          <div>
+            <dt>Block height</dt>
+            <dd id="height">—</dd>
           </div>
-          <dl class="readout">
-            <div>
-              <dt>Network</dt>
-              <dd id="chain-id">—</dd>
-            </div>
-            <div>
-              <dt>Block height</dt>
-              <dd class="height" id="height">—</dd>
-            </div>
-            <div class="hash-field">
-              <dt>Latest block hash</dt>
-              <dd class="hash" id="head-hash">—</dd>
-            </div>
-          </dl>
-          <div class="network-footnote">
-            <p id="last-checked">Waiting for chain data. Updates every 10 seconds.</p>
-            <a href="./api/head">View chain data <span aria-hidden="true">↗</span></a>
+          <div>
+            <dt>Latest block</dt>
+            <dd id="head-hash">—</dd>
           </div>
-          <noscript
-            ><p class="no-script">
-              Enable JavaScript for the live readout, or follow “View chain data” to inspect this
-              node.
-            </p></noscript
-          >
-        </section>
-      </main>
-
-      <footer>
-        <p>Mordecai <span>/</span> The world is yours to build.</p>
-        <span class="footer-label">Served by this node</span>
-      </footer>
-    </div>
+        </dl>
+        <p id="last-checked">Waiting for chain data. Updates every 10 seconds.</p>
+        <noscript
+          ><p>
+            Enable JavaScript for live node details, or use the chain API link above.
+          </p></noscript
+        >
+      </section>
+    </main>
   </body>
 </html>

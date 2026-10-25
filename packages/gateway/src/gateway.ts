@@ -20,7 +20,7 @@ import { NodeRpcClient } from '@mordecai/rpc';
  *   GET  /api/contract/<id hex>/state[?prefix=<hex>]
  *                                          → [{key, value}] storage entries
  *
- * Outside /api, serves `staticDir` (SPA fallback) or the built-in landing page.
+ * Outside /api, serves `staticDir` (SPA fallback) or the built-in page and book.
  */
 export interface GatewayOptions {
   /** RPC public key of the chain node to bridge to. */
@@ -45,22 +45,21 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
   '.wasm': 'application/wasm',
 };
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
 const LANDING_DIR = fileURLToPath(new URL('../public/', import.meta.url));
+const DOCS_DIR = join(LANDING_DIR, 'docs');
 const LANDING_PATHS = new Set([
   '/',
   '/index.html',
   '/mordecai.css',
   '/mordecai.js',
-  '/guardian.jpg',
   '/favicon.svg',
-  '/guide',
-  '/guide.html',
-  '/guide.css',
-  '/guide.js',
 ]);
 
 function json(res: ServerResponse, status: number, body: unknown): void {
@@ -116,13 +115,29 @@ export class Gateway {
       if (path.startsWith('/api/')) return handleApi(req, res, path, url);
       if (options.staticDir) return serveStatic(res, options.staticDir, path);
       if (req.method === 'GET' || req.method === 'HEAD') {
-        if (path === '/guide/') {
-          res.writeHead(308, { location: '../guide' + url.search });
+        if (path === '/docs' || ['/guide', '/guide/', '/guide.html'].includes(path)) {
+          const target =
+            path === '/docs'
+              ? './docs/'
+              : `${path === '/guide/' ? '../' : './'}docs/field-guide.html`;
+          res.writeHead(308, { location: target + url.search });
           res.end();
           return;
         }
+        if (path.startsWith('/docs/')) {
+          let docPath: string;
+          try {
+            docPath = decodeURIComponent(path.slice('/docs'.length));
+          } catch {
+            return json(res, 404, { error: 'not found' });
+          }
+          if (docPath.split(/[/\\]/).includes('..') || docPath.includes('\0')) {
+            return json(res, 404, { error: 'not found' });
+          }
+          return serveStatic(res, DOCS_DIR, docPath, false);
+        }
         if (LANDING_PATHS.has(path)) {
-          return serveStatic(res, LANDING_DIR, path === '/guide' ? '/guide.html' : path);
+          return serveStatic(res, LANDING_DIR, path, false);
         }
       }
       json(res, 404, { error: 'not found' });
@@ -189,12 +204,18 @@ export class Gateway {
       }
     };
 
-    const serveStatic = async (res: ServerResponse, dir: string, path: string): Promise<void> => {
+    const serveStatic = async (
+      res: ServerResponse,
+      dir: string,
+      path: string,
+      spaFallback = true,
+    ): Promise<void> => {
       const rel = normalize(path).replace(/^([/\\]|\.\.)+/, '');
       let file = join(dir, rel === '' || rel === '.' ? 'index.html' : rel);
       try {
         if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
       } catch {
+        if (!spaFallback) return json(res, 404, { error: 'not found' });
         file = join(dir, 'index.html'); // SPA fallback
       }
       try {

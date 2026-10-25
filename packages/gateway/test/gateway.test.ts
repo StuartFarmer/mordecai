@@ -86,34 +86,69 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
-  it.each(['/', '/guide', '/guide.html'])('serves %s and its local assets', async (route) => {
-    const page = await fetch(`${base}${route}`);
-    expect(page.status).toBe(200);
-    expect(page.headers.get('content-type')).toContain('text/html');
-    const html = await page.text();
-    expect(html).toContain('<h1');
-    // Follow the page's actual asset references, so missing packaged assets fail.
-    const assets = [...html.matchAll(/(?:src|href)="(\.\/[^"#]+\.(?:css|js|jpg|svg))"/g)];
-    expect(assets.length).toBeGreaterThanOrEqual(3);
-    for (const [, path] of assets) {
-      const asset = await fetch(new URL(path!, page.url));
-      expect(asset.status).toBe(200);
-      expect(asset.headers.get('content-type')).not.toContain('text/html');
-      expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
-    }
-    const head = await fetch(`${base}${route}`, { method: 'HEAD' });
-    expect(head.status).toBe(200);
-    expect(await head.text()).toBe('');
-    for (const path of ['/missing', '/api/missing', '/package.json']) {
-      expect((await fetch(`${base}${path}`)).status).toBe(404);
-    }
-    expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
+  it.each(['/', '/docs/', '/docs/field-guide.html', '/docs/architecture/overview.html'])(
+    'serves %s and its local assets',
+    async (route) => {
+      const page = await fetch(`${base}${route}`);
+      expect(page.status).toBe(200);
+      expect(page.headers.get('content-type')).toContain('text/html');
+      const html = await page.text();
+      expect(html).toContain('<h1');
+      // Follow the page's actual asset references, so missing packaged assets fail.
+      const assets = [...html.matchAll(/(?:src|href)="([^"#?]+\.(?:css|js|jpg|svg|png))"/g)];
+      expect(assets.length).toBeGreaterThanOrEqual(3);
+      for (const [, path] of assets) {
+        const asset = await fetch(new URL(path!, page.url));
+        expect(asset.status).toBe(200);
+        expect(asset.headers.get('content-type')).not.toContain('text/html');
+        expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
+      }
+      const head = await fetch(`${base}${route}`, { method: 'HEAD' });
+      expect(head.status).toBe(200);
+      expect(await head.text()).toBe('');
+      for (const path of ['/missing', '/api/missing', '/package.json']) {
+        expect((await fetch(`${base}${path}`)).status).toBe(404);
+      }
+      expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
+    },
+  );
+
+  it.each(['/guide', '/guide/', '/guide.html'])('redirects legacy %s to the book', async (path) => {
+    const res = await fetch(`${base}${path}?from=old`, { redirect: 'manual' });
+    expect(res.status).toBe(308);
+    expect(new URL(res.headers.get('location')!, res.url).href).toBe(
+      `${base}/docs/field-guide.html?from=old`,
+    );
   });
 
-  it('redirects the guide trailing slash so relative links resolve correctly', async () => {
-    const res = await fetch(`${base}/guide/`, { redirect: 'manual' });
+  it('redirects the book root so its relative assets resolve correctly', async () => {
+    const res = await fetch(`${base}/docs?search=wallet`, { redirect: 'manual' });
     expect(res.status).toBe(308);
-    expect(new URL(res.headers.get('location')!, res.url).href).toBe(`${base}/guide`);
+    expect(new URL(res.headers.get('location')!, res.url).href).toBe(`${base}/docs/?search=wallet`);
+  });
+
+  it.each([
+    '/docs/missing.html',
+    '/docs/missing.js',
+    '/docs/%2e%2e%2findex.html',
+    '/docs/%2e%2e%5cindex.html',
+    '/docs/%E0%A4%A',
+    '/docs/%00',
+  ])('rejects missing or invalid documentation path %s', async (path) => {
+    expect((await fetch(`${base}${path}`)).status).toBe(404);
+  });
+
+  it('keeps the field guide section anchors and serves the book search index', async () => {
+    const html = await (await fetch(`${base}/docs/field-guide.html`)).text();
+    for (const id of ['tools', 'join-network', 'wallet', 'create-app', 'join-app', 'payments']) {
+      expect(html).toContain(`id="${id}"`);
+    }
+    const script = html.match(/window\.path_to_searchindex_js = "([^"]+)"/);
+    expect(script).not.toBeNull();
+    const index = await fetch(new URL(script![1]!, `${base}/docs/field-guide.html`));
+    expect(index.status).toBe(200);
+    expect(index.headers.get('content-type')).toContain('javascript');
+    expect(await index.text()).toContain('Create a wallet');
   });
 
   it('lets a custom frontend replace the landing page and keep its SPA fallback', async () => {
@@ -125,7 +160,15 @@ describe('HTTP gateway to node RPC', () => {
       staticDir,
     });
     try {
-      for (const path of ['/', '/app/route', '/guide', '/guide/']) {
+      for (const path of [
+        '/',
+        '/app/route',
+        '/guide',
+        '/guide/',
+        '/docs',
+        '/docs/',
+        '/docs/field-guide.html',
+      ]) {
         const res = await fetch(`http://127.0.0.1:${custom.port}${path}`);
         expect(res.status).toBe(200);
         expect(await res.text()).toBe('<h1>My app</h1>');
