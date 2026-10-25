@@ -1,6 +1,6 @@
 # Interactive Frontier, Outpost and Chess demos
 
-Status: proposed design, awaiting user review. No product implementation yet.
+Status: approved by the user; implementation authorized with three parallel agents.
 
 Independent builder check: no important unanswered planning questions.
 
@@ -11,7 +11,7 @@ demo from Demos without importing their key again. The user requested preparing
 the remaining apps like Hex, continuing incremental git commits, and selected
 **one persistent shared world per demo** for Frontier and Outpost.
 
-Implement in order: Frontier, Outpost, Chess. Keep the running Hex deployment,
+Implement Frontier, Outpost and Chess in parallel, as subsequently requested. Keep the running Hex deployment,
 wallet balances and rooms. All native-token transactions use the existing
 `mordecai-demo` L1. App-chain fee balances remain separate. No public deployment
 or push is included.
