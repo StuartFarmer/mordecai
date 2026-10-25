@@ -29,6 +29,7 @@ import token as T
 import tokenize
 
 from mordecaidsl.ast_nodes import (
+    ByteLen,
     Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
     Exists, FieldDef, If, Index, IntLit, Name, NotOp, Param, Program,
     Require, StateDef, Stmt, StrLit, TransferStmt,
@@ -399,6 +400,12 @@ class _Parser:
             if tok.string in ("True", "False"):
                 self.next()
                 return BoolLit(line=tok.start[0], value=tok.string == "True")
+            if tok.string == "byte_len":
+                self.next()
+                self.expect(T.OP, "(")
+                operand = self.parse_expr()
+                self.expect(T.OP, ")")
+                return ByteLen(line=tok.start[0], operand=operand)
             if tok.string == "exists":
                 self.next()
                 self.expect(T.OP, "(")

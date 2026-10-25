@@ -5,6 +5,7 @@ config, rebinding state handles, and identifiers that would collide with the
 generated Rust."""
 
 from mordecaidsl.ast_nodes import (
+    ByteLen,
     Action, Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt,
     Exists, If, Index, IntLit, Name, NotOp, Program, Require, StrLit,
     TransferStmt,
@@ -24,7 +25,7 @@ RUST_KEYWORDS = {
 # names the generated Rust already uses
 RESERVED_IDENTS = RUST_KEYWORDS | {
     "deps", "env", "info", "msg", "config", "sender", "height", "value",
-    "time", "storage", "key", "addr",
+    "time", "storage", "key", "addr", "byte_len",
 }
 RESERVED_TYPE_NAMES = {
     "Config", "InstantiateMsg", "ExecuteMsg", "QueryMsg", "ContractError",
@@ -330,6 +331,11 @@ class _Checker:
         if isinstance(expr, Index):
             self.fail("state entries cannot be used as values here "
                       "(bind one first: x = Map[key])", expr)
+
+        if isinstance(expr, ByteLen):
+            if self.type_expr(expr.operand, scope, action) != "str":
+                self.fail("byte_len() requires str", expr)
+            return "int"
 
         if isinstance(expr, Exists):
             state = self.states.get(expr.map_name)

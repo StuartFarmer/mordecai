@@ -1,0 +1,86 @@
+# Public, funded information requests. Award window is fixed at 100 blocks.
+contract InformationBounties:
+    state Meta[int]:
+        next_bounty: int = 0
+        next_response: int = 0
+
+    state Bounty[int]:
+        creator: address
+        reward: int
+        title: str
+        request: str
+        submit_end: int
+        award_end: int
+        created_height: int
+        response_count: int = 0
+        # 0 reserved, 1 awarded, 2 cancelled, 3 refunded
+        phase: int = 0
+        winner: int = 0
+        settled_height: int = 0
+
+    state Answer[int]:
+        bounty_id: int
+        author: address
+        text: str
+        submitted_height: int
+
+    action create(title: str, request: str, submit_end: int):
+        require(value > 0, "attach a positive reward")
+        require(byte_len(title) > 0 and byte_len(title) <= 160, "title must be 1-160 UTF-8 bytes")
+        require(byte_len(request) > 0 and byte_len(request) <= 8192, "request must be 1-8192 UTF-8 bytes")
+        require(submit_end > height, "submission deadline must be in the future")
+        require(submit_end - height <= 100000, "submission duration exceeds 100000 blocks")
+        award_end = submit_end + 100
+        bounty_id = Meta[0].next_bounty
+        Meta[0].next_bounty += 1
+        Bounty[bounty_id] = Bounty(creator=sender, reward=value, title=title, request=request, submit_end=submit_end, award_end=award_end, created_height=height)
+        emit("bounty funded")
+
+    action respond(bounty_id: int, text: str):
+        require(value == 0, "do not attach value")
+        b = Bounty[bounty_id]
+        require(b.phase == 0, "bounty is closed")
+        require(height < b.submit_end, "submissions are closed")
+        require(sender != b.creator, "creator cannot respond")
+        require(byte_len(text) > 0 and byte_len(text) <= 8192, "response must be 1-8192 UTF-8 bytes")
+        response_id = Meta[0].next_response
+        Meta[0].next_response += 1
+        Answer[response_id] = Answer(bounty_id=bounty_id, author=sender, text=text, submitted_height=height)
+        b.response_count += 1
+        emit("response recorded")
+
+    action cancel(bounty_id: int):
+        require(value == 0, "do not attach value")
+        b = Bounty[bounty_id]
+        require(b.phase == 0, "bounty is closed")
+        require(sender == b.creator, "only creator can cancel")
+        require(b.response_count == 0, "responses prevent cancellation")
+        require(height < b.submit_end, "cancellation window closed")
+        b.phase = 2
+        b.settled_height = height
+        transfer(b.creator, b.reward)
+        emit("bounty cancelled and refunded")
+
+    action award(bounty_id: int, response_id: int):
+        require(value == 0, "do not attach value")
+        b = Bounty[bounty_id]
+        require(b.phase == 0, "bounty is closed")
+        require(sender == b.creator, "only creator can award")
+        require(height >= b.submit_end and height < b.award_end, "outside award window")
+        a = Answer[response_id]
+        require(a.bounty_id == bounty_id, "response belongs to another bounty")
+        b.phase = 1
+        b.winner = response_id
+        b.settled_height = height
+        transfer(a.author, b.reward)
+        emit("award paid")
+
+    action refund(bounty_id: int):
+        require(value == 0, "do not attach value")
+        b = Bounty[bounty_id]
+        require(b.phase == 0, "bounty is closed")
+        require(height >= b.award_end, "refund deadline has not arrived")
+        b.phase = 3
+        b.settled_height = height
+        transfer(b.creator, b.reward)
+        emit("expired bounty refunded")

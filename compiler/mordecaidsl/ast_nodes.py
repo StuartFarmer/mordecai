@@ -60,6 +60,11 @@ class NotOp(Expr):
 
 
 @dataclass
+class ByteLen(Expr):
+    operand: Expr | None = None
+
+
+@dataclass
 class Attr(Expr):
     obj: Expr | None = None
     attr: str = ""

@@ -72,6 +72,8 @@ parse time.
   No chained comparisons.
 - Boolean: `and`, `or`, `not`.
 - `exists(Map[key])` → bool.
+- `byte_len(text)` → int: UTF-8 byte length of a `str`. Use this to bound public
+  text stored by a contract; multibyte characters can occupy more than one byte.
 - `config.field` — read-only access to config.
 - `Map[key].field` — read a field without binding.
 

@@ -16,6 +16,7 @@ ArgReader/args helpers match it).
 """
 
 from mordecaidsl.ast_nodes import (
+    ByteLen,
     Assign, Attr, BinOp, BoolLit, BoolOp, Compare, Ctor, EmitStmt, Exists,
     If, IntLit, Name, NotOp, Program, Require, StrLit, TransferStmt,
 )
@@ -72,7 +73,7 @@ def _uses(node, want_kind: str) -> bool:
         return _uses(node.left, want_kind) or _uses(node.right, want_kind)
     if isinstance(node, BoolOp):
         return any(_uses(p, want_kind) for p in node.parts)
-    if isinstance(node, NotOp):
+    if isinstance(node, (NotOp, ByteLen)):
         return _uses(node.operand, want_kind)
     if isinstance(node, (Exists,)):
         return _uses(node.key, want_kind)
@@ -426,6 +427,8 @@ class _CodeGen:
         from mordecaidsl.ast_nodes import Index
         if isinstance(e, IntLit):
             return f"{e.value}u64"
+        if isinstance(e, ByteLen):
+            return f"({self.expr(e.operand)}.len() as u64)"
         if isinstance(e, StrLit):
             return f"{rust_string(e.value)}.to_string()"
         if isinstance(e, BoolLit):
