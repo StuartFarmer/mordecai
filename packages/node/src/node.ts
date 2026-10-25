@@ -4,6 +4,8 @@ import { ConsensusEngine, PeerHub } from '@mordecai/consensus';
 import type { KeyPair } from '@mordecai/crypto';
 import type { Genesis } from '@mordecai/chain';
 import { NodeRpcServer } from '@mordecai/rpc';
+import { Gateway, type GatewayOptions } from '@mordecai/gateway';
+import { Network } from '@mordecai/networking';
 
 export interface NodeOptions {
   dir: string;
@@ -13,37 +15,39 @@ export interface NodeOptions {
   maxTxsPerBlock?: number;
   bootstrap?: { host: string; port: number }[];
   log?: (message: string) => void;
+  gateway?: Omit<GatewayOptions, 'nodeKey' | 'bootstrap'>;
+  /** App-selected feeds to download continuously and serve to other peers. */
+  feedKeys?: Uint8Array[];
 }
 
 /**
- * A chain node. With a single genesis validator it runs the M3 sequencer
- * loop; with more it runs M4 BFT consensus over the peer mesh (topic =
- * genesis hash). Non-validator nodes in consensus mode follow and serve RPC.
+ * Every node verifies, stores and serves chain state, seeds selected feeds,
+ * and provides HTTP access. Only keys in genesis participate in voting.
  */
 export class Node {
-  private timer: NodeJS.Timeout | undefined;
-  private producing = false;
-
   private constructor(
     readonly chain: Chain,
     readonly mempool: Mempool,
     private readonly rpc: NodeRpcServer,
-    private readonly keyPair: KeyPair,
-    private readonly maxTxsPerBlock: number,
-    private readonly log: (message: string) => void,
-    private readonly hub: PeerHub | undefined,
-    private readonly engine: ConsensusEngine | undefined,
+    private readonly hub: PeerHub,
+    private readonly engine: ConsensusEngine,
+    readonly network: Network,
+    readonly gateway: Gateway,
   ) {}
 
   static async start(options: NodeOptions): Promise<Node> {
     const chain = await Chain.open(join(options.dir, 'chain'), options.genesis);
     const mempool = new Mempool(chain);
     const log = options.log ?? (() => {});
-    const consensusMode = options.genesis.validators.length > 1;
-
     let hub: PeerHub | undefined;
     let engine: ConsensusEngine | undefined;
-    if (consensusMode) {
+    let rpc: NodeRpcServer | undefined;
+    let gateway: Gateway | undefined;
+    const network = Network.create({
+      storageDir: join(options.dir, 'feeds'),
+      ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
+    });
+    try {
       hub = await PeerHub.create({
         topic: genesisHash(options.genesis),
         ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
@@ -58,36 +62,34 @@ export class Node {
         log,
       });
       engine.start();
-    }
-
-    const rpc = await NodeRpcServer.start(
-      {
-        chain,
-        mempool,
-        ...(engine ? { onTxAccepted: (tx) => engine!.broadcastTx(tx) } : {}),
-      },
-      {
+      rpc = await NodeRpcServer.start(
+        {
+          chain,
+          mempool,
+          onTxAccepted: (tx) => engine!.broadcastTx(tx),
+        },
+        {
+          ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
+          keyPair: options.keyPair,
+        },
+      );
+      gateway = await Gateway.start({
+        config: { chainId: chain.chainId },
+        ...options.gateway,
+        nodeKey: rpc.publicKey,
         ...(options.bootstrap ? { bootstrap: options.bootstrap } : {}),
-        keyPair: options.keyPair,
-      },
-    );
-    const node = new Node(
-      chain,
-      mempool,
-      rpc,
-      options.keyPair,
-      options.maxTxsPerBlock ?? 1_000,
-      log,
-      hub,
-      engine,
-    );
-    if (!consensusMode) {
-      node.timer = setInterval(() => {
-        void node.tick();
-      }, options.blockIntervalMs ?? 500);
-      node.timer.unref();
+      });
+      for (const key of options.feedKeys ?? []) await network.seedFeed(key);
+      return new Node(chain, mempool, rpc, hub, engine, network, gateway);
+    } catch (err) {
+      await gateway?.close();
+      await engine?.stop();
+      await hub?.close();
+      await rpc?.close();
+      await network.close();
+      await chain.close();
+      throw err;
     }
-    return node;
   }
 
   get rpcPublicKey(): Uint8Array {
@@ -99,36 +101,21 @@ export class Node {
     return this.rpc;
   }
 
-  /** Connected consensus peers (0 in single-sequencer mode). */
-  get peerCount(): number {
-    return this.hub?.peerCount ?? 0;
+  get isValidator(): boolean {
+    return this.engine.isValidatorNode;
   }
 
-  private async tick(): Promise<void> {
-    if (this.producing || this.mempool.size === 0) return;
-    this.producing = true;
-    try {
-      const txs = await this.mempool.takeForBlock(this.maxTxsPerBlock);
-      if (txs.length > 0) {
-        const { block, skipped } = await this.chain.produceBlock(txs, this.keyPair);
-        await this.mempool.prune();
-        this.log(
-          `block ${block.header.height}: ${block.txs.length} tx(s)` +
-            (skipped.length > 0 ? `, ${skipped.length} skipped` : ''),
-        );
-      }
-    } catch (err) {
-      this.log(`block production error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      this.producing = false;
-    }
+  /** Connected validators and ordinary peers on this chain. */
+  get peerCount(): number {
+    return this.hub.peerCount;
   }
 
   async stop(): Promise<void> {
-    if (this.timer) clearInterval(this.timer);
-    await this.engine?.stop();
-    await this.hub?.close();
+    await this.gateway.close();
+    await this.engine.stop();
+    await this.hub.close();
     await this.rpc.close();
+    await this.network.close();
     await this.chain.close();
   }
 }

@@ -29,6 +29,11 @@ export class Feed {
     return this.core.writable;
   }
 
+  /** Whether a block is already stored locally (without requesting it). */
+  has(index: number): Promise<boolean> {
+    return this.core.has(index);
+  }
+
   async append(block: Uint8Array | string): Promise<void> {
     const bytes = typeof block === 'string' ? new TextEncoder().encode(block) : block;
     await this.core.append(bytes);
@@ -44,6 +49,19 @@ export class Feed {
   /** Wait until a connected peer advertises a longer feed. */
   async update(): Promise<boolean> {
     return this.core.update({ wait: true });
+  }
+
+  /** Download existing and future blocks until this subscription is stopped. */
+  seed(): () => void {
+    const range = this.core.download({ start: 0, end: -1 });
+    let stopped = false;
+    void range.done().catch((error: unknown) => {
+      if (!stopped) console.error('feed download failed:', error);
+    });
+    return () => {
+      stopped = true;
+      range.destroy();
+    };
   }
 
   /** Subscribe to appends; returns an unsubscribe function. */

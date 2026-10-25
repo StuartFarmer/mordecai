@@ -1,5 +1,5 @@
 /**
- * The mordecai-peer CLI against a live L1 + app chain. The app chain is
+ * The mordecai app CLI against a live L1 + app chain. The app chain is
  * registered with two validators — the CLI's key and an in-process one —
  * so a quorum needs both. A transaction submitted through the spawned
  * process's own RPC and committed therefore proves it really joined
@@ -21,9 +21,10 @@ import { NodeRpcClient } from '@mordecai/rpc';
 import { AppChain } from '../src/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const peerCli = join(here, '..', 'dist', 'cli.js');
+const appCli = join(here, '..', 'dist', 'cli.js');
+const cli = join(here, '..', '..', '..', 'bin', 'mordecai.mjs');
 const nodeCli = join(here, '..', '..', 'node', 'dist', 'cli.js');
-const enabled = existsSync(peerCli) && existsSync(nodeCli);
+const enabled = existsSync(appCli) && existsSync(nodeCli);
 
 const L1_CHAIN = 'mordecai-cli-test';
 const APP = 'com.example.cli';
@@ -50,9 +51,9 @@ function bootstrapArg(): string {
 }
 
 /** Run a CLI to completion, returning stdout (rejects on non-zero exit). */
-function runCli(script: string, args: string[]): Promise<string> {
+function runCli(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(process.execPath, [script, ...args], { stdio: 'pipe' });
+    const proc = spawn(process.execPath, [cli, ...args], { stdio: 'pipe' });
     let out = '';
     let err = '';
     proc.stdout.on('data', (d: Buffer) => (out += d.toString()));
@@ -65,13 +66,12 @@ function runCli(script: string, args: string[]): Promise<string> {
 
 /** Spawn a long-running CLI, resolving once `marker` appears on stdout. */
 function spawnUntil(
-  script: string,
   args: string[],
   marker: string,
   timeoutMs = 60_000,
 ): Promise<{ proc: ChildProcessWithoutNullStreams; output: string }> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(process.execPath, [script, ...args], { stdio: 'pipe' });
+    const proc = spawn(process.execPath, [cli, ...args], { stdio: 'pipe' });
     let out = '';
     let err = '';
     const timer = setTimeout(() => {
@@ -93,20 +93,34 @@ function spawnUntil(
   });
 }
 
-describe.skipIf(!enabled)('mordecai-peer CLI', () => {
+describe.skipIf(!enabled)('mordecai app CLI', () => {
   let peerDir: string;
   let peerPublicKey: string;
+
+  it('dispatches settlement initialization and help, and rejects unknown command groups', async () => {
+    expect(await runCli(['--help'])).toContain('mordecai l1');
+    expect(await runCli(['app', '--help'])).toContain('mordecai app init');
+    expect(await runCli(['l1', '--help'])).toContain('mordecai l1 init');
+    await expect(runCli(['unknown'])).rejects.toThrow(/unknown command group/i);
+    const dir = tmp('mordecai-unified-l1-');
+    const result = JSON.parse(
+      await runCli(['l1', 'init', '--dir', dir, '--chain-id', 'unified-cli']),
+    ) as { address: string };
+    const genesis = JSON.parse(readFileSync(join(dir, 'genesis.json'), 'utf8'));
+    expect(genesis.chainId).toBe('unified-cli');
+    expect(genesis.validators).toEqual([result.address]);
+  });
 
   beforeAll(async () => {
     testnet = await createTestnet(3);
 
     // The CLI mints its own key; its public key is what the registry entry
-    // must carry, so keygen has to happen before register_app.
+    // must carry, so init has to happen before register_app.
     peerDir = tmp('mordecai-cli-peer-');
-    const keygen = JSON.parse(await runCli(peerCli, ['keygen', '--dir', peerDir])) as {
+    const init = JSON.parse(await runCli(['app', 'init', '--dir', peerDir])) as {
       publicKey: string;
     };
-    peerPublicKey = keygen.publicKey;
+    peerPublicKey = init.publicKey;
 
     l1 = await Node.start({
       dir: tmp('mordecai-cli-l1-'),
@@ -165,25 +179,29 @@ describe.skipIf(!enabled)('mordecai-peer CLI', () => {
     for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
   });
 
-  it('keygen writes a reusable peer.key', () => {
+  it('init writes a reusable peer.key and refuses to replace it', async () => {
     const seed = readFileSync(join(peerDir, 'peer.key'), 'utf8').trim();
     expect(seed).toMatch(/^[0-9a-f]{64}$/);
     // The printed public key must be the one derived from that seed —
     // it's what the operator pastes into the registered validator set.
     const derived = keyPairFromSeed(new Uint8Array(Buffer.from(seed, 'hex')));
     expect(Buffer.from(derived.publicKey).toString('hex')).toBe(peerPublicKey);
+    await expect(runCli(['app', 'init', '--dir', peerDir])).rejects.toThrow(
+      /refusing to overwrite/,
+    );
+    expect(readFileSync(join(peerDir, 'peer.key'), 'utf8').trim()).toBe(seed);
   });
 
   it('start joins the app chain from the registry and reaches consensus', async () => {
     const started = await spawnUntil(
-      peerCli,
       [
+        'app',
         'start',
         '--dir',
         peerDir,
         '--app',
         APP,
-        '--l1-node',
+        '--settlement-node',
         Buffer.from(l1.rpcPublicKey).toString('hex'),
         '--bootstrap',
         bootstrapArg(),
@@ -231,4 +249,128 @@ describe.skipIf(!enabled)('mordecai-peer CLI', () => {
       await peerRpc.close();
     }
   }, 120_000);
+
+  it('connect creates an ordinary peer and starts its HTTP gateway without init', async () => {
+    const dir = tmp('mordecai-cli-connect-');
+    const started = await spawnUntil(
+      [
+        'app',
+        'connect',
+        '--dir',
+        dir,
+        '--app',
+        APP,
+        '--l1-node',
+        Buffer.from(l1.rpcPublicKey).toString('hex'),
+        '--bootstrap',
+        bootstrapArg(),
+      ],
+      'peer running',
+    );
+    try {
+      expect(started.output).toContain('role:     peer');
+      expect(readFileSync(join(dir, 'peer.key'), 'utf8').trim()).toMatch(/^[0-9a-f]{64}$/);
+      const url = /http:\s+(http:\/\/127\.0\.0\.1:\d+)/.exec(started.output)![1];
+      await expect
+        .poll(
+          async () => {
+            const response = await fetch(`${url}/api/head`);
+            return ((await response.json()) as { height: string }).height;
+          },
+          { timeout: 15_000 },
+        )
+        .toBe('1');
+    } finally {
+      const stopped = new Promise<void>((resolve) => started.proc.once('exit', () => resolve()));
+      started.proc.kill('SIGTERM');
+      await stopped;
+    }
+  }, 60_000);
+
+  it('explains that named lookup needs settlement or a direct peer URL', async () => {
+    await expect(
+      runCli(['app', 'connect', '--dir', tmp('mordecai-no-settlement-'), '--app', APP]),
+    ).rejects.toThrow(/settlement.*peer URL/i);
+  });
+
+  it('joins an unregistered app by URL and then by the new peer IP without settlement', async () => {
+    const validatorDir = tmp('mordecai-direct-validator-');
+    const identity = JSON.parse(await runCli(['app', 'init', '--dir', validatorDir])) as {
+      publicKey: string;
+    };
+    const standalone = await AppChain.start({
+      appId: 'com.example.standalone',
+      chainValidators: [other.publicKey, new Uint8Array(Buffer.from(identity.publicKey, 'hex'))],
+      dir: tmp('mordecai-standalone-'),
+      keyPair: other,
+      bootstrap: testnet.bootstrap,
+      gateway: { config: { secret: 'must not appear in connection metadata' } },
+    });
+    const spawned: ChildProcessWithoutNullStreams[] = [];
+    try {
+      let target = `http://127.0.0.1:${standalone.node.gateway.port}`;
+      for (let i = 0; i < 2; i++) {
+        const started = await spawnUntil(
+          [
+            'app',
+            'connect',
+            '--dir',
+            i === 0 ? validatorDir : tmp('mordecai-direct-'),
+            '--app',
+            target,
+          ],
+          'peer running',
+        );
+        spawned.push(started.proc);
+        expect(started.output).toContain(`role:     ${i === 0 ? 'validator' : 'peer'}`);
+        const url = /http:\s+(http:\/\/127\.0\.0\.1:\d+)/.exec(started.output)![1]!;
+        const config = await (await fetch(`${url}/api/connect`)).json();
+        expect(config).toMatchObject({
+          version: 1,
+          appId: 'com.example.standalone',
+          bootstrap: testnet.bootstrap,
+        });
+        expect(config.settlement).toBeUndefined();
+        expect(config.secret).toBeUndefined();
+        if (i === 0) {
+          await standalone.waitForPeers(1);
+          const unsigned = {
+            chainId: 'app:com.example.standalone',
+            nonce: 0n,
+            sender: other.publicKey,
+            maxFee: 500_000n,
+            payload: { kind: 'transfer' as const, to: owner.publicKey, amount: 123n },
+          };
+          const tx = {
+            ...unsigned,
+            signature: sign(transactionSigningBytes(unsigned), other.secretKey),
+          };
+          const response = await fetch(`${url}/api/tx`, {
+            method: 'POST',
+            body: JSON.stringify({ tx: Buffer.from(encodeTransaction(tx)).toString('hex') }),
+          });
+          expect(response.ok).toBe(true);
+        }
+        await expect
+          .poll(
+            async () => {
+              const response = await fetch(`${url}/api/account/${encodeAddress(owner.publicKey)}`);
+              return ((await response.json()) as { balance: string }).balance;
+            },
+            { timeout: 15_000 },
+          )
+          .toBe('123');
+        target = url.replace('http://', '');
+      }
+      await standalone.waitForPeers(2);
+      expect(await standalone.chain.getCertificate(1n)).toHaveLength(2);
+    } finally {
+      for (const proc of spawned) {
+        const stopped = new Promise<void>((resolve) => proc.once('exit', () => resolve()));
+        proc.kill('SIGTERM');
+        await stopped;
+      }
+      await standalone.stop();
+    }
+  }, 60_000);
 });

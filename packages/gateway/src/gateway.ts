@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { NodeRpcClient } from '@mordecai/rpc';
 
 /**
@@ -19,17 +20,19 @@ import { NodeRpcClient } from '@mordecai/rpc';
  *   GET  /api/contract/<id hex>/state[?prefix=<hex>]
  *                                          → [{key, value}] storage entries
  *
- * Anything outside /api serves `staticDir` (SPA fallback to index.html).
+ * Outside /api, serves `staticDir` (SPA fallback) or the built-in landing page.
  */
 export interface GatewayOptions {
   /** RPC public key of the chain node to bridge to. */
   nodeKey: Uint8Array;
   bootstrap?: { host: string; port: number }[];
   port?: number;
-  /** Frontend bundle to serve at /; omit for an API-only gateway. */
+  /** Frontend bundle to serve at /; omit for the built-in Mordecai landing page. */
   staticDir?: string;
   /** Arbitrary JSON served at /api/config (chain id, contract address, dev accounts…). */
   config?: unknown;
+  /** Public app-network discovery metadata, kept separate from frontend config. */
+  connection?: Record<string, unknown>;
 }
 
 const MIME: Record<string, string> = {
@@ -40,11 +43,25 @@ const MIME: Record<string, string> = {
   '.json': 'application/json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon',
   '.wasm': 'application/wasm',
 };
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
+const LANDING_DIR = fileURLToPath(new URL('../public/', import.meta.url));
+const LANDING_PATHS = new Set([
+  '/',
+  '/index.html',
+  '/mordecai.css',
+  '/mordecai.js',
+  '/guardian.jpg',
+  '/favicon.svg',
+  '/guide',
+  '/guide.html',
+  '/guide.css',
+  '/guide.js',
+]);
 
 function json(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json' });
@@ -98,6 +115,16 @@ export class Gateway {
 
       if (path.startsWith('/api/')) return handleApi(req, res, path, url);
       if (options.staticDir) return serveStatic(res, options.staticDir, path);
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        if (path === '/guide/') {
+          res.writeHead(308, { location: '../guide' + url.search });
+          res.end();
+          return;
+        }
+        if (LANDING_PATHS.has(path)) {
+          return serveStatic(res, LANDING_DIR, path === '/guide' ? '/guide.html' : path);
+        }
+      }
       json(res, 404, { error: 'not found' });
     };
 
@@ -108,6 +135,11 @@ export class Gateway {
       url: URL,
     ): Promise<void> => {
       try {
+        if (req.method === 'GET' && path === '/api/connect') {
+          return options.connection
+            ? json(res, 200, options.connection)
+            : json(res, 404, { error: 'this gateway does not advertise an app network' });
+        }
         if (req.method === 'GET' && path === '/api/config') {
           return json(res, 200, options.config ?? {});
         }
@@ -182,6 +214,9 @@ export class Gateway {
         const address = server.address();
         resolve(typeof address === 'object' && address ? address.port : (options.port ?? 0));
       });
+    }).catch(async (error: unknown) => {
+      await rpc.close();
+      throw error;
     });
 
     return new Gateway(server, rpc, port);

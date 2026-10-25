@@ -13,7 +13,7 @@ zechariah/
     vm/              contract executor (wasmi-in-wasm) + runtime/ (Rust crate)
     chain/           genesis, execution, fees, mempool, blocks, registry
     consensus/       BFT engine, peer hub, certificates, block sync
-    node/            node orchestration + mordecai-node CLI
+    node/            node orchestration + mordecai l1 CLI
     rpc/             hyperswarm-RPC server + typed client
     wallet/          Wallet, Signer, keystore files, mordecai-wallet CLI
     sdk/             Mordecai (app runtime), ContractArgs, mordecai-launcher

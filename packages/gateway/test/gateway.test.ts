@@ -3,7 +3,7 @@
  * HTTP. The "browser" here is fetch(): it signs transactions locally and
  * talks JSON — exactly what the web client does.
  */
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -86,6 +86,56 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
+  it.each(['/', '/guide', '/guide.html'])('serves %s and its local assets', async (route) => {
+    const page = await fetch(`${base}${route}`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get('content-type')).toContain('text/html');
+    const html = await page.text();
+    expect(html).toContain('<h1');
+    // Follow the page's actual asset references, so missing packaged assets fail.
+    const assets = [...html.matchAll(/(?:src|href)="(\.\/[^"#]+\.(?:css|js|jpg|svg))"/g)];
+    expect(assets.length).toBeGreaterThanOrEqual(3);
+    for (const [, path] of assets) {
+      const asset = await fetch(new URL(path!, page.url));
+      expect(asset.status).toBe(200);
+      expect(asset.headers.get('content-type')).not.toContain('text/html');
+      expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
+    }
+    const head = await fetch(`${base}${route}`, { method: 'HEAD' });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe('');
+    for (const path of ['/missing', '/api/missing', '/package.json']) {
+      expect((await fetch(`${base}${path}`)).status).toBe(404);
+    }
+    expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
+  });
+
+  it('redirects the guide trailing slash so relative links resolve correctly', async () => {
+    const res = await fetch(`${base}/guide/`, { redirect: 'manual' });
+    expect(res.status).toBe(308);
+    expect(new URL(res.headers.get('location')!, res.url).href).toBe(`${base}/guide`);
+  });
+
+  it('lets a custom frontend replace the landing page and keep its SPA fallback', async () => {
+    const staticDir = mkdtempSync(join(tmpdir(), 'mordecai-frontend-'));
+    writeFileSync(join(staticDir, 'index.html'), '<h1>My app</h1>');
+    const custom = await Gateway.start({
+      nodeKey: node.rpcPublicKey,
+      bootstrap: testnet.bootstrap,
+      staticDir,
+    });
+    try {
+      for (const path of ['/', '/app/route', '/guide', '/guide/']) {
+        const res = await fetch(`http://127.0.0.1:${custom.port}${path}`);
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe('<h1>My app</h1>');
+      }
+    } finally {
+      await custom.close();
+      rmSync(staticDir, { recursive: true, force: true });
+    }
+  });
+
   it('serves the operator config and chain head', { timeout: 30_000 }, async () => {
     expect(await api('/api/config')).toEqual({ chainId: 'mordecai-gw-test', hello: 'frontier' });
     const head = await api<{ chainId: string; height: string }>('/api/head');

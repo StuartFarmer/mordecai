@@ -1,24 +1,29 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { genesisHash, parseGenesisJson } from '@mordecai/chain';
-import { encodeAddress } from '@mordecai/crypto';
 import { initNodeDir, joinNodeDir, loadNodeDir } from './config.js';
 import { Node } from './node.js';
 
-const USAGE = `mordecai-node — Mordecai node
+const USAGE = `mordecai l1 — Mordecai node
 
 Usage:
-  mordecai-node init  --dir <path> [--chain-id <id>] [--alloc <address>=<amount>]...
+  mordecai l1 init  --dir <path> [--chain-id <id>] [--alloc <address>=<amount>]...
                   [--validator <address>]...
-  mordecai-node join  --dir <path> --genesis <file>
-  mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
+  mordecai l1 join  --dir <path> --genesis <file>
+  mordecai l1 connect --dir <path> [--genesis <file>]
+  mordecai l1 start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
+                     [--port <port>] [--static <dir>] [--config <file.json>]
 
 init creates a node key and genesis.json (this node is the default validator).
 join creates a node key against an existing network's genesis.json; it prints
      the genesis hash, which is the swarm topic — compare it with the network's
      before starting, since a mismatch lands you on an empty mesh of one.
-start runs the sequencer and serves RPC on the node's public key.
+connect joins on first use (--genesis required), then starts all services.
+start resumes an initialized node. Both serve HTTP, RPC and chain data;
+      keys in the validator set additionally vote. HTTP uses --port or PORT,
+      otherwise an available port printed at startup.
 `;
 
 function fail(message: string): never {
@@ -43,6 +48,9 @@ async function main(): Promise<void> {
       'block-interval': { type: 'string', default: '500' },
       bootstrap: { type: 'string' },
       genesis: { type: 'string' },
+      port: { type: 'string', default: process.env.PORT ?? '0' },
+      static: { type: 'string' },
+      config: { type: 'string' },
     },
   });
   const dir = values.dir;
@@ -94,7 +102,7 @@ async function main(): Promise<void> {
             chainId: genesis.chainId,
             address: config.address,
             genesisHash: Buffer.from(genesisHash(genesis)).toString('hex'),
-            role: isValidator ? 'validator' : 'follower',
+            role: isValidator ? 'validator' : 'peer',
           },
           null,
           2,
@@ -102,7 +110,12 @@ async function main(): Promise<void> {
       );
       break;
     }
+    case 'connect':
     case 'start': {
+      if (command === 'connect' && !existsSync(join(dir, 'genesis.json'))) {
+        if (!values.genesis) fail('--genesis <file> is required on first connection');
+        joinNodeDir({ dir, genesis: parseGenesisJson(readFileSync(values.genesis, 'utf8')) });
+      }
       const config = loadNodeDir(dir);
       const bootstrap = values.bootstrap
         ? values.bootstrap.split(',').map((entry) => {
@@ -117,11 +130,18 @@ async function main(): Promise<void> {
         blockIntervalMs: Number(values['block-interval']),
         ...(bootstrap ? { bootstrap } : {}),
         log: (message) => process.stdout.write(`${new Date().toISOString()} ${message}\n`),
+        gateway: {
+          port: Number(values.port),
+          ...(values.static ? { staticDir: values.static } : {}),
+          ...(values.config ? { config: JSON.parse(readFileSync(values.config, 'utf8')) } : {}),
+        },
       });
       process.stdout.write(`chain:    ${config.genesis.chainId}\n`);
       process.stdout.write(`height:   ${node.chain.height}\n`);
       process.stdout.write(`address:  ${config.address}\n`);
-      process.stdout.write(`rpc key:  ${encodeAddress(node.rpcPublicKey)}\n`);
+      process.stdout.write(`role:     ${node.isValidator ? 'validator' : 'peer'}\n`);
+      process.stdout.write(`rpc key:  ${Buffer.from(node.rpcPublicKey).toString('hex')}\n`);
+      process.stdout.write(`http:     http://127.0.0.1:${node.gateway.port}\n`);
       process.stdout.write('node running — Ctrl-C to stop\n');
       const shutdown = () => {
         void node.stop().then(() => process.exit(0));

@@ -1,7 +1,7 @@
 # How-To: Run Your App on Its Own Chain
 
 This walks through the whole app-chain lifecycle with `@mordecai/appchain`:
-register, join, play, anchor, settle. The finished version of every step
+start or discover, join, play, and optionally anchor and settle. The finished version of every step
 is `packages/appchain/test/market.test.ts` and `scripts/outpost-demo.mjs`.
 
 ## When you want one
@@ -12,6 +12,57 @@ anything that must survive any single player leaving — and especially
 anything L1 money will settle on. Contracts encode the _referee_
 (legality, resources, outcomes); the app keeps everything else
 (rendering, search, AI, UI).
+
+## Start without settlement
+
+App networks can run independently. Create a persistent identity first:
+
+```sh
+mordecai app init --dir ./game
+```
+
+Then start the first peer from your app's Node.js entry point:
+
+```ts
+import { readKeyFile } from '@mordecai/node';
+import { AppChain } from '@mordecai/appchain';
+
+const keyPair = readKeyFile('./game/peer.key');
+const game = await AppChain.start({
+  appId: 'com.example.game',
+  chainValidators: [keyPair.publicKey],
+  keyPair,
+  dir: './game',
+  gateway: { port: 8787 },
+  // feedKeys: [bundleFeedKey, sharedDataFeedKey],
+});
+```
+
+Share the machine's reachable gateway URL. Another participant can join:
+
+```sh
+mordecai app connect --dir ./my-game --app http://192.168.1.20:8787
+```
+
+Or use `AppChain.connect('http://192.168.1.20:8787', { dir: './my-game' })`.
+The peer reads `/api/connect`, verifies the connection document's structure
+and genesis hash, and joins the advertised native peer network. The URL is
+an introduction, not a permanent central server. Every joined app peer
+serves the same network configuration with its own RPC key.
+
+Both roles seed the advertised feed keys and run HTTP access. A key in
+`chainValidators` also votes; every other key participates without voting.
+The source URL supplies the initial trust configuration. An existing data
+directory rejects a different genesis rather than switching networks.
+
+Settlement is optional. When you register this app later, use the same app
+ID and validator order so the derived genesis stays identical. Settlement
+contracts and anchoring remain separate setup. You may advertise optional
+`settlement: { nodeKey, chainId, bootstrap }` metadata from `AppChain.start`.
+Direct joins do not contact that settlement node automatically.
+
+The following sections describe the registry-based entry path and optional
+settlement integration.
 
 ## 1. Register the app with its validator set
 
@@ -39,15 +90,23 @@ import { AppChain } from '@mordecai/appchain';
 
 const game = await AppChain.join(l1Rpc, 'com.example.outpost', {
   dir: './outpost-chain',
-  keyPair: myKeys, // validator if in the set, follower otherwise
+  // keyPair: myKeys, // optional; otherwise creates/reuses dir/peer.key
   blockIntervalMs: 300, // game speed, not L1 speed
 });
 await game.waitForPeers(1); // let the mesh form before the first move
 ```
 
+Joining starts the HTTP gateway, chain verification and replication for
+both roles. It also downloads and seeds the registered app bundle.
+`game.node.gateway.port` is the browser API port; `game.node.network`
+provides feed access. Pass `feedKeys` for other app-selected feeds, or call
+`game.node.network.seedFeed(key)` for feeds discovered while running.
+These dynamic subscriptions must be selected again when the app reconnects.
+No bundle is automatically executed.
+
 Validators automatically answer `anchor_sign` on their node endpoint —
 dialed by the same keys the registry publishes, so there is no extra
-discovery. Followers sync and serve reads.
+discovery. Ordinary peers sync, verify, store and serve data without voting.
 
 ## 3. Deploy the rules and play
 
@@ -118,7 +177,8 @@ against in-process chains; the whole suite runs in seconds.
 
 - **Old data dirs:** anchors shipped with `PROTOCOL_VERSION 2`; devnets
   from before it need fresh data dirs.
-- **Browser UIs:** point a second [gateway](gateway.md) at any app-chain
-  node — the JSON surface is identical to L1's.
+- **Browser UIs:** use the node's built-in [gateway](gateway.md); pass
+  `gateway: { port, staticDir, config }` to configure it. Its JSON surface
+  is identical to L1's.
 - **Disposal:** after the last anchor of a season, the chain's data dirs
   can be deleted. L1 keeps the anchor and the settlement forever.

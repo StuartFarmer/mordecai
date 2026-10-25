@@ -11,4 +11,5 @@ export {
 } from './attest.js';
 export { registerCosigner, requestCosignature } from './cosign.js';
 export { AppChain, type AppChainOptions } from './appchain.js';
+export { type AppConnection, type SettlementConnection } from './connection.js';
 export { AnchorDaemon, type AnchorDaemonOptions } from './daemon.js';

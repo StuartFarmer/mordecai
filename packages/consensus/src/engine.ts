@@ -367,7 +367,14 @@ export class ConsensusEngine {
         return;
       }
       if (block.header.height !== this.nextHeight) continue;
-      if (!this.verifyCertificate(block.header.height, blockHash(block.header), item.votes)) {
+      // Before all nodes used the mesh, single-validator blocks carried
+      // only the proposer's signature. applyBlock verifies that signature
+      // and re-executes the block; no certificate exemption for larger sets.
+      const legacySingleValidator = this.validators.length === 1 && item.votes.length === 0;
+      if (
+        !legacySingleValidator &&
+        !this.verifyCertificate(block.header.height, blockHash(block.header), item.votes)
+      ) {
         this.log(`height ${block.header.height}: rejected sync block (bad certificate)`);
         return;
       }

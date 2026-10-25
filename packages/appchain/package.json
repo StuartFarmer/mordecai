@@ -10,9 +10,6 @@
       "default": "./dist/index.js"
     }
   },
-  "bin": {
-    "mordecai-peer": "./dist/cli.js"
-  },
   "files": [
     "dist"
   ],

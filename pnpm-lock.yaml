@@ -262,6 +262,12 @@ importers:
       '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@mordecai/gateway':
+        specifier: workspace:*
+        version: link:../gateway
+      '@mordecai/networking':
+        specifier: workspace:*
+        version: link:../networking
       '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol

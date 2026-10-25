@@ -131,125 +131,114 @@ Nothing here _needs_ hosting — that's the point. But an always-on peer is
 useful: an app chain whose players come and go still wants a validator
 that never sleeps, and browsers need a gateway to reach the DHT at all.
 
-There are **three** roles, and they sync different things:
+There are **two node roles**: validators and peers. Both sync and verify
+state, store and serve chain history, seed app data, and provide HTTP
+access. A validator additionally proposes and votes on blocks. The node
+detects its role from its identity and the network's validator set.
 
-| Role                     | Syncs                | Volume | HTTP port     | L1 relationship |
-| ------------------------ | -------------------- | ------ | ------------- | --------------- |
-| **L1 node**              | the settlement chain | yes    | no            | _is_ L1         |
-| **App-chain peer**       | one app's chain      | yes    | no            | RPC client only |
-| **Gateway** (app server) | nothing              | no     | yes (`$PORT`) | RPC client only |
+A settlement node serves the settlement network; an app node serves one
+app's network. Connecting to an app does not also download the settlement
+chain: it reads the app's registration through settlement RPC.
 
-> **An app-chain peer does not sync L1.** It runs the node stack against
-> the app's own genesis, derived from the registry entry. Its only L1
-> contact is a `NodeRpcClient` — reading the registry entry when it joins,
-> and submitting ~100-byte anchors if it's the one running the daemon. If
-> you want a replica of the settlement chain, that's the separate L1-node
-> role below. Running both means running two services.
+### Build and storage
 
-### Build settings (all three roles)
-
-Node ≥ 20 with corepack. The WASM runtime and contracts are committed, so
-Railway needs no Rust or Python toolchain.
+Node ≥ 20 with corepack. The WASM runtime and contracts are committed.
 
 ```
-Build:  corepack enable && pnpm install --frozen-lockfile && pnpm build
+Build: corepack enable && pnpm install --frozen-lockfile && pnpm build
 ```
 
-Roles that keep a chain need a **Railway Volume** mounted at `/data`. The
-node directory holds `node.key` — the Ed25519 seed that _is_ this node's
-RPC address and validator identity — plus `genesis.json` and `chain/`. On
-an ephemeral filesystem you get a new identity and a full resync on every
-deploy, which for a validator means the quorum silently loses a member.
+Mount a persistent volume at `/data`. It keeps your identity, chain history,
+and downloaded feeds across restarts. Losing a validator key means losing
+a member of that network's quorum.
 
-### 1. Gateway — the "app server"
+### Connect to an app
 
-The only role that takes public HTTP traffic. It translates browser JSON
-into swarm RPC and serves your SPA bundle; it holds no keys and syncs no
-chain, so it's stateless and safe to scale or redeploy freely. Point it at
-whichever node's RPC key you want to read — an L1 node for wallet/market
-views, an app-chain peer for game state.
-
-```
-Start:  node packages/gateway/dist/cli.js \
-          --node $NODE_RPC_KEY \
-          --port $PORT \
-          --static apps/outpost-web/dist
-```
-
-`--port $PORT` is required — Railway assigns it. The server binds all
-interfaces, so ingress works with no extra config; the `127.0.0.1` in its
-startup log is cosmetic. Add `--config` for an operator-supplied
-`/api/config`. Gateways are interchangeable and untrusted: transactions
-arrive signed and state is decoded client-side, so a hostile gateway can
-refuse service but cannot forge or tamper.
-
-### 2. L1 node — a settlement-chain replica
-
-Joining an existing chain means reproducing its genesis **byte for byte** —
-the genesis hash is the swarm topic, so a mismatch doesn't error, it just
-lands you on an empty network of one. `join` mints a node key against the
-network's `genesis.json` and prints the resulting hash so you can compare
-before starting:
+Join a peer directly, without any settlement network:
 
 ```sh
-node packages/node/dist/cli.js join --dir /data/l1 --genesis ./genesis.json
-node packages/node/dist/cli.js start --dir /data/l1
+mordecai app connect --dir /data/app --app http://192.168.1.20:8787
+# IP shorthand also works: --app 192.168.1.20:8787
 ```
 
-```json
-{
-  "chainId": "mordecai-dev-1",
-  "address": "6i5yyuyn…",
-  "genesisHash": "0af5795e77458991eb26d0101ad5e6f34117ae74ad366883009dc6221f2f5286",
-  "role": "follower"
-}
-```
-
-A node whose address is _not_ in `validators` follows the chain and serves
-RPC — that's what you want unless the existing set has agreed to include
-you, and `join` reports which you got. `start` prints the `rpc key`; that
-hex string is what gateways and peers connect to, and it's stable only as
-long as the volume is.
-
-### 3. App-chain peer — an always-on validator for your app
-
-Mint the peer's key **before registering the app** — the public key it
-prints is what goes into the registered validator set, and the set is
-baked into the genesis:
+Or resolve an app ID through a settlement registry:
 
 ```sh
-node packages/appchain/dist/cli.js keygen --dir /data/app
-# → { "publicKey": "6f1d1819…", "address": "phqtogkr…" }
+mordecai app connect --dir /data/app --app com.example.game \
+  --settlement-node "$SETTLEMENT_RPC_KEY" --port "$PORT"
 ```
 
-Then run it. The peer looks the app up on L1, derives the genesis from the
-registered validator set, and starts the node — the registry entry is the
-whole root of trust, no other coordination needed:
+These are the installed CLI commands; from a checkout, substitute
+`node bin/mordecai.mjs app` for `mordecai app`.
 
+HTTP(S) URLs and IP addresses fetch `/api/connect` from the chosen peer.
+Domain URLs require a scheme (`https://game.example.com`); a bare name
+such as `com.example.game` is a registry lookup and requires
+`--settlement-node`. The older `--l1-node` flag remains an alias.
+A failed direct lookup never falls back to settlement.
+
+Both paths create or reuse `peer.key`, derive the app's chain from its
+configuration, start all services, and seed the advertised feeds. Registry
+lookups automatically include the registered bundle. Startup reports the
+role, RPC key and HTTP URL. Every joined peer also exposes `/api/connect`,
+so it can introduce the next peer.
+
+Direct discovery trusts the chosen peer's initial configuration; registry
+lookup trusts the selected settlement network. Subsequent chain data is
+verified against that configuration. Optional settlement metadata does not
+make a direct join contact settlement or start spending funds.
+
+See [standalone app networks](docs/src/apps/app-chains.md#start-without-settlement)
+for starting the first peer without a registry.
+
+Use `--feed <hex-key>` for additional app-selected data feeds (repeatable),
+`--static <dir>` to serve a built browser frontend, and `--config <file.json>`
+for its configuration. Downloaded bundles are seeded, not automatically
+executed or unpacked; installation still verifies the registry hash.
+
+For a new validator, generate its identity before choosing the app's validator set:
+
+```sh
+mordecai app init --dir /data/app
 ```
-Start:  node packages/appchain/dist/cli.js start \
-          --dir /data/app \
-          --app com.example.game \
-          --l1-node $L1_NODE_RPC_KEY
+
+Put the printed public key in the app's local or registered validator set. The same
+`connect` command then starts voting automatically. Ordinary peers need no
+`init` step. `start` remains an alias for `connect`.
+
+### Connect to settlement
+
+```sh
+node bin/mordecai.mjs l1 connect \
+  --dir /data/l1 --genesis ./genesis.json --port "$PORT"
 ```
 
-If the key is in the registered set the peer produces blocks and answers
-`anchor_sign`; otherwise it follows and serves reads. Either way it prints
-its own `rpc key`, which is what a gateway points at for game state. Keep
-`peer.key` on the volume — for a validator, losing it means losing a quorum
-member.
+The first connection saves the supplied network genesis and creates an
+identity. Later connections reuse that directory. Everyone joining the
+same network must use the same genesis. HTTP runs automatically on both
+roles, including networks with a single validator.
 
-Add `--anchor --l1-chain-id <id> --relayer <file>` to also relay anchors to
-L1, paid for by that funded account. Only one peer needs to; the co-signing
-endpoints keep it honest, and concurrent daemons converge because the epoch
-counter comes from L1. That flag anchors the **state root alone** — outcome
-calls like `settle(order_id, winner)` are app-specific, so those still need
-`AnchorDaemon`'s `outcome` hook from a script (see `scripts/hex-demo.mjs`).
+Without `--port`, the CLIs use `PORT` or choose an available port and print
+it. For programmatic use, `Node.start({ ... })` exposes `node.gateway` and
+`node.network`; `AppChain.join(...)` exposes these through `app.node`.
+The gateway binds all interfaces; normal HTTP ingress configuration still
+applies. A standalone gateway remains available for separate web deployments,
+but connecting a node does not require one.
+
+### Settlement outcomes
+
+Validators automatically answer anchor co-signing requests. Relaying
+anchors to L1 remains app-specific: add
+`--anchor --l1-chain-id <id> --relayer <file>` for periodic state-root
+anchors, paid for by the funded relayer. Outcome calls such as
+`settle(order_id, winner)` use `AnchorDaemon`'s `outcome` hook. Connecting
+a peer does not authorize spending settlement funds.
 
 ### The one thing to verify
 
-These are **DHT peers, not servers** — they need no inbound ports, but they
-do need hyperswarm's UDP hole punching to work outbound from Railway's NAT.
+The native peer mesh uses DHT discovery and UDP hole punching; it does
+not need an inbound TCP listener. HTTP discovery and browser access do
+require a reachable gateway port. Check outbound UDP works from Railway's NAT.
 Connections are outbound-initiated, so this generally works, but it isn't
 something to assume: check `waitForPeers()` resolves, or that `height` is
 advancing, before trusting a deployment. Omit `bootstrap` and you get the

@@ -9,7 +9,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
+import {
+  blake2b256,
+  encodeAddress,
+  generateSeed,
+  keyPairFromSeed,
+  sign,
+  type KeyPair,
+} from '@mordecai/crypto';
 import { genesisHash } from '@mordecai/chain';
 import {
   encodeTransaction,
@@ -36,6 +43,7 @@ let l1Rpc: NodeRpcClient;
 let chainA: AppChain;
 let chainB: AppChain;
 let daemon: AnchorDaemon;
+let bundleKey: Uint8Array;
 const dirs: string[] = [];
 const nonces = new Map<KeyPair, bigint>();
 
@@ -77,16 +85,21 @@ beforeAll(async () => {
     bootstrap: testnet.bootstrap,
   });
   l1Rpc = NodeRpcClient.connect(l1.rpcPublicKey, { bootstrap: testnet.bootstrap });
+  const bundle = await l1.network.createFeed('app-bundle');
+  const bytes = new TextEncoder().encode('game bundle');
+  await bundle.append(bytes);
+  await l1.network.joinFeed(bundle);
+  bundleKey = bundle.key;
 
   await submit(
     l1Rpc,
     stx(owner, L1_CHAIN, {
       kind: 'register_app',
       appId: APP,
-      pearKey: new Uint8Array(32).fill(1),
+      pearKey: bundleKey,
       version: '1.0.0',
       contractAddress: new Uint8Array(32),
-      metadataHash: new Uint8Array(32).fill(2),
+      metadataHash: blake2b256(bytes),
       chainValidators: [alice.publicKey, bob.publicKey],
     }),
   );
@@ -132,6 +145,29 @@ afterAll(async () => {
 }, 120_000);
 
 describe('app chains over the swarm', () => {
+  it(
+    'joining creates a persistent peer with HTTP access and automatic bundle seeding',
+    { timeout: 60_000 },
+    async () => {
+      const dir = tmp('mordecai-ac-peer-');
+      const options = { dir, bootstrap: testnet.bootstrap };
+      let peer = await AppChain.join(l1Rpc, APP, options);
+      try {
+        const key = peer.rpcPublicKey;
+        expect(peer.isValidator).toBe(false);
+        const head = await fetch(`http://127.0.0.1:${peer.node.gateway.port}/api/head`);
+        expect(await head.json()).toMatchObject({ chainId: `app:${APP}` });
+        const bundle = await peer.node.network.openFeed(bundleKey);
+        await expect.poll(() => bundle.has(0), { timeout: 15_000 }).toBe(true);
+        await peer.stop();
+        peer = await AppChain.join(l1Rpc, APP, options);
+        expect(peer.rpcPublicKey).toEqual(key);
+        expect(await (await peer.node.network.openFeed(bundleKey)).has(0)).toBe(true);
+      } finally {
+        await peer.stop();
+      }
+    },
+  );
   it('derives one deterministic genesis for every joiner', () => {
     const a = appChainGenesis(APP, [alice.publicKey, bob.publicKey]);
     const b = appChainGenesis(APP, [alice.publicKey, bob.publicKey]);

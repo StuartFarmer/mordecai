@@ -17,6 +17,7 @@ export interface NetworkOptions {
  */
 export class Network {
   private readonly connectionListeners = new Set<(remotePublicKey: Uint8Array) => void>();
+  private readonly seeds = new Map<string, () => void>();
 
   private constructor(
     private readonly swarm: Hyperswarm,
@@ -61,6 +62,15 @@ export class Network {
     await this.join(feed.discoveryKey);
   }
 
+  /** Keep a complete local copy, including future appends, and serve it. */
+  async seedFeed(key: Uint8Array): Promise<Feed> {
+    const feed = await this.openFeed(key);
+    const id = Buffer.from(key).toString('hex');
+    if (!this.seeds.has(id)) this.seeds.set(id, feed.seed());
+    await this.joinFeed(feed);
+    return feed;
+  }
+
   /** Join an arbitrary 32-byte topic as both server and client. */
   async join(topic: Uint8Array): Promise<void> {
     const discovery = this.swarm.join(topic, { server: true, client: true });
@@ -82,6 +92,8 @@ export class Network {
   }
 
   async close(): Promise<void> {
+    for (const stop of this.seeds.values()) stop();
+    this.seeds.clear();
     await this.swarm.destroy();
     await this.store.close();
   }

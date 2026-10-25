@@ -20,6 +20,7 @@ import {
 } from '@mordecai/protocol';
 import {
   LevelStore,
+  MemoryStore,
   Overlay,
   computeStateRoot,
   computeStateRootWith,
@@ -189,7 +190,20 @@ export class Chain {
       throw new ChainError('stored chain was created from a different genesis config');
     }
     const storedRoot = await computeStateRoot(stateStore);
-    if (Buffer.compare(storedRoot, head.stateRoot) !== 0) {
+    let expectedRoot = head.stateRoot;
+    if (head.height === 0n) {
+      // Existing genesis headers commit allocation order, while the store
+      // iterates in key order. Preserve chain hashes and verify both against
+      // the supplied genesis instead of rejecting an untouched data dir.
+      const initial = new MemoryStore();
+      const expected = await buildGenesisBlock(genesis, initial);
+      if (Buffer.compare(blockHash(head), blockHash(expected.header)) !== 0) {
+        throw new ChainError('stored genesis header does not match genesis config');
+      }
+      await initial.applyChanges(genesisChanges(genesis));
+      expectedRoot = await computeStateRoot(initial);
+    }
+    if (Buffer.compare(storedRoot, expectedRoot) !== 0) {
       throw new ChainError('state does not match head state root (corrupt data dir)');
     }
     return new Chain(genesis, stateStore, blockStore, head, validatorKeys);

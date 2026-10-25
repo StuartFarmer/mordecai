@@ -20,6 +20,7 @@ export default defineConfig({
       '@mordecai/sdk': pkg('sdk'),
       '@mordecai/pear-integration': pkg('pear-integration'),
       '@mordecai/node': pkg('node'),
+      '@mordecai/gateway': pkg('gateway'),
     },
   },
   test: {

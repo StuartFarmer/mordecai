@@ -1,53 +1,94 @@
 # CLI Tools
 
-All CLIs live in package `dist/` directories after `pnpm build` (or via the
-package `bin` entries). Examples below use `node <path>` form.
-
-## `mordecai-node` (`packages/node/dist/cli.js`)
-
-```sh
-mordecai-node init  --dir <path> [--chain-id <id>] \
-                [--alloc <address>=<amount>]... [--validator <address>]...
-mordecai-node join  --dir <path> --genesis <file>
-mordecai-node start --dir <path> [--block-interval <ms>] [--bootstrap host:port,...]
-```
-
-`init` generates a node key (plaintext seed in `node.key` — an operational
-validator key, not a user wallet) and writes `genesis.json`; with no
-`--validator` flags the node itself is the sole validator (single-sequencer
-mode). With **more than one genesis validator, `start` runs BFT consensus
-automatically**; with one, the M3 sequencer loop. `start` prints the RPC
-key that wallets/SDKs dial.
-
-`join` is `init` for an **existing** network: it mints a node key but takes
-the genesis from the network's own `genesis.json` instead of writing one.
-Both commands print the `genesisHash` — that hash is the swarm topic, so
-compare it against the network's before starting; a mismatch doesn't error,
-it silently puts you on an empty mesh of one. `join` also reports whether
-the new key landed in the validator set (`validator`) or not (`follower`),
-the latter being the normal case for a replica.
-
-## `mordecai-peer` (`packages/appchain/dist/cli.js`)
+Build with `pnpm build`. The unified entry point is `mordecai`, with `l1`
+for settlement and `app` for application networks. From a checkout, use
+`pnpm mordecai ...` or `node bin/mordecai.mjs ...`; linking the root package
+makes `mordecai` available on PATH. Other tools retain their own commands.
 
 ```sh
-mordecai-peer keygen --dir <path>
-mordecai-peer start  --dir <path> --app <appId> --l1-node <rpc-key-hex> \
-                 [--bootstrap host:port,...] [--block-interval <ms>] \
-                 [--anchor --l1-chain-id <id> --relayer <file> [--epoch-interval <ms>]]
+mordecai --help
+mordecai l1 --help
+mordecai app --help
 ```
 
-An always-on peer on one app's chain. `keygen` writes `peer.key` and prints
-the public key that belongs in the app's registered validator set — run it
-**before** `register_app`, since that set is what the genesis is derived
-from.
+## Connect a node
 
-`start` reads the registry entry from L1, derives the app-chain genesis
-from it, and runs the node: a key in the set produces blocks and answers
-`anchor_sign`, anything else follows and serves reads. It syncs the **app
-chain only** — its sole L1 contact is an RPC client. `--anchor` adds an
-[`AnchorDaemon`](../architecture/app-chains.md) relaying state roots to L1
-under `--relayer`'s account; outcome calls are app-specific and still need
-the library's `outcome` hook.
+Every connection starts chain sync, verification, storage, data serving,
+and an HTTP gateway. The configured validator set determines the role:
+**validators** also propose and vote; **peers** do everything else.
+
+### Settlement (`mordecai l1`)
+
+```sh
+mordecai l1 connect --dir <path> --genesis <file> [--port <port>]
+```
+
+On first connection, creates `node.key` and saves the supplied genesis.
+Subsequent connections reuse them; `--genesis` is then optional. Use the
+network's exact genesis: its hash determines which peers you discover.
+
+The lower-level commands remain available:
+
+```sh
+mordecai l1 init --dir <path> [--chain-id <id>] \
+                  [--alloc <address>=<amount>]... [--validator <address>]...
+mordecai l1 join --dir <path> --genesis <file>
+mordecai l1 start --dir <path>
+```
+
+`init` creates a new network, defaulting to this node as its sole validator.
+`join` prepares a directory for an existing network without starting it.
+`start` resumes an initialized directory.
+
+### App network (`mordecai app`)
+
+```sh
+# Direct discovery: no settlement RPC required
+mordecai app connect --dir ./game --app http://192.168.1.20:8787
+mordecai app connect --dir ./game --app 192.168.1.20:8787
+
+# Named lookup: settlement RPC required
+mordecai app connect --dir ./game --app com.example.game \
+                     --settlement-node <rpc-key-hex>
+```
+
+`--app` accepts an explicit HTTP(S) URL, an IP address (optionally with a
+port), or a registered app ID. IPv6 ports use brackets: `[::1]:8787`.
+Domain URLs need a scheme; `game.example.com` alone is treated as an app ID.
+URLs may include a gateway path prefix or the full `/api/connect` endpoint.
+`--l1-node` remains an alias for `--settlement-node`; conflicting values fail.
+
+Direct lookup fetches a bounded, validated connection document from the
+peer's HTTP gateway. It never requires a settlement network or falls back
+to one. Named lookup requires the settlement node explicitly and reads its
+app registry. Optional settlement information in a peer document is only
+metadata until an action such as `--anchor` uses it.
+
+Both paths create or reuse `peer.key`, derive the same genesis, seed the
+advertised app feeds, and start all services. Every joined app peer also
+serves `/api/connect`. Registry lookup automatically includes the registered
+bundle. Additional app data feeds can be supplied with repeatable
+`--feed <hex-key>`. `start` is an alias for `connect`.
+
+To prepare a validator identity before connecting:
+
+```sh
+mordecai app init --dir <path>
+```
+
+Include that public key in the app's local or registered validator set. The ordinary connect
+command then votes automatically and answers `anchor_sign`. No role flag
+is required. Preserve the data directory across restarts.
+
+Both CLIs accept `--bootstrap host:port,...`, `--block-interval <ms>`,
+`--static <frontend-dir>` and `--config <file.json>`. HTTP uses `--port`,
+then the `PORT` environment variable, otherwise an available port. Startup
+prints the role, RPC key and HTTP URL. HTTP binds all interfaces.
+
+App validators may additionally use
+`--anchor --l1-chain-id <id> --relayer <file> [--epoch-interval <ms>]`.
+This relays state-root anchors using the funded relayer; application outcomes
+still use the library's `AnchorDaemon.outcome` hook.
 
 ## `mordecai-wallet` (`packages/wallet/dist/cli.js`)
 

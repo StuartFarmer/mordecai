@@ -51,9 +51,14 @@ declare module 'hypercore' {
     discoveryKey: Uint8Array;
     length: number;
     writable: boolean;
+    has(index: number): Promise<boolean>;
     append(block: Uint8Array | Uint8Array[]): Promise<{ length: number }>;
     get(index: number, options?: { wait?: boolean; timeout?: number }): Promise<Uint8Array | null>;
     update(options?: { wait?: boolean }): Promise<boolean>;
+    download(options: { start: number; end: number }): {
+      done(): Promise<boolean>;
+      destroy(): void;
+    };
     on(event: 'append', listener: () => void): this;
     off(event: 'append', listener: () => void): this;
   }

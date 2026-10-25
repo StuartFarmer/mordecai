@@ -6,6 +6,8 @@
   },
   "include": ["src"],
   "references": [
+    { "path": "../gateway" },
+    { "path": "../networking" },
     {
       "path": "../protocol"
     },

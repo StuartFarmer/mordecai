@@ -14,7 +14,8 @@
     "mordecai-gateway": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "public"
   ],
   "scripts": {
     "build": "tsc -b",

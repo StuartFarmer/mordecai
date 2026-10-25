@@ -52,12 +52,19 @@ worked examples are in [Three Kinds of State](state.md) and
 
 ## Division of labor at runtime
 
-- **Players/users** run apps. Opening an app makes your device a peer: it
-  replicates the feeds you care about and serves them to others, like a
-  BitTorrent client. Closing the app stops it. No stake, no mining.
-- **Validators** (a fixed set named in genesis, for v1) run consensus and
-  earn transaction fees. Users never need to run one.
-- **Anyone** may run a non-validator full node: it syncs blocks, verifies
-  every quorum certificate independently, re-executes every transaction,
-  and serves RPC — but has zero say in consensus. App developers typically
-  run one as a reliable RPC endpoint for their users.
+Connecting a native node starts all services for the selected network:
+state verification and replication, chain storage and serving, feed seeding,
+RPC, and an HTTP gateway. App connections automatically seed the registered
+bundle; apps select additional data feeds by key.
+
+- **Validators** do all of that and participate in consensus. Their keys
+  are listed in the network's fixed validator set.
+- **Peers** do all of that without proposing or voting. Their keys are
+  not in the validator set. There is no separate seeder or gateway role
+  to choose when connecting.
+
+A node serves either the settlement chain or one application's chain.
+An app-chain connection discovers configuration through a peer URL or an
+app ID resolved by settlement RPC; direct discovery requires no settlement.
+Neither path downloads settlement history. Browser-only clients still use a
+running node's HTTP gateway because browsers cannot join the native DHT.

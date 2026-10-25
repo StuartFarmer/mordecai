@@ -2,11 +2,15 @@
   "name": "mordecai-platform",
   "private": true,
   "type": "module",
+  "bin": {
+    "mordecai": "./bin/mordecai.mjs"
+  },
   "packageManager": "pnpm@10.34.4",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
+    "mordecai": "node bin/mordecai.mjs",
     "build": "tsc -b",
     "test": "vitest run",
     "lint": "eslint .",

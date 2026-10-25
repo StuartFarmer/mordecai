@@ -10,9 +10,6 @@
       "default": "./dist/index.js"
     }
   },
-  "bin": {
-    "mordecai-node": "./dist/cli.js"
-  },
   "files": [
     "dist"
   ],
@@ -24,6 +21,8 @@
     "@mordecai/chain": "workspace:*",
     "@mordecai/consensus": "workspace:*",
     "@mordecai/crypto": "workspace:*",
+    "@mordecai/gateway": "workspace:*",
+    "@mordecai/networking": "workspace:*",
     "@mordecai/protocol": "workspace:*",
     "@mordecai/rpc": "workspace:*"
   },
