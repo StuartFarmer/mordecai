@@ -15,3 +15,6 @@ packages/gateway/public/wallet-assets/
 .cp-images/
 /benchmark-results
 .railway-test/
+
+.mordecai-demo/
+packages/gateway/public/demo-assets/

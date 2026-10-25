@@ -27,6 +27,8 @@ import { Faucet, FaucetError } from './faucet.js';
 export interface GatewayOptions {
   /** Dedicated funded wallet for an opt-in test-token faucet. Never put this in config. */
   faucet?: Wallet;
+  /** Operator-selected fixed grant; defaults to 10,000 base units. */
+  faucetAmount?: bigint;
   /** RPC public key of the chain node to bridge to. */
   nodeKey: Uint8Array;
   bootstrap?: { host: string; port: number }[];
@@ -37,6 +39,11 @@ export interface GatewayOptions {
   config?: unknown;
   /** Public app-network discovery metadata, kept separate from frontend config. */
   connection?: Record<string, unknown>;
+  /** App-chain APIs served on this origin at /api/demos/<name>/api/*. */
+  networks?: Record<
+    string,
+    Pick<GatewayOptions, 'nodeKey' | 'bootstrap' | 'faucet' | 'faucetAmount'>
+  >;
 }
 
 const MIME: Record<string, string> = {
@@ -96,14 +103,49 @@ export class Gateway {
     private readonly server: Server,
     private readonly rpc: NodeRpcClient,
     readonly port: number,
+    private readonly networkClients: NodeRpcClient[],
   ) {}
 
   static async start(options: GatewayOptions): Promise<Gateway> {
+    for (const [name, network] of Object.entries(options.networks ?? {})) {
+      if (!/^[a-z0-9-]+$/.test(name)) throw new Error('Invalid app network name');
+      if (
+        network.faucetAmount !== undefined &&
+        (network.faucetAmount <= 0n || network.faucetAmount >= 1n << 64n)
+      )
+        throw new Error('Invalid faucet amount');
+    }
+    if (
+      options.faucetAmount !== undefined &&
+      (options.faucetAmount <= 0n || options.faucetAmount >= 1n << 64n)
+    )
+      throw new Error('Invalid faucet amount');
     const rpc = NodeRpcClient.connect(
       options.nodeKey,
       options.bootstrap ? { bootstrap: options.bootstrap } : {},
     );
-    const faucet = options.faucet ? new Faucet(rpc, options.faucet) : undefined;
+    const faucet = options.faucet
+      ? new Faucet(rpc, options.faucet, options.faucetAmount)
+      : undefined;
+
+    const networks = new Map(
+      Object.entries(options.networks ?? {}).map(([name, network]) => {
+        const client = NodeRpcClient.connect(
+          network.nodeKey,
+          network.bootstrap ? { bootstrap: network.bootstrap } : {},
+        );
+        return [
+          name,
+          {
+            rpc: client,
+            faucet: network.faucet
+              ? new Faucet(client, network.faucet, network.faucetAmount)
+              : undefined,
+          },
+        ] as const;
+      }),
+    );
+    const networkClients = [...networks.values()].map((network) => network.rpc);
 
     const server = createServer((req, res) => {
       handle(req, res).catch((err) => {
@@ -126,7 +168,13 @@ export class Gateway {
       const url = new URL(req.url ?? '/', 'http://gateway');
       const path = url.pathname;
 
-      if (path.startsWith('/api/')) return handleApi(req, res, path, url);
+      const mounted = path.match(/^\/api\/demos\/([a-z0-9-]+)(\/api\/.*)$/);
+      if (mounted) {
+        const network = networks.get(mounted[1]!);
+        if (!network) return json(res, 404, { error: 'demo is not enabled' });
+        return handleApi(req, res, mounted[2]!, url, network.rpc, network.faucet);
+      }
+      if (path.startsWith('/api/')) return handleApi(req, res, path, url, rpc, faucet);
       if (req.method === 'GET' || req.method === 'HEAD') {
         if (path === '/wallet') {
           res.writeHead(308, { location: './wallet.html' });
@@ -172,6 +220,8 @@ export class Gateway {
       res: ServerResponse,
       path: string,
       url: URL,
+      rpc: NodeRpcClient,
+      faucet: Faucet | undefined,
     ): Promise<void> => {
       try {
         if (path === '/api/faucet' && req.method === 'GET') {
@@ -284,15 +334,15 @@ export class Gateway {
         resolve(typeof address === 'object' && address ? address.port : (options.port ?? 0));
       });
     }).catch(async (error: unknown) => {
-      await rpc.close();
+      await Promise.all([rpc.close(), ...networkClients.map((client) => client.close())]);
       throw error;
     });
 
-    return new Gateway(server, rpc, port);
+    return new Gateway(server, rpc, port, networkClients);
   }
 
   async close(): Promise<void> {
     await new Promise<void>((resolve) => this.server.close(() => resolve()));
-    await this.rpc.close();
+    await Promise.all([this.rpc.close(), ...this.networkClients.map((client) => client.close())]);
   }
 }

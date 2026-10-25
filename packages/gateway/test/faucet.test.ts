@@ -154,3 +154,15 @@ it('retains identical signed bytes when the submission result is uncertain', asy
   await faucet.claim(Wallet.create().wallet.address, 'ip2');
   expect(decodeTransaction(rpc.submitTx.mock.calls[2]![0]!).nonce).toBe(1n);
 });
+
+it('uses the operator grant amount and rejects invalid grants', async () => {
+  const { rpc, wallet, recipient } = setup('100000000');
+  const faucet = new Faucet(rpc, wallet, 10_000_000n);
+  expect(faucet.info().amount).toBe('10000000');
+  await faucet.claim(recipient.address, 'test');
+  expect(decodeTransaction(rpc.submitTx.mock.calls[0]![0]).payload).toMatchObject({
+    amount: 10_000_000n,
+  });
+  for (const amount of [0n, -1n, 1n << 64n])
+    expect(() => new Faucet(rpc, wallet, amount)).toThrow();
+});

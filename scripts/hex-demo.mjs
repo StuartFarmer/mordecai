@@ -23,23 +23,19 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createTestnet from '../packages/networking/node_modules/hyperdht/testnet.js';
-import {
-  decodeAddress,
-  encodeAddress,
-  generateSeed,
-  keyPairFromSeed,
-  sign,
-} from '../packages/crypto/dist/index.js';
+import { decodeAddress, encodeAddress, sign } from '../packages/crypto/dist/index.js';
 import { encodeTransaction, transactionSigningBytes } from '../packages/protocol/dist/index.js';
-import { appAddress, contractIdFor } from '../packages/chain/dist/index.js';
+import { appAddress } from '../packages/chain/dist/index.js';
 import { NodeRpcClient } from '../packages/rpc/dist/index.js';
 import { Node } from '../packages/node/dist/index.js';
 import { Gateway } from '../packages/gateway/dist/index.js';
+import { loadDemoIdentity, bootstrapTransaction } from './lib/demo-state.mjs';
 import { Wallet } from '../packages/wallet/dist/index.js';
 import { AnchorDaemon, AppChain } from '../packages/appchain/dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const l1ChainId = 'mordecai-hex-devnet';
+const nodeSite = process.env.MORDECAI_NODE_DEMO === '1';
+const l1ChainId = nodeSite ? 'mordecai-demo' : 'mordecai-hex-devnet';
 const APP = 'com.example.hex';
 const TIMEOUT_MS = BigInt(process.env.HEX_TIMEOUT_MS ?? 180_000); // 3-minute inactivity forfeit
 const L1_PORT = Number(process.env.PORT ?? 8787);
@@ -48,13 +44,15 @@ const FAUCET_PORT = L1_PORT + 2;
 const L1_GRANT = 10_000_000n; // per faucet request, covers stakes + fees
 const APP_GRANT = 1_000_000_000n; // app-chain fee float (valueless by design)
 
-const hosts = {
-  'host-a': keyPairFromSeed(generateSeed()),
-  'host-b': keyPairFromSeed(generateSeed()),
-};
-const relayer = keyPairFromSeed(generateSeed());
-const faucet = keyPairFromSeed(generateSeed());
-const { wallet: webFaucet } = Wallet.create();
+const base = nodeSite
+  ? (process.env.DEMO_DIR ?? join(repoRoot, '.mordecai-demo'))
+  : mkdtempSync(join(tmpdir(), 'mordecai-hex-demo-'));
+const identity = loadDemoIdentity(base, l1ChainId, TIMEOUT_MS);
+const hosts = { 'host-a': identity.key('host-a'), 'host-b': identity.key('host-b') };
+const relayer = identity.key('relayer');
+const faucet = identity.key('faucet');
+const webFaucet = Wallet.fromSeed(identity.seed('web-faucet'));
+const appFaucet = Wallet.fromSeed(identity.seed('app-faucet'));
 
 const utf8 = (s) => new TextEncoder().encode(s);
 const u64 = (n) => {
@@ -72,7 +70,7 @@ const hexToBytes = (h) => new Uint8Array(Buffer.from(h, 'hex'));
 // ---------------------------------------------------------------- L1 devnet
 
 const testnet = await createTestnet(3);
-const validators = Array.from({ length: 3 }, () => keyPairFromSeed(generateSeed()));
+const validators = Array.from({ length: 3 }, (_, i) => identity.key(`validator-${i}`));
 const genesis = {
   chainId: l1ChainId,
   validators: validators.map((v) => encodeAddress(v.publicKey)),
@@ -82,7 +80,6 @@ const genesis = {
     { address: webFaucet.address, balance: 1_000_000_000n },
   ],
 };
-const base = mkdtempSync(join(tmpdir(), 'mordecai-hex-demo-'));
 const nodes = [];
 for (const [i, keyPair] of validators.entries()) {
   nodes.push(
@@ -98,12 +95,9 @@ for (const [i, keyPair] of validators.entries()) {
 console.log('L1 devnet up: 3 validators');
 
 const rpc = NodeRpcClient.connect(nodes[0].rpcPublicKey, { bootstrap: testnet.bootstrap });
-const nonces = new Map();
 
 async function submit(client, chainId, who, payload) {
-  const key = `${chainId}:${encodeAddress(who.publicKey)}`;
-  const nonce = nonces.get(key) ?? 0n;
-  nonces.set(key, nonce + 1n);
+  const nonce = BigInt((await client.getAccount(encodeAddress(who.publicKey))).nonce);
   const u = { chainId, nonce, sender: who.publicKey, maxFee: 500_000n, payload };
   const tx = { ...u, signature: sign(transactionSigningBytes(u), who.secretKey) };
   const info = await client.waitForTx(await client.submitTx(encodeTransaction(tx)), {
@@ -113,12 +107,14 @@ async function submit(client, chainId, who, payload) {
   return info;
 }
 const l1Submit = (who, payload) => submit(rpc, l1ChainId, who, payload);
+const bootL1 = (step, payload) =>
+  bootstrapTransaction(base, step, rpc, l1ChainId, relayer, payload);
 
 // hex escrow on L1, its settle gated to the app's derived address
 const escrowWasm = new Uint8Array(readFileSync(join(repoRoot, 'contracts/dist/hex_escrow.wasm')));
-await l1Submit(relayer, { kind: 'deploy_contract', code: escrowWasm });
-const escrow = contractIdFor(relayer.publicKey, 0n, escrowWasm);
-await l1Submit(relayer, {
+const escrowReceipt = await bootL1('escrow-deploy', { kind: 'deploy_contract', code: escrowWasm });
+const escrow = hexToBytes(escrowReceipt.returnData);
+await bootL1('escrow-init', {
   kind: 'execute_contract',
   contract: escrow,
   value: 0n,
@@ -128,7 +124,7 @@ await l1Submit(relayer, {
 console.log(`hex escrow on L1: ${Buffer.from(escrow).toString('hex')}`);
 
 // register the app: the two host-run keys are its chain validators
-await l1Submit(relayer, {
+await bootL1('hex-register', {
   kind: 'register_app',
   appId: APP,
   pearKey: new Uint8Array(32).fill(1),
@@ -157,9 +153,11 @@ const appRpc = NodeRpcClient.connect(chainA.rpcPublicKey, { bootstrap: testnet.b
 const appSubmit = (who, payload) => submit(appRpc, chainA.genesis.chainId, who, payload);
 
 const hexWasm = new Uint8Array(readFileSync(join(repoRoot, 'contracts/dist/hex.wasm')));
-await appSubmit(hosts['host-a'], { kind: 'deploy_contract', code: hexWasm });
-const hex = contractIdFor(hosts['host-a'].publicKey, 0n, hexWasm);
-await appSubmit(hosts['host-a'], {
+const bootApp = (step, payload) =>
+  bootstrapTransaction(base, step, appRpc, chainA.genesis.chainId, hosts['host-a'], payload);
+const hexReceipt = await bootApp('hex-deploy', { kind: 'deploy_contract', code: hexWasm });
+const hex = hexToBytes(hexReceipt.returnData);
+await bootApp('hex-init', {
   kind: 'execute_contract',
   contract: hex,
   value: 0n,
@@ -167,6 +165,12 @@ await appSubmit(hosts['host-a'], {
   args: u64(TIMEOUT_MS),
 });
 console.log(`hex game on app chain: ${Buffer.from(hex).toString('hex')}`);
+if (nodeSite)
+  await bootApp('app-faucet-fund', {
+    kind: 'transfer',
+    to: appFaucet.publicKey,
+    amount: 100_000_000_000n,
+  });
 
 // -------------------------------------------------- anchor daemon (settler)
 
@@ -252,48 +256,83 @@ const faucetServer = createServer((req, res) => {
     });
   });
 });
-await new Promise((resolve) => faucetServer.listen(FAUCET_PORT, resolve));
+if (!nodeSite) await new Promise((resolve) => faucetServer.listen(FAUCET_PORT, resolve));
 
 // ------------------------------------------------------------------ gateways
 
-const appGateway = await Gateway.start({
-  nodeKey: chainA.rpcPublicKey,
-  bootstrap: testnet.bootstrap,
-  port: APP_PORT,
-});
+const appGateway = nodeSite
+  ? null
+  : await Gateway.start({
+      nodeKey: chainA.rpcPublicKey,
+      bootstrap: testnet.bootstrap,
+      port: APP_PORT,
+    });
 const gateway = await Gateway.start({
   faucet: webFaucet,
   nodeKey: nodes[0].rpcPublicKey,
   bootstrap: testnet.bootstrap,
   port: L1_PORT,
-  staticDir: join(repoRoot, 'apps/hex-web/dist'),
-  config: {
-    chainId: l1ChainId,
-    appChainId: chainA.genesis.chainId,
-    appId: APP,
-    escrow: Buffer.from(escrow).toString('hex'),
-    hex: Buffer.from(hex).toString('hex'),
-    // Ports, not URLs: the page targets the host it was loaded from, so
-    // players on other machines reach this box automatically.
-    appApiPort: appGateway.port,
-    faucetPort: FAUCET_PORT,
-  },
+  ...(nodeSite
+    ? {
+        faucetAmount: L1_GRANT,
+        networks: {
+          hex: {
+            nodeKey: chainA.rpcPublicKey,
+            bootstrap: testnet.bootstrap,
+            faucet: appFaucet,
+            faucetAmount: APP_GRANT,
+          },
+        },
+      }
+    : { staticDir: join(repoRoot, 'apps/hex-web/dist') }),
+  config: nodeSite
+    ? {
+        demos: {
+          hex: {
+            chainId: l1ChainId,
+            appChainId: chainA.genesis.chainId,
+            appId: APP,
+            escrow: Buffer.from(escrow).toString('hex'),
+            hex: Buffer.from(hex).toString('hex'),
+            appApi: '/api/demos/hex',
+            appFaucet: '/api/demos/hex/api/faucet',
+            manualFunding: true,
+          },
+        },
+      }
+    : {
+        chainId: l1ChainId,
+        appChainId: chainA.genesis.chainId,
+        appId: APP,
+        escrow: Buffer.from(escrow).toString('hex'),
+        hex: Buffer.from(hex).toString('hex'),
+        // Ports, not URLs: the page targets the host it was loaded from, so
+        // players on other machines reach this box automatically.
+        appApiPort: appGateway?.port,
+        faucetPort: FAUCET_PORT,
+      },
 });
 
-console.log(`\n⬡ hex is live: http://127.0.0.1:${gateway.port}`);
+console.log(
+  `\n${nodeSite ? 'Node demo' : 'Hex'} is live: http://127.0.0.1:${gateway.port}${nodeSite ? '/#/demos/hex' : ''}`,
+);
+console.log(`   persistent data: ${base}`);
 console.log(`   web wallet:        http://127.0.0.1:${gateway.port}/wallet.html`);
-console.log(`   app-chain gateway: http://127.0.0.1:${appGateway.port}`);
-console.log(`   faucet:            http://127.0.0.1:${FAUCET_PORT}`);
+if (appGateway) console.log(`   app-chain gateway: http://127.0.0.1:${appGateway.port}`);
+if (!nodeSite) console.log(`   faucet:            http://127.0.0.1:${FAUCET_PORT}`);
 console.log('\nplay: open the site on two machines (or two browsers), agree on a game');
 console.log('code, create on one and join on the other — 1,000,000 🪙 each, winner takes all.');
 console.log('Ctrl-C to stop.');
 
-process.on('SIGINT', async () => {
+let stopping = false;
+const stop = async () => {
+  if (stopping) return;
+  stopping = true;
   console.log('\nshutting down…');
   await daemon.close().catch(() => {});
-  await new Promise((resolve) => faucetServer.close(resolve));
+  if (!nodeSite) await new Promise((resolve) => faucetServer.close(resolve));
   await gateway.close().catch(() => {});
-  await appGateway.close().catch(() => {});
+  await appGateway?.close().catch(() => {});
   await appRpc.close().catch(() => {});
   await rpc.close().catch(() => {});
   await chainA.stop().catch(() => {});
@@ -301,5 +340,7 @@ process.on('SIGINT', async () => {
   for (const node of nodes) await node.stop().catch(() => {});
   await testnet.destroy();
   process.exit(0);
-});
+};
+process.once('SIGINT', stop);
+process.once('SIGTERM', stop);
 await new Promise(() => {});

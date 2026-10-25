@@ -43,13 +43,17 @@ export class Faucet {
   constructor(
     private readonly rpc: FaucetRpc,
     private readonly wallet: Wallet,
-  ) {}
+    private readonly amount: bigint = AMOUNT,
+  ) {
+    if (amount <= 0n || amount >= 1n << 64n)
+      throw new Error('Faucet grant must be a positive u64 amount');
+  }
 
   info() {
     return {
       enabled: true,
       address: this.wallet.address,
-      amount: AMOUNT.toString(),
+      amount: this.amount.toString(),
       cooldownSeconds: COOLDOWN_MS / 1000,
     };
   }
@@ -108,14 +112,14 @@ export class Faucet {
         }
         this.pending = undefined;
       }
-      if (BigInt(account.balance) < AMOUNT + MAX_FEE)
+      if (BigInt(account.balance) < this.amount + MAX_FEE)
         throw new FaucetError(503, 'The faucet needs more funds. Please try again later.');
       const head = await this.rpc.getHead();
       const tx = this.wallet.signTransaction({
         chainId: head.chainId,
         nonce,
         maxFee: MAX_FEE,
-        payload: { kind: 'transfer', to, amount: AMOUNT },
+        payload: { kind: 'transfer', to, amount: this.amount },
       });
       const bytes = encodeTransaction(tx);
       const hash = Buffer.from(transactionHash(tx)).toString('hex');
@@ -132,7 +136,7 @@ export class Faucet {
           `Submission is unconfirmed. Check transaction ${hash} before requesting again.`,
         );
       }
-      return { hash, amount: AMOUNT.toString(), status: 'submitted' as const };
+      return { hash, amount: this.amount.toString(), status: 'submitted' as const };
     } catch (error) {
       if (error instanceof FaucetError) throw error;
       throw new FaucetError(503, 'The faucet cannot reach the node. Please try again shortly.', 1);

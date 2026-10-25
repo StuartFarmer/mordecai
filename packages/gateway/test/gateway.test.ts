@@ -166,6 +166,35 @@ describe('HTTP gateway to node RPC', () => {
     }
   });
 
+  it('mounts named app APIs and their faucets independently of the root', async () => {
+    const mounted = await Gateway.start({
+      nodeKey: node.rpcPublicKey,
+      bootstrap: testnet.bootstrap,
+      networks: {
+        hex: {
+          nodeKey: node.rpcPublicKey,
+          bootstrap: testnet.bootstrap,
+          faucet: faucetWallet,
+          faucetAmount: 1000000000n,
+        },
+      },
+    });
+    try {
+      const url = `http://127.0.0.1:${mounted.port}`;
+      expect(await (await fetch(`${url}/api/faucet`)).json()).toEqual({ enabled: false });
+      expect(await (await fetch(`${url}/api/demos/hex/api/faucet`)).json()).toMatchObject({
+        enabled: true,
+        amount: '1000000000',
+      });
+      expect(await (await fetch(`${url}/api/demos/hex/api/head`)).json()).toMatchObject({
+        chainId: 'mordecai-gw-test',
+      });
+      expect((await fetch(`${url}/api/demos/missing/api/head`)).status).toBe(404);
+    } finally {
+      await mounted.close();
+    }
+  });
+
   it('keeps the faucet disabled unless the operator supplies a wallet', async () => {
     const defaultBase = `http://127.0.0.1:${node.gateway.port}`;
     expect(await (await fetch(`${defaultBase}/api/faucet`)).json()).toEqual({ enabled: false });
