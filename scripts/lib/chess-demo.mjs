@@ -4,7 +4,7 @@ import { decodeTransaction } from '../../packages/protocol/dist/index.js';
 import { encodeAddress } from '../../packages/crypto/dist/index.js';
 import { ChessRooms } from '../../packages/gateway/dist/chess-rooms.js';
 
-export async function bootChess({ base, repoRoot, rpc, chainId, bootL1 }) {
+export async function bootChess({ base, repoRoot, rpc, chainId, bootL1, trustRailwayProxy }) {
   const receipt = await bootL1('chess-wager-v1', {
     kind: 'deploy_contract',
     code: new Uint8Array(readFileSync(join(repoRoot, 'contracts/dist/chess_wager.wasm'))),
@@ -12,6 +12,7 @@ export async function bootChess({ base, repoRoot, rpc, chainId, bootL1 }) {
   const contract = receipt.returnData;
   if (!/^[a-f0-9]{64}$/.test(contract)) throw new Error('Invalid Chess deployment');
   const rooms = new ChessRooms({
+    trustRailwayProxy,
     dir: join(base, 'chess-rooms'),
     chainId,
     contract,

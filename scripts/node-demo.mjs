@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Persistent node site + Hex on one settlement network.
-process.env.MORDECAI_NODE_DEMO = '1';
-process.env.PORT ??= '8790';
+// Persistent node site and all demos on one settlement network.
+import { configureDemoEnvironment } from './lib/demo-environment.mjs';
+configureDemoEnvironment(process.env);
 await import('./hex-demo.mjs');

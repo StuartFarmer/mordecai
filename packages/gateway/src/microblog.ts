@@ -1,6 +1,7 @@
 import { mkdir, readFile, open, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { assertSameOrigin, clientIp } from './request-context.js';
 import { decodeTransaction, encodeTransaction } from '@mordecai/protocol';
 import {
   browserAddress,
@@ -19,6 +20,7 @@ import {
 import type { NodeRpcClient } from '@mordecai/rpc';
 
 interface Options {
+  trustRailwayProxy?: boolean;
   dir: string;
   chainId: string;
   feedId: string;
@@ -401,9 +403,8 @@ export class Microblog {
         req.method === 'POST' &&
         (path === '/posts' || path === '/tips' || /^\/posts\/[a-f0-9]{64}\/hide$/.test(path))
       ) {
-        if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host)
-          throw new Error('Cross-origin writes are not allowed');
-        this.limit(`source:${req.socket.remoteAddress ?? 'unknown'}`);
+        assertSameOrigin(req, this.options.trustRailwayProxy);
+        this.limit(`source:${clientIp(req, this.options.trustRailwayProxy)}`);
         const chunks: Buffer[] = [];
         let size = 0;
         for await (const chunk of req) {

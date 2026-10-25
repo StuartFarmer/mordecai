@@ -4,7 +4,7 @@ import { mkdir, open, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Microblog } from '../../packages/gateway/dist/microblog.js';
 
-export async function bootMicroblog({ base, rpc, chainId }) {
+export async function bootMicroblog({ base, rpc, chainId, trustRailwayProxy }) {
   const dir = join(base, 'microblog');
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const identity = join(dir, 'feed-id');
@@ -27,7 +27,7 @@ export async function bootMicroblog({ base, rpc, chainId }) {
   }
   const feedId = await readFile(identity, 'utf8');
   if (!/^[a-f0-9]{64}$/.test(feedId)) throw new Error('Invalid persisted microblog feed identity');
-  const feed = new Microblog({ dir, chainId, feedId, rpc });
+  const feed = new Microblog({ dir, chainId, feedId, rpc, trustRailwayProxy });
   await feed.feed();
   let resolving = false;
   const resolve = async () => {

@@ -34,6 +34,10 @@ world; Outpost focuses on goods orders and settlement. The
 [Bounties](docs/src/examples/bounties.md) lets people fund questions and award a
 response. The launcher keeps its data across restarts in `.mordecai-demo/`.
 
+To host the whole demo on one Railway service, use the root `Dockerfile` and
+attach a persistent volume at `/data`. See the [Railway deployment guide](docs/src/railway.md)
+for the complete settings and verification command.
+
 ## Outpost: goods, orders and settlement across two chains
 
 ![outpost — game on an app chain, market on L1, one wallet](docs/assets/outpost-ui.png)

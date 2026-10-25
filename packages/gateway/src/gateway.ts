@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { NodeRpcClient, RpcError } from '@mordecai/rpc';
 import type { Wallet } from '@mordecai/wallet';
 import { Faucet, FaucetError } from './faucet.js';
+import { clientIp } from './request-context.js';
 
 /**
  * Browser-facing edge of the network (web tier of the frontend-flow design):
@@ -25,6 +26,8 @@ import { Faucet, FaucetError } from './faucet.js';
  * Outside /api, serves `staticDir` (SPA fallback) or the built-in page and book.
  */
 export interface GatewayOptions {
+  /** Trust Railway's HTTP edge headers; never enable with direct public access to the port. */
+  trustRailwayProxy?: boolean;
   /** Dedicated funded wallet for an opt-in test-token faucet. Never put this in config. */
   faucet?: Wallet;
   /** Operator-selected fixed grant; defaults to 10,000 base units. */
@@ -163,6 +166,7 @@ export class Gateway {
     });
 
     const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+      if (req.url?.startsWith('/api/')) res.setHeader('cache-control', 'no-store');
       // permissive CORS: the gateway is a public read/submit endpoint
       res.setHeader('access-control-allow-origin', '*');
       res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
@@ -248,7 +252,10 @@ export class Gateway {
           if (!faucet) return json(res, 503, { error: 'This node has not enabled a faucet.' });
           const body = JSON.parse(await readBody(req, 512)) as { address?: unknown } | null;
           try {
-            const result = await faucet.claim(body?.address, req.socket.remoteAddress ?? 'unknown');
+            const result = await faucet.claim(
+              body?.address,
+              clientIp(req, options.trustRailwayProxy),
+            );
             return json(res, 202, result);
           } catch (error) {
             if (!(error instanceof FaucetError)) throw error;

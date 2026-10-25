@@ -3,6 +3,7 @@
 [Introduction](introduction.md)
 [Field Guide](field-guide.md)
 [Quickstart](quickstart.md)
+[Host the Demo on Railway](railway.md)
 
 # Architecture
 

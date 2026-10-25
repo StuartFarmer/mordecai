@@ -1,6 +1,7 @@
 import { mkdir, readFile, open, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { assertSameOrigin } from './request-context.js';
 import {
   chessMessageHash,
   replayChess,
@@ -22,6 +23,7 @@ export interface ChessWagerState {
   opponentDraw: boolean;
 }
 interface Options {
+  trustRailwayProxy?: boolean;
   dir: string;
   chainId: string;
   contract: string;
@@ -110,8 +112,7 @@ export class ChessRooms {
       let data;
       if (req.method === 'GET') data = await this.read(match[1]!);
       else if (req.method === 'POST') {
-        if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host)
-          throw new Error('Cross-origin room writes are not allowed');
+        assertSameOrigin(req, this.options.trustRailwayProxy);
         let body = '';
         for await (const part of req) {
           body += part.toString();
