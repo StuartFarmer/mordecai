@@ -44,6 +44,8 @@ export interface GatewayOptions {
     string,
     Pick<GatewayOptions, 'nodeKey' | 'bootstrap' | 'faucet' | 'faucetAmount'>
   >;
+  /** Optional authenticated Chess room service; limited to its own URL namespace. */
+  demoHandler?: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>;
 }
 
 const MIME: Record<string, string> = {
@@ -74,6 +76,9 @@ const LANDING_PATHS = new Set([
   '/favicon.svg',
   '/mordecai-image.jpg',
   '/demo-assets/hex.js',
+  '/demo-assets/frontier.js',
+  '/demo-assets/outpost.js',
+  '/demo-assets/chess.js',
 ]);
 
 const WALLET_FILES: Record<string, string> = {
@@ -168,6 +173,12 @@ export class Gateway {
 
       const url = new URL(req.url ?? '/', 'http://gateway');
       const path = url.pathname;
+
+      if (
+        (path === '/api/demos/chess/rooms' || path.startsWith('/api/demos/chess/rooms/')) &&
+        (await options.demoHandler?.(req, res, url))
+      )
+        return;
 
       const mounted = path.match(/^\/api\/demos\/([a-z0-9-]+)(\/api\/.*)$/);
       if (mounted) {

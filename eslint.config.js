@@ -50,6 +50,7 @@ export default tseslint.config(
         setInterval: 'readonly',
         clearInterval: 'readonly',
         URLSearchParams: 'readonly',
+        URL: 'readonly',
         localStorage: 'readonly',
         crypto: 'readonly',
         process: 'readonly', // vite.config.js reads env at build time

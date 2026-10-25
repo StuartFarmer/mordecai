@@ -8,7 +8,7 @@ export default defineConfig({
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
     outDir: fileURLToPath(new URL('../../packages/gateway/public/demo-assets', import.meta.url)),
-    emptyOutDir: true,
+    emptyOutDir: false,
     lib: {
       entry: fileURLToPath(new URL('./src/embed.jsx', import.meta.url)),
       name: 'MordecaiHex',

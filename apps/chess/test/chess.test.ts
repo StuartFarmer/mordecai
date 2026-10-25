@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Genesis } from '@mordecai/chain';
 import { encodeAddress, generateSeed, keyPairFromSeed } from '@mordecai/crypto';
 import { Node } from '@mordecai/node';
-import { Mordecai } from '@mordecai/sdk';
+import { Mordecai, ContractArgs } from '@mordecai/sdk';
 import { Wallet } from '@mordecai/wallet';
 import { ChessMatch, WagerClient } from '../src/index.js';
 
@@ -141,4 +141,76 @@ describe('p2p chess with an on-chain wager (spec Phase 8)', () => {
     expect(again.success).toBe(false);
     expect(again.error).toBe('match is not active');
   });
+});
+
+describe('browser wagers preserve native escrow and bind room ids', () => {
+  it(
+    'binds concurrent room creations and refunds only mutually agreed draws',
+    { timeout: 120_000 },
+    async () => {
+      const roomA = new Uint8Array(32).fill(17),
+        roomB = new Uint8Array(32).fill(18);
+      const created = await Promise.all([
+        alice.execute(contract, 'create_room', new ContractArgs().address(roomA).encode(), STAKE),
+        bob.execute(contract, 'create_room', new ContractArgs().address(roomB).encode(), STAKE),
+      ]);
+      expect(created.every((r) => r.success)).toBe(true);
+      const entries = await alice.query(contract);
+      const idFor = (room: Uint8Array) => {
+        const key = Buffer.concat([Buffer.from('s:Room:'), room]);
+        const entry = entries.find(([k]) => Buffer.from(k).equals(key))!;
+        return Buffer.from(entry[1]).readBigUInt64LE() - 1n;
+      };
+      const idA = idFor(roomA),
+        idB = idFor(roomB);
+      expect(idA).not.toBe(idB);
+      const matchFor = (id: bigint) => {
+        const suffix = Buffer.alloc(8);
+        suffix.writeBigUInt64LE(id);
+        return entries.find(([k]) =>
+          Buffer.from(k).equals(Buffer.concat([Buffer.from('s:Match:'), suffix])),
+        )![1];
+      };
+      expect(encodeAddress(matchFor(idA).subarray(0, 32))).toBe(alice.address);
+      expect(encodeAddress(matchFor(idB).subarray(0, 32))).toBe(bob.address);
+      expect(
+        (
+          await alice.execute(
+            contract,
+            'create_room',
+            new ContractArgs().address(roomA).encode(),
+            STAKE,
+          )
+        ).success,
+      ).toBe(false);
+      expect((await new WagerClient(bob, contract).join(idA, STAKE)).success).toBe(true);
+      const args = new ContractArgs().u64(idA).encode();
+      const aliceBefore = BigInt((await alice.account()).balance),
+        bobBefore = BigInt((await bob.account()).balance);
+      const first = await alice.execute(contract, 'draw', args);
+      expect(first.success).toBe(true);
+      expect(BigInt((await alice.account()).balance)).toBe(aliceBefore - BigInt(first.fee));
+      const second = await bob.execute(contract, 'draw', args);
+      expect(second.success).toBe(true);
+      expect(BigInt((await alice.account()).balance)).toBe(aliceBefore - BigInt(first.fee) + STAKE);
+      expect(BigInt((await bob.account()).balance)).toBe(bobBefore - BigInt(second.fee) + STAKE);
+      expect((await alice.execute(contract, 'draw', args)).success).toBe(false);
+      const cancelled = await new WagerClient(bob, contract).cancel(idB);
+      expect(cancelled.success).toBe(true);
+      expect(BigInt((await alice.account(encodeAddress(contract))).balance)).toBe(0n);
+      // A draw and a winner report must not settle against stale picks.
+      const nextId = (idA > idB ? idA : idB) + 1n;
+      const aliceWager = new WagerClient(alice, contract),
+        bobWager = new WagerClient(bob, contract);
+      expect((await aliceWager.create(STAKE)).success).toBe(true);
+      expect((await bobWager.join(nextId, STAKE)).success).toBe(true);
+      expect(
+        (await alice.execute(contract, 'draw', new ContractArgs().u64(nextId).encode())).success,
+      ).toBe(true);
+      expect((await bobWager.report(nextId, alice.address)).success).toBe(true);
+      expect(BigInt((await alice.account(encodeAddress(contract))).balance)).toBe(2n * STAKE);
+      expect((await aliceWager.report(nextId, alice.address)).success).toBe(true);
+      expect(BigInt((await alice.account(encodeAddress(contract))).balance)).toBe(0n);
+    },
+  );
 });

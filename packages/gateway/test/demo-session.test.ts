@@ -25,3 +25,18 @@ it('shares a key-free wallet facade and invalidates it after closing or changing
   expect(changed).toHaveBeenCalledTimes(2);
   unsubscribe();
 });
+
+it('revokes Chess message signing when the loaded wallet changes', async () => {
+  let wallet = createBrowserWallet();
+  const sign = vi.fn(async () => ({ signature: 'signed' }));
+  const session = createDemoSession(() => wallet, vi.fn(), sign);
+  session.refresh();
+  const player = session.getSnapshot();
+  const message = { action: 'move' };
+  await player.signChessMessage(message);
+  expect(sign).toHaveBeenCalledWith(wallet, message);
+  wallet = createBrowserWallet();
+  session.refresh();
+  await expect(player.signChessMessage(message)).rejects.toThrow(/wallet/i);
+  expect(sign).toHaveBeenCalledOnce();
+});

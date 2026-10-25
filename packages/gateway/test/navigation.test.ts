@@ -53,3 +53,23 @@ it('switches persistent views, supports deep links/back, and marks the active na
   change();
   expect(views[0]!.hidden).toBe(false);
 });
+
+it('opens additional demo deep links with their page title', () => {
+  for (const [name, title] of [
+    ['frontier', 'Frontier'],
+    ['outpost', 'Outpost'],
+    ['chess', 'Chess'],
+  ]) {
+    const page = { dataset: { page: `demos/${name}` }, hidden: true };
+    const doc = {
+      title: '',
+      querySelectorAll: (selector: string) => (selector === '[data-page]' ? [page] : []),
+    };
+    initNavigation(doc, {
+      location: { hash: `#/demos/${name}?room=example` },
+      addEventListener() {},
+    });
+    expect(page.hidden).toBe(false);
+    expect(doc.title).toBe(`Mordecai — ${title}`);
+  }
+});

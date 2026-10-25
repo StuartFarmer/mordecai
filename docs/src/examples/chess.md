@@ -1,9 +1,40 @@
-# Chess: A Complete P2P App
+# Chess: browser rooms and native P2P matches
 
-`apps/chess` is the spec's flagship example (§15): a wagered chess match
-where **the game never touches the chain** and **the money never touches
-the game**. Its end-to-end test plays a full wagered match on a
-2-validator devnet in under two seconds.
+The node site offers **Demos → Chess**. Load a wallet in Wallet, fund it from
+Faucet, and create a room with a positive integer stake in base units. Copy the
+invitation to another browser with a different wallet. The creator plays white;
+the joiner matches the stake and plays black. Extra visitors can spectate.
+
+Select a piece and destination to move; choose a promotion piece before moving
+a pawn onto its last rank. The board validates legal moves, checkmate, stalemate,
+repetition and other automatic draws. Players can resign or offer/accept a draw.
+Both players must then use **Report result on L1**. The page keeps settlement
+pending until confirmed contract state closes the wager. Each side's report is
+shown separately; submitting a local game result does not itself pay out.
+
+**Active stakes can remain locked if a player refuses to report or abandons a
+match. There is no automatic adjudication or active-match timeout.** Only the
+creator can cancel before an opponent joins. Matching draw reports refund each
+stake, less transaction fees already paid. Keep enough balance for fees.
+
+The browser uses a same-origin signed-message relay, not direct HyperDHT.
+Messages bind the chain, deployed contract, room, sequence, previous hash and
+action to the wallet signature. Host and browser replay the same signatures and
+rules using [chess.js 1.4.0](https://jhlywa.github.io/chess.js/), distributed under
+its [BSD-2-Clause license](https://github.com/jhlywa/chess.js/blob/master/LICENSE).
+The host verifies confirmed wager membership before accepting play. A room-key
+mapping on L1 binds each creation to its match even when several users create
+simultaneously. A host can withhold service, but cannot forge player messages.
+
+Room histories survive host restart. Reopen the invitation and load the same
+wallet to resume. Retry an uncertain move with **Retry identical signed message**;
+accepted identical retries do not append again. If registration was interrupted
+after creating the wager, use **Recover room registration** and, if needed, paste
+the confirmed creation hash from Wallet history. Only public receipt hashes are
+saved by the game. Closing or replacing a wallet revokes further sends/signatures.
+
+`apps/chess` remains the native Hypercore example. Its transport and `WagerClient`
+API are unchanged; the browser client lives in `apps/chess-web`.
 
 ## The split
 
@@ -72,3 +103,17 @@ The move-wait originally polled `feed.update()` and could stall forever —
 thumb now in the [networking chapter](../architecture/networking.md)): use
 `feed.get(index)`, which actively requests the block and resolves when it
 arrives.
+
+## Browser contract additions
+
+`create_room(room: address)` creates an ordinary sequential match and records
+`Room[room].match_plus_one`. The 32-byte room identifier is generated in the
+browser, and registration verifies the confirmed create transaction and signer.
+Native `create()`, `join()`, `report()` and `cancel()` retain their interfaces.
+`draw(match_id)` records a player's draw report and refunds both stakes only when
+both players agree. A later winner report clears that player's draw choice.
+
+Tests cover signature tampering, wrong deployment/room, sequence replay, illegal
+moves, self-join, conflicting concurrent appends, exact retries and persisted
+recovery. Real-network escrow tests cover concurrent room creation, mutual draws,
+creator cancellation and the original native winner payout.

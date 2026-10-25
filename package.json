@@ -11,7 +11,7 @@
   },
   "scripts": {
     "mordecai": "node bin/mordecai.mjs",
-    "build": "tsc -b && node packages/gateway/node_modules/vite/bin/vite.js build --config packages/gateway/vite.config.js && node apps/hex-web/node_modules/vite/bin/vite.js build --config apps/hex-web/vite.embed.config.js && mdbook build docs",
+    "build": "tsc -b && node scripts/build-node-web.mjs && mdbook build docs",
     "build:docs": "mdbook build docs",
     "test": "vitest run",
     "lint": "eslint .",

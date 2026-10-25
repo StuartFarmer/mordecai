@@ -14,9 +14,10 @@ Open `http://127.0.0.1:8790`. Create/load a wallet, use the **Faucet** tab,
 then choose **Demos → Hex**. The same in-memory wallet signs game actions and
 L1 stakes; no second key import is needed. Closing it in Wallet disconnects Hex.
 Create a room and use **Copy room link** to invite another player with a different
-wallet. A fresh visitor can join from that link. Frontier, Outpost and Chess
-currently link to their guides in the dropdown; their integrated wallet/room
-conversion remains pending.
+wallet. A fresh visitor can join from that link. The same Demos menu also opens
+[Frontier](frontier-web.md), [Outpost](outpost.md), and [Chess](chess.md), using
+the loaded wallet. Frontier and Outpost each have one persistent shared world;
+Chess uses invitation rooms.
 
 The node-demo L1 faucet grants 10,000,000 base units, enough for the default
 1,000,000-unit stake plus fees. Hex requests app-chain fee tokens separately.
@@ -173,6 +174,7 @@ Funding `mordecai-preview` does not fund `mordecai-hex-devnet`, even with the sa
 address. There is no token bridge in this walkthrough. The Hex app chain's fee
 float is separate from the L1 CAI escrow and is valueless by design.
 
-Frontier and Outpost currently use their scripts' predefined Alice/Bob identities.
-Their current web clients do not load this portable wallet. Start with Hex for
-the complete create-wallet → faucet → game flow.
+The integrated Frontier and Outpost demos share this wallet and settlement L1.
+Their standalone scripts retain the separate Alice/Bob development-account mode.
+Outpost has its own app-chain fee faucet; use **Fund app fees** inside Outpost
+before claiming land or delivering goods.

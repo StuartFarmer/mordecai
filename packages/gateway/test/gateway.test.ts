@@ -96,6 +96,32 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
+  it('mounts the Chess room handler without intercepting ordinary API requests', async () => {
+    const paths: string[] = [];
+    const gw = await Gateway.start({
+      nodeKey: node.rpcPublicKey,
+      bootstrap: testnet.bootstrap,
+      demoHandler: async (_req, res, url) => {
+        paths.push(url.pathname);
+        if (url.pathname !== '/api/demos/chess/rooms/test') return false;
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ room: 'test' }));
+        return true;
+      },
+    });
+    try {
+      const origin = `http://127.0.0.1:${gw.port}`;
+      expect(await (await fetch(`${origin}/api/demos/chess/rooms/test`)).json()).toEqual({
+        room: 'test',
+      });
+      expect((await fetch(`${origin}/api/head`)).status).toBe(200);
+      expect((await fetch(`${origin}/api/demos/chess/rooms/missing`)).status).toBe(404);
+      expect((await fetch(`${origin}/api/demos/chess/roomsevil`)).status).toBe(404);
+      expect(paths).toEqual(['/api/demos/chess/rooms/test', '/api/demos/chess/rooms/missing']);
+    } finally {
+      await gw.close();
+    }
+  });
   it('submits browser transfers and locally signed transaction payloads with real receipts', async () => {
     const client = new TransactionClient((path: string, init?: RequestInit) =>
       fetch(new URL(path, `${base}/`), init),

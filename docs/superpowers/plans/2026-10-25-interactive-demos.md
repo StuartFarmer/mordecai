@@ -51,60 +51,60 @@ the exact typed schema and reports it to root.
 **Files:** apps/frontier-web/**; scripts/lib/frontier-demo.mjs; docs/src/examples/frontier-web.md.
 **Interfaces:** bootFrontier context above; returns config `{chainId,contract}`.
 
-- [ ] Add failing tests for facade sends, input bounds and wallet-aware behavior.
-- [ ] Adapt the existing app to optional supplied config/session, preserving standalone mode; replace embedded identity switch and fixed transfer recipient.
-- [ ] Add isolated embed entry/build config and persistent L1 deployment helper.
-- [ ] Run scoped tests and standalone/embedded build; record outputs and report file ownership.
+- [x] Add failing tests for facade sends, input bounds and wallet-aware behavior.
+- [x] Adapt the existing app to optional supplied config/session, preserving standalone mode; replace embedded identity switch and fixed transfer recipient.
+- [x] Add isolated embed entry/build config and persistent L1 deployment helper.
+- [x] Run scoped tests and standalone/embedded build; record outputs and report file ownership.
 
 ### Task 2: Outpost (worker)
 
 **Files:** apps/outpost-web/**; scripts/lib/outpost-demo.mjs; scripts/lib/outpost-outcome.mjs; scripts/outpost-demo.mjs; docs/src/examples/outpost.md; scoped tests under apps/outpost-web/test.
 **Interfaces:** bootOutpost returns `{config,networks:{outpost},start,close}`; config includes chainId, appChainId, appId, market, outpost, appApi `/api/demos/outpost`, appFaucet `/api/demos/outpost/api/faucet`.
 
-- [ ] Add failing tests for exact delivery matching, unrelated valid deliveries, app-only funding and facade sends.
-- [ ] Adapt browser app to supplied wallet/config, fee-aware amounts and disconnected state.
-- [ ] Create persistent boot module with distinct app validator identities, app faucet and L1 relayer; use existing bootstrap journal and defer daemon startup.
-- [ ] Share corrected settlement selection with standalone launcher; document non-atomic cancellation limit.
-- [ ] Run scoped tests and both builds; report configuration and lifecycle details.
+- [x] Add failing tests for exact delivery matching, unrelated valid deliveries, app-only funding and facade sends.
+- [x] Adapt browser app to supplied wallet/config, fee-aware amounts and disconnected state.
+- [x] Create persistent boot module with distinct app validator identities, app faucet and L1 relayer; use existing bootstrap journal and defer daemon startup.
+- [x] Share corrected settlement selection with standalone launcher; document non-atomic cancellation limit.
+- [x] Run scoped tests and both builds; report configuration and lifecycle details.
 
 ### Task 3: Chess (worker)
 
 **Files:** apps/chess-web/** (new); packages/wallet/src/chess.ts and its export/test; packages/gateway/src/chess-rooms.ts and its tests; scripts/lib/chess-demo.mjs; compiler/examples/chess_wager.pysc; rebuilt contracts/dist/chess_wager.wasm; apps/chess/test/**; docs/src/examples/chess.md.
 **Interfaces:** bootChess returns `{config,handleRequest,close}`; root mounts room handler. Root owns gateway.ts and package/root lockfile integration. Send dependency requests to root before installing.
 
-- [ ] Verify chess-rules library via official documentation/license; provide dependency changes to root.
-- [ ] Test typed message signatures, room/deployment binding, replay and illegal-move rejection, identical retry and durable recovery.
-- [ ] Implement narrow wallet signing, authenticated room API, persistent ordered messages and deterministic room-to-wager association.
-- [ ] Extend wager with mutually agreed draw refund, preserve existing report API; rebuild only affected WASM and test winner/draw/cancel paths.
-- [ ] Build browser board, invitations, promotion, game results, spectator reads and explicit pending settlement/abandoned-stake limits.
-- [ ] Test concurrent rooms, fresh wallet and close/change, restart; report exact integration schema.
+- [x] Verify chess-rules library via official documentation/license; provide dependency changes to root.
+- [x] Test typed message signatures, room/deployment binding, replay and illegal-move rejection, identical retry and durable recovery.
+- [x] Implement narrow wallet signing, authenticated room API, persistent ordered messages and deterministic room-to-wager association.
+- [x] Extend wager with mutually agreed draw refund, preserve existing report API; rebuild only affected WASM and test winner/draw/cancel paths.
+- [x] Build browser board, invitations, promotion, game results, spectator reads and explicit pending settlement/abandoned-stake limits.
+- [x] Test concurrent rooms, fresh wallet and close/change, restart; report exact integration schema.
 
 ### Task 4: Shared integration (root)
 
 **Files:** scripts/hex-demo.mjs; packages/gateway/{src/gateway.ts,web/_,public/_,test/*,package.json}; package.json; pnpm-lock.yaml; apps/hex-web/vite.embed.config.js; docs/src/examples/hex-web.md.
 
-- [ ] Test additional navigation, lazy asset selection, supported app routes and session signing revocation.
-- [ ] Add demo registry and pages; generalize Hex loader only as far as the four known demos require.
-- [ ] Wire per-demo boot modules before anchor startup and close services on shutdown.
-- [ ] Wire bounded Chess handler and message signer; retain existing transaction serialization.
-- [ ] Build all assets and verify two-wallet browser flows, mobile navigation, persistent restart and original Hex behavior.
-- [ ] Run full suite, lint/format, independent review and fixes; commit complete scoped increments.
+- [x] Test additional navigation, lazy asset selection, supported app routes and session signing revocation.
+- [x] Add demo registry and pages; generalize Hex loader only as far as the four known demos require.
+- [x] Wire per-demo boot modules before anchor startup and close services on shutdown.
+- [x] Wire bounded Chess handler and message signer; retain existing transaction serialization.
+- [x] Build all assets and verify two-wallet browser flows, mobile navigation, persistent restart and original Hex behavior.
+- [x] Run full suite, lint/format, independent review and fixes; commit complete scoped increments.
 
 ### Task 5: Microblogging proposal (fourth worker, queued)
 
 **Files:** docs/superpowers/specs/2026-10-25-tipped-microblog-design.md.
 
-- [ ] Read existing wallet, storage/feed and payment capabilities.
-- [ ] Propose smallest interactive site: posts, authors, feed, wallet identity and direct tips linked to posts; explain persistence/moderation and transaction confirmation.
-- [ ] Compare viable on/off-chain content approaches, distinguish assumptions and unresolved product choices, and define an MVP acceptance walkthrough. No product code.
+- [x] Read existing wallet, storage/feed and payment capabilities.
+- [x] Propose smallest interactive site: posts, authors, feed, wallet identity and direct tips linked to posts; explain persistence/moderation and transaction confirmation.
+- [x] Compare viable on/off-chain content approaches, distinguish assumptions and unresolved product choices, and define an MVP acceptance walkthrough. No product code.
 
 ### Task 6: Information bounty proposal (fifth worker, queued)
 
 **Files:** docs/superpowers/specs/2026-10-25-information-bounties-design.md.
 
-- [ ] Read existing escrow/contract/wallet capabilities.
-- [ ] Propose questions/data requests with a pinned reward, responses and a single best-response award; distinguish pledged amounts from funded escrow.
-- [ ] Specify creator selection, deadline/cancel/refund policy, content privacy, funding transparency and payout confirmation; identify policy choices requiring user input. No product code.
+- [x] Read existing escrow/contract/wallet capabilities.
+- [x] Propose questions/data requests with a pinned reward, responses and a single best-response award; distinguish pledged amounts from funded escrow.
+- [x] Specify creator selection, deadline/cancel/refund policy, content privacy, funding transparency and payout confirmation; identify policy choices requiring user input. No product code.
 
 ## Coordination rulings
 
@@ -114,3 +114,12 @@ ownership. Only three child slots are available, so queue design workers as slot
 open. Root serializes git operations and installs. No broad concurrent formatting.
 Use a final independent review as the approved spec requires; inspect each worker's
 scoped tests and diff before accepting its increment.
+
+## Completion evidence
+
+- Frontier committed as `3a79ee6`; Outpost as `3552aca`; the two proposals as `c54e4c8`.
+- Final regression suite: 326 tests across 56 files passed. TypeScript, all embedded bundles, mdBook, ESLint and Prettier passed. Standalone Frontier and Outpost builds also passed.
+- Two-wallet browser checks: Frontier claim/build/harvest/trade/land transfer; Outpost app funding/claim/build/harvest/delivery/confirmed L1 payout; Chess invitation/join/e4/resign/both reports/confirmed payout, including mobile and shared-wallet navigation.
+- Existing Hex deployment, room state and balances were unchanged when adding demos. Final restart verified 14 public snapshot paths covering all configurations, worlds, test-room escrow and signed Chess history, plus test player balances. A separate live Chess room was cancelled during verification; its other persisted fields were unchanged.
+- Independent review found an active-wager registration recovery issue. A regression reproduced it; the minimal phase guard fix passed the scoped re-review. No remaining review findings.
+- Microblogging and information-bounty documents are proposals only, not implementations or approved product policies. No public deployment or push.

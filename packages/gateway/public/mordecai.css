@@ -316,7 +316,7 @@ h3 {
   display: block;
   padding: 6px;
 }
-main:has([data-page='demos/hex']:not([hidden])) {
+main:has([data-page^='demos/']:not([hidden])) {
   max-width: 1120px;
 }
 @media (max-width: 480px) {

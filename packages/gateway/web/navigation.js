@@ -1,4 +1,5 @@
 /* global document, window */
+import { DEMOS } from './demos.js';
 export function initNavigation(doc = document, win = window, onChange = () => {}) {
   const pages = [...doc.querySelectorAll('[data-page]')];
   if (!pages.length) return;
@@ -15,7 +16,10 @@ export function initNavigation(doc = document, win = window, onChange = () => {}
       if (link.dataset.route === route) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
-    doc.title = `Mordecai — ${{ home: 'Node', wallet: 'Wallet', faucet: 'Faucet', 'demos/hex': 'Hex' }[route]}`;
+    const title = route.startsWith('demos/')
+      ? DEMOS[route.slice(6)]?.title
+      : { home: 'Node', wallet: 'Wallet', faucet: 'Faucet' }[route];
+    doc.title = `Mordecai — ${title ?? 'Node'}`;
     for (const menu of doc.querySelectorAll('nav details')) menu.open = false;
     onChange(route);
     if (focus) win.scrollTo(0, 0);

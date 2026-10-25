@@ -17,6 +17,11 @@ contract ChessWager:
         opponent_reported: bool = False
         creator_pick: address
         opponent_pick: address
+        creator_draw: bool = False
+        opponent_draw: bool = False
+
+    state Room[address]:
+        match_plus_one: int = 0
 
     action create():
         require(value > 0, "attach a stake to create a match")
@@ -29,6 +34,21 @@ contract ChessWager:
             creator_pick=sender,
             opponent_pick=sender,
         )
+        emit("match created")
+
+    action create_room(room: address):
+        require(Room[room].match_plus_one == 0, "room already exists")
+        require(value > 0, "attach a stake to create a match")
+        match_id = Meta[0].next_id
+        Meta[0].next_id += 1
+        Match[match_id] = Match(
+            creator=sender,
+            opponent=sender,
+            stake=value,
+            creator_pick=sender,
+            opponent_pick=sender,
+        )
+        Room[room].match_plus_one = match_id + 1
         emit("match created")
 
     action join(match_id: int):
@@ -46,16 +66,18 @@ contract ChessWager:
         require(winner == m.creator or winner == m.opponent,
                 "winner must be one of the players")
         if sender == m.creator:
+            m.creator_draw = False
             m.creator_pick = winner
             m.creator_reported = True
         elif sender == m.opponent:
+            m.opponent_draw = False
             m.opponent_pick = winner
             m.opponent_reported = True
         else:
             require(False, "only the players can report a result")
 
         if m.creator_reported and m.opponent_reported:
-            if m.creator_pick == m.opponent_pick:
+            if not m.creator_draw and not m.opponent_draw and m.creator_pick == m.opponent_pick:
                 m.phase = 2
                 transfer(m.creator_pick, m.stake + m.stake)
                 emit("match settled")
@@ -67,3 +89,20 @@ contract ChessWager:
         m.phase = 2
         transfer(m.creator, m.stake)
         emit("match cancelled")
+
+    action draw(match_id: int):
+        m = Match[match_id]
+        require(m.phase == 1, "match is not active")
+        if sender == m.creator:
+            m.creator_draw = True
+            m.creator_reported = True
+        elif sender == m.opponent:
+            m.opponent_draw = True
+            m.opponent_reported = True
+        else:
+            require(False, "only the players can report a result")
+        if m.creator_draw and m.opponent_draw:
+            m.phase = 2
+            transfer(m.creator, m.stake)
+            transfer(m.opponent, m.stake)
+            emit("match drawn")

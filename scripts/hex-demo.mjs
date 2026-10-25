@@ -172,6 +172,26 @@ if (nodeSite)
     amount: 100_000_000_000n,
   });
 
+// Complete all shared-account bootstrap transactions before starting anchor timers.
+const demos = new Map();
+if (nodeSite) {
+  const context = {
+    base,
+    repoRoot,
+    rpc,
+    chainId: l1ChainId,
+    nodeKey: nodes[0].rpcPublicKey,
+    bootstrap: testnet.bootstrap,
+    bootL1,
+  };
+  const { bootFrontier } = await import('./lib/frontier-demo.mjs');
+  demos.set('frontier', await bootFrontier(context));
+  const { bootOutpost } = await import('./lib/outpost-demo.mjs');
+  demos.set('outpost', await bootOutpost(context));
+  const { bootChess } = await import('./lib/chess-demo.mjs');
+  demos.set('chess', await bootChess(context));
+}
+
 // -------------------------------------------------- anchor daemon (settler)
 
 /**
@@ -215,6 +235,7 @@ const daemon = new AnchorDaemon({
   epochIntervalMs: 5_000,
   log: (m) => console.log(`[anchor] ${m}`),
 });
+for (const demo of demos.values()) demo.start?.();
 
 // -------------------------------------------------------------- the faucet
 
@@ -275,7 +296,9 @@ const gateway = await Gateway.start({
   ...(nodeSite
     ? {
         faucetAmount: L1_GRANT,
+        demoHandler: demos.get('chess')?.handleRequest,
         networks: {
+          ...Object.assign({}, ...[...demos.values()].map((demo) => demo.networks ?? {})),
           hex: {
             nodeKey: chainA.rpcPublicKey,
             bootstrap: testnet.bootstrap,
@@ -288,6 +311,7 @@ const gateway = await Gateway.start({
   config: nodeSite
     ? {
         demos: {
+          ...Object.fromEntries([...demos].map(([name, demo]) => [name, demo.config])),
           hex: {
             chainId: l1ChainId,
             appChainId: chainA.genesis.chainId,
@@ -332,6 +356,7 @@ const stop = async () => {
   await daemon.close().catch(() => {});
   if (!nodeSite) await new Promise((resolve) => faucetServer.close(resolve));
   await gateway.close().catch(() => {});
+  for (const demo of demos.values()) await demo.close?.().catch(() => {});
   await appGateway?.close().catch(() => {});
   await appRpc.close().catch(() => {});
   await rpc.close().catch(() => {});

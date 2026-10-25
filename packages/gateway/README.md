@@ -38,7 +38,7 @@ exact `/wallet-assets/` files remain reserved for the built-in web wallet.
 Unknown paths on the built-in site return 404.
 
 The built-in site is a single-page app: `/#/` shows Home and `/#/wallet`
-shows Wallet; `/#/faucet` shows the faucet. **Demos → Hex** opens the integrated game when the operator enables it. The top bar links to all three views, the documentation, chain API,
+shows Wallet; `/#/faucet` shows the faucet. **Demos** opens Hex, Frontier, Outpost and Chess when the operator enables them. The top bar links to all three views, the documentation, chain API,
 and GitHub. Hash navigation and browser back/forward preserve the loaded wallet. Wallet initially shows only create/load controls; opening it reveals account details and transaction forms. Close wallet clears drafts and returns to create/load.
 The standalone `/wallet.html` page remains available for custom app frontends
 such as Hex.
@@ -145,7 +145,10 @@ homepage URL. The local devnet and its balances are temporary.
 ## Integrated demos
 
 `pnpm build` includes the isolated Hex browser bundle. `node scripts/node-demo.mjs`
-starts the built-in SPA and Hex on the same persistent settlement network. See the
+starts the built-in SPA and all four demos on the same persistent settlement network.
+Frontier and Outpost each use one shared world; Hex and Chess use invitation rooms.
+Chess relays wallet-signed moves through this gateway and settles wagers only after
+both players report matching results. Closing Wallet revokes all demo signers. See the
 book's Web Wallet, Faucet, and Hex guide for startup and room invitations.
 
 From code, `GatewayOptions.networks` mounts named RPC connections at

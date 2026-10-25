@@ -4,8 +4,10 @@ import {
   loadBrowserWallet,
   exportBrowserWallet,
 } from '@mordecai/wallet/browser';
+import { signChessMessage } from '@mordecai/wallet/chess';
 import { initNavigation } from './navigation.js';
 import { createDemoSession } from './demo-session.js';
+import { DEMOS, createDemoLoader } from './demos.js';
 import { TransactionClient, transactionSummary } from './transactions.js';
 
 const byId = (id) => document.getElementById(id);
@@ -20,9 +22,8 @@ let working = false;
 const demoClients = new Map();
 const clients = () => [transactions, ...demoClients.values()];
 const pendingClient = () => clients().find((client) => client.pending);
-const demoSession = createDemoSession(() => wallet, sendDemoTransaction);
-let hexMounted = false;
-let hexLoading = false;
+const demoSession = createDemoSession(() => wallet, sendDemoTransaction, signDemoChessMessage);
+const openDemo = createDemoLoader(document, window, demoSession);
 
 function showWallet(next, saved = false) {
   wallet = next;
@@ -282,7 +283,8 @@ async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFe
   if (wallet !== expectedWallet) throw new Error('Wallet changed.');
   if (working || pendingClient())
     throw new Error('Another transaction is pending. Check Wallet before sending again.');
-  if (base !== '' && base !== '/api/demos/hex') throw new Error('Unsupported demo network.');
+  if (base !== '' && !Object.values(DEMOS).some((demo) => demo.network === base))
+    throw new Error('Unsupported demo network.');
   let client = transactions;
   if (base) {
     if (!demoClients.has(base))
@@ -308,7 +310,7 @@ async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFe
       throw new Error(
         result.error || `Transaction ${result.status}. Check Wallet before retrying.`,
       );
-    return { height: Number(result.height), fee: result.fee };
+    return { success: true, hash: result.hash, height: Number(result.height), fee: result.fee };
   } finally {
     working = false;
     renderHistory();
@@ -316,38 +318,18 @@ async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFe
   }
 }
 
-async function openDemo(route) {
-  if (route !== 'demos/hex' || hexMounted || hexLoading) return;
-  const container = byId('hex-demo');
-  if (!container) return;
-  hexLoading = true;
-  try {
-    const response = await fetch('./api/config', {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) throw new Error('Demo configuration is unavailable.');
-    const config = (await response.json()).demos?.hex;
-    if (!config)
-      throw new Error('Hex is not enabled on this node. Start the node demo launcher to play.');
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = './demo-assets/hex.js';
-      script.onload = resolve;
-      script.onerror = () => {
-        script.remove();
-        reject(new Error('Hex assets are unavailable. Run the project build.'));
-      };
-      document.head.append(script);
-    });
-    container.textContent = '';
-    window.MordecaiHex.mount(container, { session: demoSession, config });
-    hexMounted = true;
-  } catch (error) {
-    container.textContent = error.message;
-  } finally {
-    hexLoading = false;
-  }
+async function signDemoChessMessage(expectedWallet, input) {
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  const response = await fetch('./api/config', {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error('Chess configuration is unavailable.');
+  const config = (await response.json()).demos?.chess;
+  if (!config || input.chainId !== config.chainId || input.contract !== config.contract)
+    throw new Error('The Chess message does not match this node.');
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  return signChessMessage(expectedWallet, input);
 }
 
 async function poll() {

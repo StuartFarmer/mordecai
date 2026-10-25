@@ -1,6 +1,7 @@
 dist/
 pnpm-lock.yaml
 coverage/
+.superpowers/
 packages/gateway/public/docs/
 packages/gateway/public/wallet-assets/
 
