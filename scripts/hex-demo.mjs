@@ -36,6 +36,7 @@ import { AnchorDaemon, AppChain } from '../packages/appchain/dist/index.js';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const nodeSite = process.env.MORDECAI_NODE_DEMO === '1';
 const trustRailwayProxy = nodeSite && process.env.MORDECAI_TRUST_RAILWAY_PROXY === '1';
+const trustRenderProxy = nodeSite && process.env.MORDECAI_TRUST_RENDER_PROXY === '1';
 const l1ChainId = nodeSite ? 'mordecai-demo' : 'mordecai-hex-devnet';
 const APP = 'com.example.hex';
 const TIMEOUT_MS = BigInt(process.env.HEX_TIMEOUT_MS ?? 180_000); // 3-minute inactivity forfeit
@@ -178,6 +179,7 @@ const demos = new Map();
 if (nodeSite) {
   const context = {
     trustRailwayProxy,
+    trustRenderProxy,
     base,
     repoRoot,
     rpc,
@@ -296,6 +298,7 @@ const appGateway = nodeSite
     });
 const gateway = await Gateway.start({
   trustRailwayProxy,
+  trustRenderProxy,
   faucet: webFaucet,
   nodeKey: nodes[0].rpcPublicKey,
   bootstrap: testnet.bootstrap,

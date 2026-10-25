@@ -1,10 +1,17 @@
 import type { IncomingMessage } from 'node:http';
 import { isIP } from 'node:net';
 
-// Enable only behind Railway's HTTP edge, without a public TCP bypass to this port.
-export function clientIp(req: IncomingMessage, trustRailwayProxy = false): string {
-  const forwarded = req.headers['x-real-ip'];
-  if (trustRailwayProxy && typeof forwarded === 'string' && isIP(forwarded)) return forwarded;
+// Trust headers only through the selected provider's public HTTP edge.
+export function clientIp(
+  req: IncomingMessage,
+  { trustRailwayProxy = false, trustRenderProxy = false } = {},
+): string {
+  const forwarded = trustRenderProxy
+    ? req.headers['cf-connecting-ip']
+    : trustRailwayProxy
+      ? req.headers['x-real-ip']
+      : undefined;
+  if (typeof forwarded === 'string' && isIP(forwarded)) return forwarded;
   return req.socket.remoteAddress ?? 'unknown';
 }
 

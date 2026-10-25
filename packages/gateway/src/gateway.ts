@@ -28,6 +28,8 @@ import { clientIp } from './request-context.js';
 export interface GatewayOptions {
   /** Trust Railway's HTTP edge headers; never enable with direct public access to the port. */
   trustRailwayProxy?: boolean;
+  /** Trust Render's Cloudflare edge for visitor IPs; requires no direct public access. */
+  trustRenderProxy?: boolean;
   /** Dedicated funded wallet for an opt-in test-token faucet. Never put this in config. */
   faucet?: Wallet;
   /** Operator-selected fixed grant; defaults to 10,000 base units. */
@@ -252,10 +254,7 @@ export class Gateway {
           if (!faucet) return json(res, 503, { error: 'This node has not enabled a faucet.' });
           const body = JSON.parse(await readBody(req, 512)) as { address?: unknown } | null;
           try {
-            const result = await faucet.claim(
-              body?.address,
-              clientIp(req, options.trustRailwayProxy),
-            );
+            const result = await faucet.claim(body?.address, clientIp(req, options));
             return json(res, 202, result);
           } catch (error) {
             if (!(error instanceof FaucetError)) throw error;

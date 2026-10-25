@@ -4,6 +4,7 @@
 [Field Guide](field-guide.md)
 [Quickstart](quickstart.md)
 [Host the Demo on Railway](railway.md)
+[Host the Demo on Render](render.md)
 
 # Architecture
 

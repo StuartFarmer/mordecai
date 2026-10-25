@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mordecai-demo
+    runtime: docker
+    repo: https://github.com/StuartFarmer/mordecai
+    branch: feat/simple-node-site
+    region: frankfurt
+    plan: 0.5c-512mb
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/head
+    autoDeployTrigger: off
+    disk:
+      name: mordecai-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: '10000'
+      - key: DEMO_DIR
+        value: /data

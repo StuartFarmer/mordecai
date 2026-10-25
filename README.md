@@ -34,9 +34,11 @@ world; Outpost focuses on goods orders and settlement. The
 [Bounties](docs/src/examples/bounties.md) lets people fund questions and award a
 response. The launcher keeps its data across restarts in `.mordecai-demo/`.
 
-To host the whole demo on one Railway service, use the root `Dockerfile` and
-attach a persistent volume at `/data`. See the [Railway deployment guide](docs/src/railway.md)
-for the complete settings and verification command.
+To host the whole demo on Render, use the root `render.yaml` Blueprint, which
+configures one Docker service and a persistent disk at `/data`.
+[Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FStuartFarmer%2Fmordecai%2Ftree%2Ffeat%2Fsimple-node-site)
+or follow the [Render deployment guide](docs/src/render.md). This requires a paid
+service and disk. The [Railway deployment guide](docs/src/railway.md) is also available.
 
 ## Outpost: goods, orders and settlement across two chains
 

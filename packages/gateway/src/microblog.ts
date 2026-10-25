@@ -21,6 +21,7 @@ import type { NodeRpcClient } from '@mordecai/rpc';
 
 interface Options {
   trustRailwayProxy?: boolean;
+  trustRenderProxy?: boolean;
   dir: string;
   chainId: string;
   feedId: string;
@@ -404,7 +405,7 @@ export class Microblog {
         (path === '/posts' || path === '/tips' || /^\/posts\/[a-f0-9]{64}\/hide$/.test(path))
       ) {
         assertSameOrigin(req, this.options.trustRailwayProxy);
-        this.limit(`source:${clientIp(req, this.options.trustRailwayProxy)}`);
+        this.limit(`source:${clientIp(req, this.options)}`);
         const chunks: Buffer[] = [];
         let size = 0;
         for await (const chunk of req) {
