@@ -14,6 +14,7 @@
  *   http://127.0.0.1:8788  the app chain (game reads/moves)
  * Ctrl-C to stop.
  */
+import { outpostOutcome } from './lib/outpost-outcome.mjs';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -172,37 +173,7 @@ console.log(`outpost game on app chain: ${Buffer.from(outpost).toString('hex')}`
 
 // -------------------------------------------------- anchor daemon (settler)
 
-const utf8 = (s) => new TextEncoder().encode(s);
-const hexToBytes = (h) => new Uint8Array(Buffer.from(h, 'hex'));
-
-/** Find the lowest delivered-but-open order and settle it as the app. */
-async function outcome(chain) {
-  const deliveries = await chain.getContractState(outpost, utf8('s:Delivery:'));
-  if (deliveries.length === 0) return null;
-  const orders = await rpc.getContractState(market, utf8('s:Order:'));
-  const phaseOf = new Map(
-    orders.map(({ key, value }) => {
-      const id = Buffer.from(hexToBytes(key).subarray('s:Order:'.length)).readBigUInt64LE();
-      const v = Buffer.from(hexToBytes(value));
-      // Order = buyer(32) + good(4+n) + amount(8) + price(8) + phase(8)
-      const goodLen = v.readUInt32LE(32);
-      const phase = v.readBigUInt64LE(32 + 4 + goodLen + 16);
-      return [id, phase];
-    }),
-  );
-  for (const [key, value] of deliveries) {
-    const id = Buffer.from(key.subarray('s:Delivery:'.length)).readBigUInt64LE();
-    if (phaseOf.get(id) !== 0n) continue;
-    const seller = value.subarray(0, 32);
-    console.log(`settling order ${id} → seller ${encodeAddress(seller).slice(0, 12)}…`);
-    return {
-      contract: market,
-      action: 'settle',
-      args: new Uint8Array(Buffer.concat([Buffer.from(u64(id)), Buffer.from(addr(seller))])),
-    };
-  }
-  return null;
-}
+const outcome = outpostOutcome(rpc, market, outpost);
 
 const daemon = new AnchorDaemon({
   chain: chainA.chain,

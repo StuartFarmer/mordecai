@@ -80,3 +80,22 @@ one identity across all lanes, and a browser UI over untrusted gateways.
 The protocol-level proof is `packages/appchain/test/market.test.ts`;
 adversarial cases (replay, impersonation, double settlement) are all
 asserted there.
+
+## On the node site
+
+Open Wallet, then Demos → Outpost. Your wallet signs game moves on the shared
+Outpost app chain and market orders on the node's existing L1. Use the Faucet
+tab for L1 test CAI and **Fund app fees** for the separate game fee balance.
+The embedded demo never imports the development accounts or operator seeds.
+World state, validator identities and deployment receipts survive host restarts.
+
+Claim a tile, build and harvest as game block height advances. Another wallet
+can escrow L1 test CAI for goods. Delivering the exact buyer, good and amount
+lets the next signed anchor settle payment; confirmed L1 state determines payout.
+A mismatched delivery cannot release payment or block other valid orders, but
+it occupies that order's delivery slot: its buyer can cancel and create a new order.
+
+This is not an atomic exchange: cancellation racing a delivery can leave test
+goods transferred without payment. Cancelled orders are shown separately from
+confirmed payouts. The standalone launcher retains its separate, temporary
+development network and Alice/Bob account mode.

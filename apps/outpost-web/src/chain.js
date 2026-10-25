@@ -61,6 +61,13 @@ function encodeArgs(schema, fields) {
   for (const [name, ty] of schema) {
     const v = fields[name];
     if (ty === 'u64') {
+      if (
+        !Number.isSafeInteger(Number(v)) ||
+        BigInt(v) < 0n ||
+        BigInt(v) > BigInt(Number.MAX_SAFE_INTEGER)
+      )
+        throw new Error('Amount must be a bounded whole number');
+      if (name === 'amount' && BigInt(v) === 0n) throw new Error('Amount must be positive');
       const b = new Uint8Array(8);
       new DataView(b.buffer).setBigUint64(0, BigInt(v), true);
       parts.push(b);
@@ -81,6 +88,10 @@ function encodeArgs(schema, fields) {
 }
 
 async function sendTx(base, chainId, player, contract, action, args, value = 0n) {
+  if (action === 'place_order' && value <= 0n) throw new Error('Payment must be positive');
+  if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('Invalid payment');
+  const payload = { kind: 'execute_contract', contract: hexToBytes(contract), value, action, args };
+  if (player.sendTransaction) return player.sendTransaction(base, chainId, payload, 500000n);
   const account = await api(base, `/api/account/${player.address}`);
   const unsigned = {
     chainId,
@@ -235,7 +246,25 @@ export async function fetchStatus(config) {
 }
 
 /** L1 currency balance. */
-export async function fetchBalance(player) {
-  const account = await api('', `/api/account/${player.address}`);
+export async function fetchBalance(player, base = '') {
+  const account = await api(base, `/api/account/${player.address}`);
   return Number(account.balance);
+}
+
+export async function fundApp(player, config) {
+  const result = await api(config.appFaucet, '', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ address: player.address }),
+  });
+  for (let i = 0; i < 100; i++) {
+    const res = await fetch(`${config.appApi}/api/tx/${result.hash}`);
+    if (res.ok) {
+      const receipt = await res.json();
+      if (!receipt.success) throw new Error(receipt.error || 'Funding failed');
+      return receipt;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  throw new Error(`Funding submitted: ${result.hash}; confirmation pending`);
 }

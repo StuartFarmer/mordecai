@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   connect,
+  fundApp,
   fetchBalance,
   fetchConfig,
   fetchMarket,
@@ -10,12 +11,20 @@ import {
   trade,
 } from './chain.js';
 
+const noSubscribe = () => () => {};
+const noPlayer = () => null;
 const GRID = 12;
 const RESOURCE_ICON = { wood: '🪵', wheat: '🌾' };
 const BUILDING_ICON = { farm: '🌾', lumbermill: '🪵' };
 
-export default function App() {
-  const [config, setConfig] = useState(null);
+export default function App({ session, initialConfig }) {
+  const sharedPlayer = useSyncExternalStore(
+    session?.subscribe ?? noSubscribe,
+    session?.getSnapshot ?? noPlayer,
+  );
+  const currentPlayer = useRef(sharedPlayer);
+  currentPlayer.current = sharedPlayer;
+  const [config, setConfig] = useState(initialConfig ?? null);
   const [error, setError] = useState(null);
   const [players, setPlayers] = useState({});
   const [current, setCurrent] = useState('alice');
@@ -23,6 +32,7 @@ export default function App() {
   const [market, setMarket] = useState({});
   const [status, setStatus] = useState({ l1Height: 0, appHeight: 0, anchor: null });
   const [balances, setBalances] = useState({});
+  const [appBalances, setAppBalances] = useState({});
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState([]);
@@ -37,37 +47,49 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const cfg = await fetchConfig();
+        const cfg = initialConfig ?? (await fetchConfig());
         if (!cfg.market)
           throw new Error('gateway has no outpost config — run scripts/outpost-demo.mjs');
         setConfig(cfg);
         const conns = {};
-        for (const account of cfg.accounts) conns[account.name] = connect(cfg, account);
+        if (session) {
+          const snapshot = sharedPlayer;
+          if (snapshot) conns.you = { ...snapshot, name: 'you' };
+          setCurrent('you');
+        } else for (const account of cfg.accounts) conns[account.name] = connect(cfg, account);
         setPlayers(conns);
       } catch (e) {
         setError(String(e.message || e));
       }
     })();
-  }, []);
+  }, [session, initialConfig, sharedPlayer]);
 
   const refresh = useCallback(async () => {
     if (!config) return;
+    const snapshot = sharedPlayer;
     try {
       const [w, m, s] = await Promise.all([
         fetchWorld(config),
         fetchMarket(config),
         fetchStatus(config),
       ]);
+      if (session && snapshot !== currentPlayer.current) return;
       setWorld(w);
       setMarket(m);
       setStatus(s);
       const b = {};
-      for (const p of Object.values(players)) b[p.name] = await fetchBalance(p);
+      const fees = {};
+      for (const p of Object.values(players)) {
+        b[p.name] = await fetchBalance(p);
+        fees[p.name] = await fetchBalance(p, config.appApi);
+      }
+      if (session && snapshot !== currentPlayer.current) return;
       setBalances(b);
+      setAppBalances(fees);
     } catch (e) {
       setError(String(e.message || e));
     }
-  }, [config, players]);
+  }, [config, players, session, sharedPlayer]);
 
   useEffect(() => {
     refresh();
@@ -75,18 +97,28 @@ export default function App() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const player = players[current];
+  const player = session ? sharedPlayer && { ...sharedPlayer, name: 'you' } : players[current];
   const me = player?.address;
   const goods = (me && world.accounts[me]) || { wood: 0, wheat: 0 };
   const nameOf = (addr) =>
     Object.values(players).find((p) => p.address === addr)?.name || addr.slice(0, 12) + '…';
 
   async function run(label, fn) {
+    const snapshot = sharedPlayer;
     setBusy(true);
+    addLog({ ok: true, text: `${current}: ${label} — submitted; awaiting confirmation` });
     try {
       const res = await fn();
+      if (session && snapshot !== currentPlayer.current) {
+        setBusy(false);
+        return;
+      }
       addLog({ ok: true, text: `${current}: ${label} (block ${res.height})` });
     } catch (e) {
+      if (session && snapshot !== currentPlayer.current) {
+        setBusy(false);
+        return;
+      }
       addLog({ ok: false, text: `${current}: ${label} — ${String(e.message || e)}` });
     }
     await refresh();
@@ -94,6 +126,12 @@ export default function App() {
   }
 
   if (error) return <div className="fatal">⚠️ {error}</div>;
+  if (session && !player)
+    return (
+      <div className="fatal">
+        <a href="#/wallet">Open Wallet to play Outpost</a>
+      </div>
+    );
   if (!config || !player) return <div className="fatal">connecting to gateways…</div>;
 
   const tile = selected != null ? world.tiles[selected] : undefined;
@@ -105,9 +143,15 @@ export default function App() {
     if (o.phase === 2) return { text: 'cancelled', cls: 'err' };
     if (o.phase === 1) {
       const d = world.deliveries[id];
-      return { text: `settled — ${d ? nameOf(d.seller) : 'seller'} paid ${o.price} 🪙`, cls: 'ok' };
+      return {
+        text: `confirmed — ${d ? nameOf(d.seller) : 'seller'} paid ${o.price} 🪙`,
+        cls: 'ok',
+      };
     }
     if (world.deliveries[id]) {
+      const d = world.deliveries[id];
+      if (d.buyer !== o.buyer || d.good !== o.good || d.amount !== o.amount)
+        return { text: 'delivery mismatch — buyer can cancel and place a new order', cls: 'err' };
       return {
         text: `delivered by ${nameOf(world.deliveries[id].seller)} — settling on next anchor…`,
         cls: 'hint',
@@ -132,7 +176,12 @@ export default function App() {
             {Array.from({ length: GRID * GRID }, (_, id) => {
               const t = world.tiles[id];
               const ownerName =
-                t && Object.values(players).find((p) => p.address === t.owner)?.name;
+                t &&
+                (session
+                  ? t.owner === me
+                    ? 'alice'
+                    : 'other'
+                  : Object.values(players).find((p) => p.address === t.owner)?.name);
               const cls = [
                 'tile',
                 t ? `owner-${ownerName || 'other'}` : 'unclaimed',
@@ -152,10 +201,11 @@ export default function App() {
           </div>
           <div className="legend">
             <span>
-              <i className="swatch owner-alice" /> alice
+              <i className="swatch owner-alice" /> {session ? 'your land' : 'alice'}
             </span>
             <span>
-              <i className="swatch owner-bob" /> bob
+              <i className={`swatch owner-${session ? 'other' : 'bob'}`} />{' '}
+              {session ? 'other players' : 'bob'}
             </span>
             <span>
               <i className="swatch unclaimed" /> unclaimed
@@ -165,6 +215,10 @@ export default function App() {
           </div>
 
           <div className="market">
+            <p className="hint">
+              Test exchange uses separate chain commits. Cancellation racing delivery can leave
+              goods unpaid. Growth follows game blocks.
+            </p>
             <h3>goods market — in-game goods for L1 🪙</h3>
             <div className="place-form">
               <span>buy</span>
@@ -191,7 +245,12 @@ export default function App() {
               <span>🪙</span>
               <button
                 disabled={
-                  busy || (balances[current] ?? 0) < form.price || form.amount < 1 || form.price < 1
+                  busy ||
+                  (balances[current] ?? 0) < form.price + 500000 ||
+                  !Number.isSafeInteger(form.amount) ||
+                  !Number.isSafeInteger(form.price) ||
+                  form.amount < 1 ||
+                  form.price < 1
                 }
                 onClick={() =>
                   run(
@@ -225,9 +284,8 @@ export default function App() {
                       <span>
                         buys {o.amount} {RESOURCE_ICON[o.good]} for {o.price} 🪙
                       </span>
-                      {st ? (
-                        <span className={`status ${st.cls}`}>{st.text}</span>
-                      ) : o.buyer === me ? (
+                      {st && <span className={`status ${st.cls}`}>{st.text}</span>}
+                      {o.phase === 0 && o.buyer === me ? (
                         <button
                           disabled={busy}
                           onClick={() =>
@@ -238,9 +296,13 @@ export default function App() {
                         >
                           cancel
                         </button>
-                      ) : (
+                      ) : st ? null : (
                         <button
-                          disabled={busy || (goods[o.good] ?? 0) < o.amount}
+                          disabled={
+                            busy ||
+                            (appBalances[current] ?? 0) < 500000 ||
+                            (goods[o.good] ?? 0) < o.amount
+                          }
                           onClick={() =>
                             run(`deliver ${o.amount} ${o.good} to ${nameOf(o.buyer)}`, () =>
                               play(player, config, {
@@ -269,17 +331,34 @@ export default function App() {
 
         <div className="panel">
           <div className="player-switch">
-            {Object.values(players).map((p) => (
-              <button
-                key={p.name}
-                className={`player-btn owner-${p.name} ${current === p.name ? 'active' : ''}`}
-                onClick={() => setCurrent(p.name)}
-              >
-                {p.name}
-              </button>
-            ))}
+            {session && (
+              <>
+                <a href="#/wallet">Manage wallet</a>
+                <a href="#/faucet">L1 Faucet</a>
+                <button
+                  disabled={busy}
+                  onClick={() => run('fund app fees', () => fundApp(player, config))}
+                >
+                  Fund app fees
+                </button>
+              </>
+            )}
+            {!session &&
+              Object.values(players).map((p) => (
+                <button
+                  key={p.name}
+                  className={`player-btn owner-${p.name} ${current === p.name ? 'active' : ''}`}
+                  onClick={() => setCurrent(p.name)}
+                >
+                  {p.name}
+                </button>
+              ))}
           </div>
 
+          <p className="hint">
+            App fee balance: {appBalances[current] ?? '…'}. Each move reserves up to 500000 fee
+            units.
+          </p>
           <div className="resources">
             <div>
               <b>{goods.wood}</b> 🪵 wood <small>(game)</small>
@@ -318,7 +397,7 @@ export default function App() {
               <div className="actions">
                 {!tile && (
                   <button
-                    disabled={busy}
+                    disabled={busy || (appBalances[current] ?? 0) < 500000}
                     onClick={() =>
                       run(`claim tile ${selected}`, () =>
                         play(player, config, { claim_tile: { tile_id: selected } }),
@@ -331,7 +410,7 @@ export default function App() {
                 {mine && !tile.building && (
                   <>
                     <button
-                      disabled={busy || goods.wood < 10}
+                      disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
                       onClick={() =>
                         run(`build farm on ${selected}`, () =>
                           play(player, config, { build: { tile_id: selected, kind: 'farm' } }),
@@ -341,7 +420,7 @@ export default function App() {
                       build farm 🌾 (−10 🪵)
                     </button>
                     <button
-                      disabled={busy || goods.wood < 10}
+                      disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
                       onClick={() =>
                         run(`build lumbermill on ${selected}`, () =>
                           play(player, config, {
@@ -356,7 +435,7 @@ export default function App() {
                 )}
                 {mine && tile.building && (
                   <button
-                    disabled={busy}
+                    disabled={busy || (appBalances[current] ?? 0) < 500000}
                     onClick={() =>
                       run(`harvest tile ${selected}`, () =>
                         play(player, config, { harvest: { tile_id: selected } }),
