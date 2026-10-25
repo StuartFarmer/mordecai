@@ -291,3 +291,34 @@ header h1 {
   border-radius: 7px;
   padding: 7px 10px;
 }
+
+.legend {
+  flex-wrap: wrap;
+}
+a {
+  color: var(--alice);
+}
+.actions input {
+  width: 100%;
+  padding: 8px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+header {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .app {
+    padding: 10px;
+  }
+  .map,
+  .panel {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+  .order {
+    flex-wrap: wrap;
+  }
+}

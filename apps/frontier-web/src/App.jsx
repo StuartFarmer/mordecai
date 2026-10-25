@@ -1,12 +1,30 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { act, connect, fetchBalance, fetchConfig, fetchHeight, fetchWorld } from './chain.js';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  act,
+  connect,
+  fetchBalance,
+  fetchConfig,
+  fetchHeight,
+  fetchWorld,
+  MAX_FEE,
+  validAmount,
+  validAddress,
+} from './chain.js';
 
 const GRID = 12; // show tiles 0..143 of the map
 const RESOURCE_ICON = { wood: '🪵', wheat: '🌾' };
 const BUILDING_ICON = { farm: '🌾', lumbermill: '🪵' };
 
-export default function App() {
-  const [config, setConfig] = useState(null);
+const noSubscribe = () => () => {};
+const noPlayer = () => null;
+export default function App({ session, initialConfig } = {}) {
+  const sharedPlayer = useSyncExternalStore(
+    session?.subscribe ?? noSubscribe,
+    session?.getSnapshot ?? noPlayer,
+    session?.getSnapshot ?? noPlayer,
+  );
+  const [config, setConfig] = useState(initialConfig ?? null);
+  const [recipient, setRecipient] = useState('');
   const [error, setError] = useState(null);
   const [players, setPlayers] = useState({}); // name -> {name, address, publicKey, seed}
   const [current, setCurrent] = useState('alice');
@@ -32,6 +50,7 @@ export default function App() {
 
   // boot: load the gateway config, derive both dev accounts
   useEffect(() => {
+    if (session) return;
     (async () => {
       try {
         const cfg = await fetchConfig();
@@ -45,21 +64,29 @@ export default function App() {
         setError(String(e.message || e));
       }
     })();
-  }, []);
+  }, [session]);
+
+  const player = session ? sharedPlayer : players[current];
+  const playerRef = useRef(player);
+  playerRef.current = player;
 
   const refresh = useCallback(async () => {
     if (!config) return;
+    const readingPlayer = player;
     try {
       const [w, h] = await Promise.all([fetchWorld(config), fetchHeight()]);
+
+      const b = {};
+      for (const p of session ? (player ? [player] : []) : Object.values(players))
+        b[p.address] = await fetchBalance(p);
+      if (playerRef.current !== readingPlayer) return;
       setWorld(w);
       setHeight(h);
-      const b = {};
-      for (const p of Object.values(players)) b[p.name] = await fetchBalance(p);
       setBalances(b);
     } catch (e) {
-      setError(String(e.message || e));
+      if (playerRef.current === readingPlayer) setError(String(e.message || e));
     }
-  }, [config, players]);
+  }, [config, players, player, session]);
 
   useEffect(() => {
     refresh();
@@ -67,31 +94,47 @@ export default function App() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const player = players[current];
   const me = player?.address;
   const account = (me && world.accounts[me]) || { wood: 0, wheat: 0 };
   const nameOf = (addr) =>
-    Object.values(players).find((p) => p.address === addr)?.name || addr.slice(0, 12) + '…';
+    (session && addr === me
+      ? 'you'
+      : Object.values(players).find((p) => p.address === addr)?.name) || addr.slice(0, 12) + '…';
 
   async function run(label, msg) {
+    const signingPlayer = player;
     setBusy(true);
     try {
+      if (!player || (balances[player.address] ?? 0n) < MAX_FEE)
+        throw new Error('Use the Faucet tab to fund transaction fees.');
       const res = await act(player, config, msg);
-      addLog({ ok: true, text: `${current}: ${label} (block ${res.height}, fee ${res.gasUsed})` });
+      if (playerRef.current !== signingPlayer) return;
+      addLog({
+        ok: true,
+        text: `${session ? 'you' : current}: ${label} (block ${res.height}, fee ${res.gasUsed})`,
+      });
     } catch (e) {
+      if (playerRef.current !== signingPlayer) return;
       const m = String(e.message || e);
-      addLog({ ok: false, text: `${current}: ${label} — ${m}` });
+      addLog({ ok: false, text: `${session ? 'you' : current}: ${label} — ${m}` });
+    } finally {
+      setBusy(false);
     }
     await refresh();
-    setBusy(false);
   }
 
   if (error) return <div className="fatal">⚠️ {error}</div>;
+  if (session && !player)
+    return (
+      <div className="fatal">
+        Load a wallet to play Frontier. <a href="#wallet">Wallet</a>
+      </div>
+    );
   if (!config || !player) return <div className="fatal">connecting to gateway…</div>;
 
   const tile = selected != null ? world.tiles[selected] : undefined;
   const mine = tile && tile.owner === me;
-  const other = Object.values(players).find((p) => p.name !== current);
+  const unavailable = busy || (balances[me] ?? 0n) < MAX_FEE;
   const growing = tile?.building ? height - tile.last_tick_height : 0;
   const openOrders = Object.entries(world.orders)
     .filter(([, o]) => o.open)
@@ -113,7 +156,12 @@ export default function App() {
             {Array.from({ length: GRID * GRID }, (_, id) => {
               const t = world.tiles[id];
               const ownerName =
-                t && Object.values(players).find((p) => p.address === t.owner)?.name;
+                t &&
+                (session
+                  ? t.owner === me
+                    ? 'alice'
+                    : 'other'
+                  : Object.values(players).find((p) => p.address === t.owner)?.name);
               const cls = [
                 'tile',
                 t ? `owner-${ownerName || 'other'}` : 'unclaimed',
@@ -133,10 +181,11 @@ export default function App() {
           </div>
           <div className="legend">
             <span>
-              <i className="swatch owner-alice" /> alice
+              <i className="swatch owner-alice" /> {session ? 'your tiles' : 'alice'}
             </span>
             <span>
-              <i className="swatch owner-bob" /> bob
+              <i className={`swatch owner-${session ? 'other' : 'bob'}`} />{' '}
+              {session ? 'other players' : 'bob'}
             </span>
             <span>
               <i className="swatch unclaimed" /> unclaimed
@@ -152,6 +201,8 @@ export default function App() {
               <input
                 type="number"
                 min="1"
+                max={Number.MAX_SAFE_INTEGER}
+                step="1"
                 value={form.giveAmount}
                 onChange={(e) => setForm({ ...form, giveAmount: Number(e.target.value) })}
               />
@@ -172,6 +223,8 @@ export default function App() {
               <input
                 type="number"
                 min="1"
+                max={Number.MAX_SAFE_INTEGER}
+                step="1"
                 value={form.wantAmount}
                 onChange={(e) => setForm({ ...form, wantAmount: Number(e.target.value) })}
               />
@@ -180,10 +233,10 @@ export default function App() {
               </span>
               <button
                 disabled={
-                  busy ||
+                  unavailable ||
                   (account[form.give] ?? 0) < form.giveAmount ||
-                  form.giveAmount < 1 ||
-                  form.wantAmount < 1
+                  !validAmount(form.giveAmount) ||
+                  !validAmount(form.wantAmount)
                 }
                 onClick={() =>
                   run(`sell ${form.giveAmount} ${form.give} for ${form.wantAmount} ${form.want}`, {
@@ -212,7 +265,7 @@ export default function App() {
                     </span>
                     {o.maker === me ? (
                       <button
-                        disabled={busy}
+                        disabled={unavailable}
                         onClick={() =>
                           run(`cancel order #${id}`, { cancel_order: { order_id: Number(id) } })
                         }
@@ -221,7 +274,7 @@ export default function App() {
                       </button>
                     ) : (
                       <button
-                        disabled={busy || !canAfford(o)}
+                        disabled={unavailable || !canAfford(o)}
                         onClick={() =>
                           run(`fill order #${id}`, { fill_order: { order_id: Number(id) } })
                         }
@@ -238,16 +291,37 @@ export default function App() {
 
         <div className="panel">
           <div className="player-switch">
-            {Object.values(players).map((p) => (
-              <button
-                key={p.name}
-                className={`player-btn owner-${p.name} ${current === p.name ? 'active' : ''}`}
-                onClick={() => setCurrent(p.name)}
-              >
-                {p.name}
-              </button>
-            ))}
+            {session ? (
+              <span>
+                {me.slice(0, 16)}… · <a href="#wallet">Manage wallet</a>
+              </span>
+            ) : (
+              <>
+                {Object.values(players).map((p) => (
+                  <button
+                    key={p.name}
+                    className={`player-btn owner-${p.name} ${current === p.name ? 'active' : ''}`}
+                    onClick={() => setCurrent(p.name)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
+          {(balances[me] ?? 0n) < MAX_FEE && (
+            <p className="hint">
+              Fund CAI fees in the <a href="#faucet">Faucet</a> tab.
+            </p>
+          )}
+          {Object.keys(world.tiles).length >= 144 && (
+            <p className="hint">
+              All 144 tiles are claimed. Trade goods or ask an owner to transfer land.
+            </p>
+          )}
+          <p className="hint">
+            Buildings grow one resource per block. Waiting alone does not advance growth.
+          </p>
 
           <div className="resources">
             <div>
@@ -257,7 +331,7 @@ export default function App() {
               <b>{account.wheat}</b> 🌾 wheat
             </div>
             <div>
-              <b>{balances[current] ?? '…'}</b> 🪙 CAI
+              <b>{balances[me]?.toString() ?? '…'}</b> 🪙 CAI
             </div>
           </div>
 
@@ -287,7 +361,7 @@ export default function App() {
               <div className="actions">
                 {!tile && (
                   <button
-                    disabled={busy}
+                    disabled={unavailable}
                     onClick={() =>
                       run(`claim tile ${selected}`, { claim_tile: { tile_id: selected } })
                     }
@@ -298,7 +372,7 @@ export default function App() {
                 {mine && !tile.building && (
                   <>
                     <button
-                      disabled={busy || account.wood < 10}
+                      disabled={unavailable || account.wood < 10}
                       onClick={() =>
                         run(`build farm on ${selected}`, {
                           build: { tile_id: selected, kind: 'farm' },
@@ -308,7 +382,7 @@ export default function App() {
                       build farm 🌾 (−10 🪵)
                     </button>
                     <button
-                      disabled={busy || account.wood < 10}
+                      disabled={unavailable || account.wood < 10}
                       onClick={() =>
                         run(`build lumbermill on ${selected}`, {
                           build: { tile_id: selected, kind: 'lumbermill' },
@@ -321,7 +395,7 @@ export default function App() {
                 )}
                 {mine && tile.building && (
                   <button
-                    disabled={busy}
+                    disabled={unavailable}
                     onClick={() =>
                       run(`harvest tile ${selected}`, { harvest: { tile_id: selected } })
                     }
@@ -329,17 +403,27 @@ export default function App() {
                     harvest {BUILDING_ICON[tile.building]}
                   </button>
                 )}
-                {mine && other && (
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      run(`transfer ${selected} to ${other.name}`, {
-                        transfer_tile: { tile_id: selected, to: other.address },
-                      })
-                    }
-                  >
-                    give to {other.name}
-                  </button>
+                {mine && (
+                  <>
+                    <label>
+                      Recipient wallet address
+                      <input
+                        aria-label="Recipient wallet address"
+                        value={recipient}
+                        onChange={(e) => setRecipient(e.target.value.trim())}
+                      />
+                    </label>
+                    <button
+                      disabled={unavailable || !validAddress(recipient) || recipient === me}
+                      onClick={() =>
+                        run(`transfer ${selected}`, {
+                          transfer_tile: { tile_id: selected, to: recipient },
+                        })
+                      }
+                    >
+                      transfer tile
+                    </button>
+                  </>
                 )}
               </div>
             </div>

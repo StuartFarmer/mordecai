@@ -7,6 +7,20 @@ import { ed25519 } from '@noble/curves/ed25519';
 import z32 from 'z32';
 import { encodeTransaction, transactionSigningBytes } from '@mordecai/protocol';
 
+export const MAX_FEE = 500000n;
+export const validAmount = (value) => Number.isSafeInteger(value) && value > 0;
+export function validAddress(value) {
+  try {
+    return (
+      typeof value === 'string' &&
+      z32.decode(value).length === 32 &&
+      z32.encode(z32.decode(value)) === value
+    );
+  } catch {
+    return false;
+  }
+}
+
 const utf8 = new TextEncoder();
 
 const hexToBytes = (hex) => new Uint8Array(hex.match(/../g)?.map((b) => parseInt(b, 16)) ?? []);
@@ -82,23 +96,50 @@ function encodeArgs(schema, fields) {
 
 /** Execute a frontier action ({action_name: {fields}}); returns {height, gasUsed}. */
 export async function act(player, config, msg) {
+  if (!player) throw new Error('Load a wallet before playing.');
+  if (Object.keys(msg).length !== 1) throw new Error('Expected one action');
   const action = Object.keys(msg)[0];
   const schema = ACTIONS[action];
   if (!schema) throw new Error(`unknown action ${action}`);
 
+  const fields = msg[action];
+  for (const [name, type] of schema) {
+    const value = fields[name];
+    if (
+      type === 'u64' &&
+      (!Number.isSafeInteger(value) ||
+        value < 0 ||
+        (name.endsWith('_amount') && !validAmount(value)))
+    )
+      throw new Error(`Invalid ${name}`);
+    if (name === 'tile_id' && value >= 144) throw new Error('Tile must be between 0 and 143');
+    if (type === 'address' && !validAddress(value)) throw new Error('Invalid recipient address');
+    if (name === 'kind' && !['farm', 'lumbermill'].includes(value))
+      throw new Error('Invalid building');
+    if (['give', 'want'].includes(name) && !['wood', 'wheat'].includes(value))
+      throw new Error('Invalid resource');
+  }
+  if (action === 'place_order' && fields.give === fields.want)
+    throw new Error('Trade different resources');
+  const payload = {
+    kind: 'execute_contract',
+    contract: hexToBytes(config.contract),
+    value: 0n,
+    action,
+    args: encodeArgs(schema, fields),
+  };
+  if (player.sendTransaction) {
+    const receipt = await player.sendTransaction('', config.chainId, payload, MAX_FEE);
+    return { ...receipt, gasUsed: receipt.fee };
+  }
   const account = await api(`/api/account/${player.address}`);
+  if (BigInt(account.balance) < MAX_FEE) throw new Error('Insufficient CAI for fees');
   const unsigned = {
     chainId: config.chainId,
     nonce: BigInt(account.nonce),
     sender: player.publicKey,
-    maxFee: 500000n,
-    payload: {
-      kind: 'execute_contract',
-      contract: hexToBytes(config.contract),
-      value: 0n,
-      action,
-      args: encodeArgs(schema, msg[action]),
-    },
+    maxFee: MAX_FEE,
+    payload,
   };
   const signature = ed25519.sign(transactionSigningBytes(unsigned), player.seed);
   const { hash } = await api('/api/tx', {
@@ -212,5 +253,5 @@ export async function fetchHeight() {
 /** Native token balance. */
 export async function fetchBalance(player) {
   const account = await api(`/api/account/${player.address}`);
-  return Number(account.balance);
+  return BigInt(account.balance);
 }
