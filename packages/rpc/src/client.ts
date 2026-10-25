@@ -12,7 +12,10 @@ import type {
 } from './messages.js';
 
 export class RpcError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly rejected = false,
+  ) {
     super(message);
     this.name = 'RpcError';
   }
@@ -36,7 +39,7 @@ export class NodeRpcClient {
   private async call<T>(method: string, params: unknown): Promise<T> {
     const raw = await this.client.request(method, Buffer.from(JSON.stringify(params)));
     const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<T>;
-    if (!envelope.ok) throw new RpcError(envelope.error);
+    if (!envelope.ok) throw new RpcError(envelope.error, envelope.rejected === true);
     return envelope.result;
   }
 
@@ -53,7 +56,7 @@ export class NodeRpcClient {
     const raw = await this.client.request('submit_tx_raw', Buffer.from(txBytes));
     if (raw.length === 32) return raw.toString('hex');
     const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<SubmitTxResult>;
-    if (!envelope.ok) throw new RpcError(envelope.error);
+    if (!envelope.ok) throw new RpcError(envelope.error, envelope.rejected === true);
     return envelope.result.hash;
   }
 

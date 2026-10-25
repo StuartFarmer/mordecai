@@ -22,7 +22,8 @@ it('updates the readout, clears stale data on failure, and recovers on the next 
     document: { getElementById: (id: string) => elements[id] },
     AbortSignal,
     fetch: async () => ({ ok: available, json: async () => response }),
-    setTimeout: (callback: typeof poll) => {
+    setTimeout: (callback: typeof poll, delay: number) => {
+      expect(delay).toBe(1000);
       poll = callback;
     },
   });

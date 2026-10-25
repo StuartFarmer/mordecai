@@ -18,18 +18,20 @@
     "public"
   ],
   "scripts": {
-    "build": "tsc -b && mdbook build ../../docs",
-    "test": "vitest run"
+    "build": "tsc -b && vite build --config vite.config.js && mdbook build ../../docs",
+    "test": "vitest run",
+    "build:web": "vite build --config vite.config.js"
   },
   "dependencies": {
-    "@mordecai/rpc": "workspace:*"
+    "@mordecai/crypto": "workspace:*",
+    "@mordecai/protocol": "workspace:*",
+    "@mordecai/rpc": "workspace:*",
+    "@mordecai/wallet": "workspace:*"
   },
   "devDependencies": {
     "@mordecai/chain": "workspace:*",
-    "@mordecai/crypto": "workspace:*",
     "@mordecai/node": "workspace:*",
-    "@mordecai/protocol": "workspace:*",
-    "@mordecai/wallet": "workspace:*",
-    "hyperdht": "^6.32.0"
+    "hyperdht": "^6.32.0",
+    "vite": "^5.4.11"
   }
 }

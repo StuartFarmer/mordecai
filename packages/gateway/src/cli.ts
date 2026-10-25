@@ -7,6 +7,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { Gateway } from './gateway.js';
+import { loadFaucetWallet } from './faucet.js';
 
 function arg(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -17,7 +18,7 @@ const nodeKey = arg('--node');
 if (!nodeKey || !/^[0-9a-fA-F]{64}$/.test(nodeKey)) {
   console.error(
     'usage: mordecai-gateway --node <rpc-key-hex> [--port 8787] [--static <dir>] ' +
-      '[--config <file.json>] [--bootstrap host:port[,host:port…]]',
+      '[--config <file.json>] [--bootstrap host:port[,host:port…]] [--faucet-keystore <file>]',
   );
   process.exit(1);
 }
@@ -31,6 +32,7 @@ const bootstrap = arg('--bootstrap')
 
 const configFile = arg('--config');
 const staticDir = arg('--static');
+const faucet = loadFaucetWallet(arg('--faucet-keystore'));
 
 const gateway = await Gateway.start({
   nodeKey: new Uint8Array(Buffer.from(nodeKey, 'hex')),
@@ -38,6 +40,7 @@ const gateway = await Gateway.start({
   ...(bootstrap ? { bootstrap } : {}),
   ...(staticDir ? { staticDir } : {}),
   ...(configFile ? { config: JSON.parse(readFileSync(configFile, 'utf8')) } : {}),
+  ...(faucet ? { faucet } : {}),
 });
 
 console.log(`gateway listening on http://127.0.0.1:${gateway.port}`);

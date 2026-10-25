@@ -9,44 +9,236 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./mordecai.css" />
     <script src="./mordecai.js" defer></script>
+    <script src="./faucet.js" defer></script>
+    <script src="./wallet-assets/wallet.js" defer></script>
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Mordecai</h1>
-        <p class="tagline">P2P toolkit for a distributed world.</p>
-        <nav aria-label="Resources">
-          <a href="./docs/">Read the documentation</a>
-          <a href="./api/head">View chain API</a>
-        </nav>
-      </header>
-
-      <section aria-labelledby="node-title">
-        <div class="section-heading">
-          <h2 id="node-title">This node</h2>
-          <p id="status" role="status" aria-live="polite" data-state="checking">Checking node</p>
-        </div>
-        <dl>
-          <div>
-            <dt>Network</dt>
-            <dd id="chain-id">—</dd>
-          </div>
-          <div>
-            <dt>Block height</dt>
-            <dd id="height">—</dd>
-          </div>
-          <div>
-            <dt>Latest block</dt>
-            <dd id="head-hash">—</dd>
-          </div>
-        </dl>
-        <p id="last-checked">Waiting for chain data. Updates every 10 seconds.</p>
-        <noscript
-          ><p>
-            Enable JavaScript for live node details, or use the chain API link above.
-          </p></noscript
+    <header class="status-bar">
+      <nav aria-label="Main navigation">
+        <a href="#/" data-route="home" aria-current="page">Home</a>
+        <a href="#/wallet" data-route="wallet">Wallet</a>
+        <a href="#/faucet" data-route="faucet">Faucet</a>
+        <a href="./docs/" target="_blank" rel="noopener" title="Opens in a new tab"
+          >Documentation</a
         >
+        <a href="./api/head" target="_blank" rel="noopener" title="Opens in a new tab">API</a>
+        <a
+          href="https://github.com/StuartFarmer/mordecai"
+          target="_blank"
+          rel="noopener"
+          title="Opens in a new tab"
+          >GitHub</a
+        >
+      </nav>
+      <dl class="node-chips" aria-label="This node">
+        <div>
+          <dt>Network:</dt>
+          <dd id="chain-id">—</dd>
+        </div>
+        <div>
+          <dt>Node status:</dt>
+          <dd id="status" role="status" aria-live="polite" data-state="checking">Checking</dd>
+        </div>
+      </dl>
+    </header>
+    <main>
+      <section data-page="home" aria-labelledby="home-title">
+        <h1 id="home-title" tabindex="-1">Mordecai</h1>
+        <p class="tagline">P2P toolkit for a distributed world.</p>
+        <img
+          class="hero"
+          src="./mordecai-image.jpg"
+          alt="A crowned warrior raising a sword while riding a white horse."
+          width="640"
+          height="369"
+          fetchpriority="high"
+        />
+        <p class="intro">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+          ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+          ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        </p>
+      </section>
+      <section id="wallet" data-page="wallet" aria-labelledby="wallet-title" hidden>
+        <h1 id="wallet-title" tabindex="-1">Wallet</h1>
+        <p class="tagline">Create or load a wallet to get started.</p>
+        <p id="wallet-notice" hidden>
+          Keys stay in this tab and clear on reload. Download your backup before leaving; it is
+          unencrypted, so keep it private and use test tokens only.
+        </p>
+        <div id="wallet-start" class="intro">
+          <button id="wallet-generate" type="button">Create wallet</button>
+          <form id="wallet-load" class="intro">
+            <label for="wallet-key">Load a private key (hexadecimal)</label>
+            <div class="faucet-controls">
+              <input
+                id="wallet-key"
+                type="password"
+                required
+                maxlength="128"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="submit">Load key</button>
+            </div>
+          </form>
+          <label for="wallet-file" class="intro">Or load a web wallet backup</label>
+          <input id="wallet-file" type="file" accept=".json,.txt,application/json,text/plain" />
+        </div>
+        <section id="wallet-account" class="intro" aria-label="Loaded wallet" hidden>
+          <dl class="wallet-details">
+            <div>
+              <dt>Address</dt>
+              <dd id="wallet-address"></dd>
+            </div>
+            <div>
+              <dt>Network</dt>
+              <dd id="wallet-network">Checking…</dd>
+            </div>
+            <div>
+              <dt>Balance</dt>
+              <dd id="wallet-balance">Checking…</dd>
+            </div>
+          </dl>
+          <div class="faucet-controls intro">
+            <button id="wallet-copy" type="button">Copy address</button>
+            <button id="wallet-download" type="button">Download private key</button>
+            <button id="wallet-close" type="button">Close wallet</button>
+          </div>
+          <label for="wallet-private" class="intro">Private key</label>
+          <div class="faucet-controls">
+            <input id="wallet-private" type="password" readonly autocomplete="off" />
+            <button id="wallet-reveal" type="button">Show private key</button>
+          </div>
+        </section>
+        <p id="wallet-message" class="intro" role="status" aria-live="polite"></p>
+        <section id="wallet-actions" class="faucet" aria-labelledby="transfer-title" hidden>
+          <h2 id="transfer-title">Send CAI</h2>
+          <p>Amounts are whole CAI base units; the maximum fee is 1,000 units.</p>
+          <form id="transfer-form">
+            <fieldset id="transfer-fields" disabled>
+              <label for="transfer-to">Recipient address</label>
+              <input
+                id="transfer-to"
+                type="text"
+                required
+                minlength="52"
+                maxlength="52"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <label for="transfer-amount" class="intro">Amount (CAI base units)</label>
+              <div class="faucet-controls">
+                <input
+                  id="transfer-amount"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]+"
+                  maxlength="20"
+                  required
+                  autocomplete="off"
+                />
+                <button type="submit">Review transfer</button>
+              </div>
+            </fieldset>
+          </form>
+          <details class="intro">
+            <summary>Sign and submit a transaction</summary>
+            <p>
+              Paste an unsigned transaction payload in hexadecimal. This wallet supplies the
+              network, sender, nonce, and signature. Review the decoded details before sending.
+            </p>
+            <form id="transaction-form">
+              <fieldset id="transaction-fields">
+                <label for="transaction-payload">Unsigned payload (hex)</label>
+                <textarea
+                  id="transaction-payload"
+                  rows="4"
+                  maxlength="1048576"
+                  required
+                  autocomplete="off"
+                  spellcheck="false"
+                ></textarea>
+                <label for="transaction-fee">Maximum fee (CAI base units)</label>
+                <div class="faucet-controls">
+                  <input
+                    id="transaction-fee"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]+"
+                    maxlength="20"
+                    value="1000"
+                    required
+                    autocomplete="off"
+                  />
+                  <button type="submit">Review transaction</button>
+                </div>
+              </fieldset>
+            </form>
+          </details>
+          <section id="tx-review" class="intro" aria-labelledby="tx-review-title" hidden>
+            <h3 id="tx-review-title" tabindex="-1">Review transaction</h3>
+            <pre id="tx-summary"></pre>
+            <div class="faucet-controls">
+              <button id="tx-send" type="button">Confirm and send</button>
+              <button id="tx-cancel" type="button">Cancel</button>
+            </div>
+          </section>
+          <p id="tx-message" role="status" aria-live="polite">Review the details before sending.</p>
+          <button id="tx-retry" class="intro" type="button" hidden>
+            Retry the same transaction
+          </button>
+          <section id="tx-history" class="intro" aria-labelledby="tx-history-title" hidden>
+            <h3 id="tx-history-title">Transactions this session</h3>
+            <ul id="tx-list"></ul>
+          </section>
+        </section>
+      </section>
+      <section data-page="faucet" aria-labelledby="faucet-title" hidden>
+        <h1 id="faucet-title" tabindex="-1">Faucet</h1>
+        <p class="tagline">
+          Free tokens to try the network. Enter your wallet address to get started.
+        </p>
+        <form id="faucet-form">
+          <fieldset id="faucet-fields" disabled>
+            <label for="faucet-address">Wallet address</label>
+            <div class="faucet-controls">
+              <input
+                id="faucet-address"
+                name="address"
+                type="text"
+                required
+                minlength="52"
+                maxlength="52"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="faucet-message"
+              />
+              <button type="submit">Get test CAI</button>
+            </div>
+          </fieldset>
+        </form>
+        <p id="faucet-message" role="status" aria-live="polite">
+          Enable JavaScript to use the faucet.
+        </p>
+        <a id="faucet-tx" target="_blank" rel="noopener" hidden>View transaction</a>
       </section>
     </main>
+    <footer>
+      <dl class="node-chips">
+        <div>
+          <dt>Block height:</dt>
+          <dd id="height">—</dd>
+        </div>
+        <div>
+          <dt>Latest block:</dt>
+          <dd id="head-hash">—</dd>
+        </div>
+      </dl>
+      <p id="last-checked">Waiting for chain data. Updates every second.</p>
+      <noscript
+        ><p>Enable JavaScript for live node details, or use the chain API link above.</p></noscript
+      >
+    </footer>
   </body>
 </html>

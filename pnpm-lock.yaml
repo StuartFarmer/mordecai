@@ -92,6 +92,9 @@ importers:
       '@mordecai/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@mordecai/wallet':
+        specifier: workspace:*
+        version: link:../../packages/wallet
       '@noble/curves':
         specifier: ^1.6.0
         version: 1.9.7
@@ -142,6 +145,9 @@ importers:
 
   packages/appchain:
     dependencies:
+      '@hyperswarm/rpc':
+        specifier: ^3.5.0
+        version: 3.5.0(sodium-javascript@0.8.0)
       '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
@@ -157,9 +163,6 @@ importers:
       '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
-      '@hyperswarm/rpc':
-        specifier: ^3.5.0
-        version: 3.5.0(sodium-javascript@0.8.0)
     devDependencies:
       hyperdht:
         specifier: ^6.32.0
@@ -213,28 +216,31 @@ importers:
 
   packages/gateway:
     dependencies:
+      '@mordecai/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@mordecai/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@mordecai/rpc':
         specifier: workspace:*
         version: link:../rpc
+      '@mordecai/wallet':
+        specifier: workspace:*
+        version: link:../wallet
     devDependencies:
       '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
-      '@mordecai/crypto':
-        specifier: workspace:*
-        version: link:../crypto
       '@mordecai/node':
         specifier: workspace:*
         version: link:../node
-      '@mordecai/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@mordecai/wallet':
-        specifier: workspace:*
-        version: link:../wallet
       hyperdht:
         specifier: ^6.32.0
         version: 6.32.0(bare-url@2.4.5)(sodium-javascript@0.8.0)
+      vite:
+        specifier: ^5.4.11
+        version: 5.4.21(@types/node@22.20.0)
 
   packages/networking:
     dependencies:
@@ -284,6 +290,9 @@ importers:
 
   packages/pear-integration:
     dependencies:
+      '@hyperswarm/rpc':
+        specifier: ^3.5.0
+        version: 3.5.0(sodium-javascript@0.8.0)
       '@mordecai/crypto':
         specifier: workspace:*
         version: link:../crypto
@@ -293,9 +302,6 @@ importers:
       '@mordecai/wallet':
         specifier: workspace:*
         version: link:../wallet
-      '@hyperswarm/rpc':
-        specifier: ^3.5.0
-        version: 3.5.0(sodium-javascript@0.8.0)
     devDependencies:
       hyperdht:
         specifier: ^6.32.0
@@ -305,6 +311,9 @@ importers:
 
   packages/rpc:
     dependencies:
+      '@hyperswarm/rpc':
+        specifier: ^3.5.0
+        version: 3.5.0(sodium-javascript@0.8.0)
       '@mordecai/chain':
         specifier: workspace:*
         version: link:../chain
@@ -314,9 +323,6 @@ importers:
       '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hyperswarm/rpc':
-        specifier: ^3.5.0
-        version: 3.5.0(sodium-javascript@0.8.0)
 
   packages/sdk:
     dependencies:
@@ -365,6 +371,15 @@ importers:
       '@mordecai/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@noble/curves':
+        specifier: ^1.6.0
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.5.0
+        version: 1.8.0
+      z32:
+        specifier: ^1.1.0
+        version: 1.1.0
 
 packages:
 

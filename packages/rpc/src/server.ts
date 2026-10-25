@@ -115,7 +115,18 @@ export class NodeRpcServer {
 
     respondRaw('submit_tx_raw', async (raw: Buffer) => {
       const txBytes = new Uint8Array(raw);
-      const hash = await deps.mempool.addEncoded(txBytes);
+      let hash: Uint8Array;
+      try {
+        hash = await deps.mempool.addEncoded(txBytes);
+      } catch (err) {
+        return Buffer.from(
+          JSON.stringify({
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+            rejected: true,
+          }),
+        );
+      }
       deps.onTxAcceptedBytes?.(txBytes);
       if (!deps.onTxAcceptedBytes && deps.onTxAccepted)
         deps.onTxAccepted(decodeTransaction(txBytes));

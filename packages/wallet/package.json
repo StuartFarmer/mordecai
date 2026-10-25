@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
     }
   },
   "bin": {
@@ -22,6 +26,9 @@
   },
   "dependencies": {
     "@mordecai/crypto": "workspace:*",
-    "@mordecai/protocol": "workspace:*"
+    "@mordecai/protocol": "workspace:*",
+    "@noble/curves": "^1.6.0",
+    "z32": "^1.1.0",
+    "@noble/hashes": "^1.5.0"
   }
 }

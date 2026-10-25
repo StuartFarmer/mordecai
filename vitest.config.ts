@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     // Tests exercise package sources directly instead of built dist output.
     alias: {
+      '@mordecai/wallet/browser': fileURLToPath(
+        new URL('./packages/wallet/src/browser.ts', import.meta.url),
+      ),
       '@mordecai/protocol': pkg('protocol'),
       '@mordecai/crypto': pkg('crypto'),
       '@mordecai/wallet': pkg('wallet'),

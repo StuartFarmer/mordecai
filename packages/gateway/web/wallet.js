@@ -1,0 +1,294 @@
+/* global document, window, fetch, AbortSignal, Blob, URL, setTimeout, navigator */
+import {
+  createBrowserWallet,
+  loadBrowserWallet,
+  exportBrowserWallet,
+} from '@mordecai/wallet/browser';
+import { initNavigation } from './navigation.js';
+import { TransactionClient, transactionSummary } from './transactions.js';
+
+initNavigation();
+
+const byId = (id) => document.getElementById(id);
+const message = byId('wallet-message');
+const account = byId('wallet-account');
+const keyInput = byId('wallet-key');
+let wallet = null;
+let backedUp = false;
+const transactions = new TransactionClient();
+let prepared = null;
+let working = false;
+
+function showWallet(next, saved = false) {
+  wallet = next;
+  backedUp = saved;
+  byId('wallet-start').hidden = true;
+  account.hidden = false;
+  byId('wallet-address').textContent = wallet.address;
+  byId('wallet-private').value = JSON.parse(exportBrowserWallet(wallet)).privateKey;
+  byId('wallet-private').type = 'password';
+  byId('wallet-reveal').textContent = 'Show private key';
+  byId('faucet-address').value = wallet.address;
+  keyInput.value = '';
+  message.textContent = saved
+    ? 'Wallet loaded. Keys stay in this tab.'
+    : 'Download your private key before closing or reloading this tab.';
+  byId('wallet-balance').textContent = 'Checking…';
+  byId('tx-message').textContent = transactions.pending
+    ? 'A transaction is still pending. Keep this tab open until it is confirmed.'
+    : 'Review the details before sending.';
+  clearReview();
+  void refreshBalance();
+}
+
+byId('wallet-generate').addEventListener('click', () => {
+  if (working || wallet) return;
+  try {
+    showWallet(createBrowserWallet());
+  } catch {
+    message.textContent =
+      'Key generation requires a browser with secure randomness. Use HTTPS or localhost.';
+  }
+});
+
+byId('wallet-load').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (working || wallet) return;
+  try {
+    showWallet(loadBrowserWallet(keyInput.value));
+  } catch (error) {
+    message.textContent = error.message;
+  }
+});
+
+byId('wallet-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    if (file.size > 4096) throw new Error('Wallet file is too large.');
+    const text = await file.text();
+    if (wallet || working) return;
+    showWallet(loadBrowserWallet(text), true);
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    event.target.value = '';
+  }
+});
+
+byId('wallet-download').addEventListener('click', () => {
+  if (!wallet) return;
+  const url = URL.createObjectURL(
+    new Blob([exportBrowserWallet(wallet)], { type: 'application/json' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `mordecai-${wallet.address.slice(0, 12)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  backedUp = true;
+  message.textContent =
+    'Keep the downloaded file private. It contains your unencrypted private key.';
+});
+
+byId('wallet-reveal').addEventListener('click', () => {
+  const field = byId('wallet-private');
+  field.type = field.type === 'password' ? 'text' : 'password';
+  byId('wallet-reveal').textContent =
+    field.type === 'password' ? 'Show private key' : 'Hide private key';
+});
+
+byId('wallet-copy').addEventListener('click', async () => {
+  if (!wallet) return;
+  try {
+    await navigator.clipboard.writeText(wallet.address);
+    message.textContent = 'Wallet address copied.';
+  } catch {
+    message.textContent = 'Select and copy the address above.';
+  }
+});
+
+byId('wallet-close').addEventListener('click', () => {
+  if (working) return;
+  if (
+    !backedUp &&
+    !window.confirm('This key has not been downloaded. Close the wallet and discard it?')
+  )
+    return;
+  wallet?.seed.fill(0);
+  wallet = null;
+  backedUp = false;
+  byId('wallet-private').value = '';
+  byId('wallet-address').textContent = '';
+  byId('faucet-address').value = '';
+  account.hidden = true;
+  byId('wallet-start').hidden = false;
+  message.textContent = 'Wallet closed. Load your backup to use it again.';
+  byId('transfer-form').reset();
+  byId('transaction-form').reset();
+  clearReview();
+  byId('wallet-generate').focus();
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if ((wallet && !backedUp) || transactions.pending || working) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
+function updateControls() {
+  const locked = working || !!transactions.pending;
+  byId('wallet-actions').hidden = !wallet;
+  byId('wallet-notice').hidden = !wallet;
+  byId('transfer-fields').disabled = locked || !wallet;
+  byId('transaction-fields').disabled = locked || !wallet;
+  byId('tx-send').disabled = locked;
+  byId('tx-cancel').disabled = working;
+  byId('wallet-close').disabled = working;
+  byId('wallet-generate').disabled = working;
+  byId('wallet-file').disabled = working;
+  byId('wallet-load').querySelector('button').disabled = working;
+  byId('tx-retry').hidden = !transactions.pending;
+  byId('tx-retry').disabled = working;
+}
+
+function clearReview() {
+  prepared = null;
+  byId('tx-review').hidden = true;
+  byId('tx-summary').textContent = '';
+  updateControls();
+}
+
+function renderHistory() {
+  byId('tx-history').hidden = transactions.history.length === 0;
+  byId('tx-list').replaceChildren(
+    ...transactions.history.map((tx) => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = `./api/tx/${tx.hash}`;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = tx.hash;
+      item.append(
+        `${tx.status}${tx.fee !== undefined ? ` · fee ${tx.fee} CAI base units` : ''}${tx.error ? ` · ${tx.error}` : ''} — `,
+        link,
+      );
+      return item;
+    }),
+  );
+  updateControls();
+}
+
+async function review(make) {
+  if (!wallet || working || transactions.pending) return;
+  working = true;
+  clearReview();
+  byId('tx-message').textContent = 'Preparing transaction…';
+  try {
+    prepared = await make();
+    byId('tx-summary').textContent = `${transactionSummary(prepared)}\nHash: ${prepared.hash}`;
+    byId('tx-review').hidden = false;
+    byId('tx-review-title').focus();
+    byId('tx-message').textContent = 'Check these details, then confirm to broadcast.';
+  } catch (error) {
+    byId('tx-message').textContent = error.message;
+  } finally {
+    working = false;
+    updateControls();
+  }
+}
+
+byId('transfer-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!wallet) return;
+  void review(() =>
+    transactions.prepareTransfer(wallet, byId('transfer-to').value, byId('transfer-amount').value),
+  );
+});
+byId('transaction-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  void review(() =>
+    transactions.prepareTransaction(
+      wallet,
+      byId('transaction-payload').value,
+      byId('transaction-fee').value,
+    ),
+  );
+});
+for (const id of ['transfer-to', 'transfer-amount', 'transaction-payload', 'transaction-fee']) {
+  byId(id).addEventListener('input', clearReview);
+}
+byId('tx-cancel').addEventListener('click', () => {
+  clearReview();
+  byId('tx-message').textContent = 'Transaction cancelled. Nothing was sent.';
+});
+
+async function send(retry = false) {
+  if (working || (!retry && !prepared)) return;
+  working = true;
+  updateControls();
+  byId('tx-message').textContent = 'Submitting transaction…';
+  try {
+    if (retry) await transactions.retry();
+    else await transactions.submit(prepared);
+    byId('tx-message').textContent = 'Submitted. Waiting for confirmation; keep this tab open.';
+  } catch (error) {
+    byId('tx-message').textContent = transactions.pending
+      ? `${error.message} Confirmation is uncertain. Keep this tab open; retry sends the same transaction.`
+      : error.message;
+  } finally {
+    working = false;
+    clearReview();
+    renderHistory();
+  }
+}
+byId('tx-send').addEventListener('click', () => void send());
+byId('tx-retry').addEventListener('click', () => void send(true));
+
+async function refreshBalance() {
+  const current = wallet;
+  if (!current) return;
+  try {
+    const [head, balance] = await Promise.all([
+      fetch('./api/head', { cache: 'no-store', signal: AbortSignal.timeout(5000) }),
+      fetch(`./api/account/${current.address}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000),
+      }),
+    ]);
+    if (!head.ok || !balance.ok) throw new Error();
+    const [network, info] = await Promise.all([head.json(), balance.json()]);
+    if (wallet !== current) return;
+    byId('wallet-network').textContent = network.chainId;
+    byId('wallet-balance').textContent = `${BigInt(info.balance).toLocaleString()} CAI`;
+  } catch {
+    if (wallet === current) byId('wallet-balance').textContent = 'Unavailable';
+  }
+}
+
+async function poll() {
+  await Promise.all([
+    refreshBalance(),
+    (async () => {
+      if (!transactions.pending || working) return;
+      try {
+        await transactions.checkPending();
+        if (working) return;
+        if (!transactions.pending) {
+          const latest = transactions.history[0];
+          byId('tx-message').textContent =
+            `Transaction ${latest.status}.${latest.error ? ` ${latest.error}` : ''}`;
+        }
+      } catch {
+        if (!working)
+          byId('tx-message').textContent =
+            'Confirmation is unavailable. Keep this tab open; the transaction may still be pending.';
+      }
+      renderHistory();
+    })(),
+  ]);
+  setTimeout(poll, 1000);
+}
+updateControls();
+void poll();

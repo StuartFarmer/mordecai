@@ -37,10 +37,14 @@ for (const [i, keyPair] of validators.entries()) {
     keyPair,
     blockIntervalMs: 300,
     bootstrap: testnet.bootstrap,
+    ...(i === 0 ? { gateway: { faucet } } : {}),
     log: (m) => console.log(`[node-${i}] ${m}`),
   });
   nodes.push(node);
   console.log(`node-${i}  rpc key: ${Buffer.from(node.rpcPublicKey).toString('hex')}`);
+  console.log(
+    `node-${i}  website: http://127.0.0.1:${node.gateway.port}${i === 0 ? ' (faucet enabled)' : ''}`,
+  );
 }
 
 console.log(`\nchain:            ${chainId}`);

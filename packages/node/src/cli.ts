@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { genesisHash, parseGenesisJson } from '@mordecai/chain';
+import { loadFaucetWallet } from '@mordecai/gateway';
 import { initNodeDir, joinNodeDir, loadNodeDir } from './config.js';
 import { Node } from './node.js';
 
@@ -15,6 +16,7 @@ Usage:
   mordecai l1 connect --dir <path> [--genesis <file>]
   mordecai l1 start --dir <path> [--block-interval <ms>] [--bootstrap <host:port,...>]
                      [--port <port>] [--static <dir>] [--config <file.json>]
+                     [--faucet-keystore <file>]
 
 init creates a node key and genesis.json (this node is the default validator).
 join creates a node key against an existing network's genesis.json; it prints
@@ -51,6 +53,7 @@ async function main(): Promise<void> {
       port: { type: 'string', default: process.env.PORT ?? '0' },
       static: { type: 'string' },
       config: { type: 'string' },
+      'faucet-keystore': { type: 'string' },
     },
   });
   const dir = values.dir;
@@ -123,6 +126,7 @@ async function main(): Promise<void> {
             return { host: host!, port: Number(port) };
           })
         : undefined;
+      const faucet = loadFaucetWallet(values['faucet-keystore']);
       const node = await Node.start({
         dir,
         genesis: config.genesis,
@@ -131,6 +135,7 @@ async function main(): Promise<void> {
         ...(bootstrap ? { bootstrap } : {}),
         log: (message) => process.stdout.write(`${new Date().toISOString()} ${message}\n`),
         gateway: {
+          ...(faucet ? { faucet } : {}),
           port: Number(values.port),
           ...(values.static ? { staticDir: values.static } : {}),
           ...(values.config ? { config: JSON.parse(readFileSync(values.config, 'utf8')) } : {}),

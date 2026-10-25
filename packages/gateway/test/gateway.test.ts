@@ -11,8 +11,11 @@ import createTestnet from 'hyperdht/testnet';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Node, initNodeDir } from '@mordecai/node';
 import { Wallet } from '@mordecai/wallet';
-import { encodeTransaction, type Payload } from '@mordecai/protocol';
+import { NodeRpcServer } from '@mordecai/rpc';
+import { createBrowserWallet } from '@mordecai/wallet/browser';
+import { encodeTransaction, encodePayload, type Payload } from '@mordecai/protocol';
 import { Gateway } from '../src/gateway.js';
+import { TransactionClient } from '../web/transactions.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 
@@ -23,6 +26,8 @@ let gateway: Gateway;
 let base: string;
 const { wallet: alice } = Wallet.create();
 const { wallet: bob } = Wallet.create();
+const { wallet: faucetWallet } = Wallet.create();
+const browserWallet = createBrowserWallet();
 let nonce = 0n;
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -61,7 +66,11 @@ beforeAll(async () => {
   const config = initNodeDir({
     dir,
     chainId: 'mordecai-gw-test',
-    allocations: [{ address: alice.address, balance: 10_000_000n }],
+    allocations: [
+      { address: alice.address, balance: 10_000_000n },
+      { address: faucetWallet.address, balance: 1_000_000n },
+      { address: browserWallet.address, balance: 100_000n },
+    ],
   });
   node = await Node.start({
     dir,
@@ -71,6 +80,7 @@ beforeAll(async () => {
     bootstrap: testnet.bootstrap,
   });
   gateway = await Gateway.start({
+    faucet: faucetWallet,
     nodeKey: node.rpcPublicKey,
     bootstrap: testnet.bootstrap,
     config: { chainId: 'mordecai-gw-test', hello: 'frontier' },
@@ -86,32 +96,148 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
-  it.each(['/', '/docs/', '/docs/field-guide.html', '/docs/architecture/overview.html'])(
-    'serves %s and its local assets',
-    async (route) => {
-      const page = await fetch(`${base}${route}`);
-      expect(page.status).toBe(200);
-      expect(page.headers.get('content-type')).toContain('text/html');
-      const html = await page.text();
-      expect(html).toContain('<h1');
-      // Follow the page's actual asset references, so missing packaged assets fail.
-      const assets = [...html.matchAll(/(?:src|href)="([^"#?]+\.(?:css|js|jpg|svg|png))"/g)];
-      expect(assets.length).toBeGreaterThanOrEqual(3);
-      for (const [, path] of assets) {
-        const asset = await fetch(new URL(path!, page.url));
-        expect(asset.status).toBe(200);
-        expect(asset.headers.get('content-type')).not.toContain('text/html');
-        expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
-      }
-      const head = await fetch(`${base}${route}`, { method: 'HEAD' });
-      expect(head.status).toBe(200);
-      expect(await head.text()).toBe('');
-      for (const path of ['/missing', '/api/missing', '/package.json']) {
-        expect((await fetch(`${base}${path}`)).status).toBe(404);
-      }
-      expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
-    },
-  );
+  it('submits browser transfers and locally signed transaction payloads with real receipts', async () => {
+    const client = new TransactionClient((path: string, init?: RequestInit) =>
+      fetch(new URL(path, `${base}/`), init),
+    );
+    const recipient = Wallet.create().wallet;
+    await client.submit(await client.prepareTransfer(browserWallet, recipient.address, '123'));
+    await waitForTx(client.pending.hash);
+    await client.checkPending();
+    expect(client.history[0].status).toBe('confirmed');
+    const second = await client.prepareTransfer(browserWallet, recipient.address, '456');
+    await client.submit(
+      await client.prepareTransaction(
+        browserWallet,
+        Buffer.from(encodePayload(second.tx.payload)).toString('hex'),
+        '1000',
+      ),
+    );
+    await waitForTx(client.pending.hash);
+    await client.checkPending();
+    expect(client.history[0].status).toBe('confirmed');
+    expect(await api(`/api/account/${recipient.address}`)).toMatchObject({ balance: '579' });
+  });
+
+  it('marks definite admission rejection and retains uncertainty after admission', async () => {
+    const client = new TransactionClient((path: string, init?: RequestInit) =>
+      fetch(new URL(path, `${base}/`), init),
+    );
+    const prepared = await client.prepareTransfer(
+      browserWallet,
+      Wallet.create().wallet.address,
+      '123',
+    );
+    const invalid = Buffer.from(prepared.hex, 'hex');
+    invalid[invalid.length - 1] ^= 1;
+    const rejected = await fetch(`${base}/api/tx`, {
+      method: 'POST',
+      body: JSON.stringify({ tx: invalid.toString('hex') }),
+    });
+    expect(rejected.status).toBe(400);
+    expect(await rejected.json()).toMatchObject({ rejected: true });
+
+    const rpc = await NodeRpcServer.start(
+      {
+        chain: node.chain,
+        mempool: node.mempool,
+        onTxAcceptedBytes() {
+          throw new Error('gossip unavailable');
+        },
+      },
+      { bootstrap: testnet.bootstrap },
+    );
+    let uncertainGateway: Gateway | undefined;
+    try {
+      uncertainGateway = await Gateway.start({
+        nodeKey: rpc.publicKey,
+        bootstrap: testnet.bootstrap,
+      });
+      const response = await fetch(`http://127.0.0.1:${uncertainGateway.port}/api/tx`, {
+        method: 'POST',
+        body: JSON.stringify({ tx: prepared.hex }),
+      });
+      expect(response.status).toBe(503);
+      expect(await response.json()).not.toHaveProperty('rejected');
+      expect((await waitForTx(prepared.hash)).success).toBe(true);
+    } finally {
+      await uncertainGateway?.close();
+      await rpc.close();
+    }
+  });
+
+  it('keeps the faucet disabled unless the operator supplies a wallet', async () => {
+    const defaultBase = `http://127.0.0.1:${node.gateway.port}`;
+    expect(await (await fetch(`${defaultBase}/api/faucet`)).json()).toEqual({ enabled: false });
+    expect((await fetch(`${defaultBase}/api/faucet`, { method: 'POST', body: '{}' })).status).toBe(
+      503,
+    );
+  });
+
+  it('validates claims, pays a real recipient, and enforces the cooldown', async () => {
+    const post = (body: string, headers = {}) =>
+      fetch(`${base}/api/faucet`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body,
+      });
+    for (const body of [
+      '{',
+      'null',
+      '{}',
+      '{"address":"bad"}',
+      JSON.stringify({ address: 'a'.repeat(600) }),
+    ]) {
+      expect((await post(body)).status).toBe(400);
+    }
+    expect(await api('/api/faucet')).toEqual({
+      enabled: true,
+      address: faucetWallet.address,
+      amount: '10000',
+      cooldownSeconds: 60,
+    });
+    const recipient = Wallet.create().wallet;
+    const response = await post(JSON.stringify({ address: recipient.address, amount: '99999999' }));
+    expect(response.status).toBe(202);
+    const { hash } = (await response.json()) as { hash: string };
+    expect((await waitForTx(hash)).success).toBe(true);
+    expect(await api(`/api/account/${recipient.address}`)).toMatchObject({ balance: '10000' });
+    const repeated = await post(JSON.stringify({ address: Wallet.create().wallet.address }), {
+      'x-forwarded-for': '203.0.113.1',
+    });
+    expect(repeated.status).toBe(429);
+    expect(Number(repeated.headers.get('retry-after'))).toBeGreaterThan(0);
+  });
+
+  it.each([
+    '/',
+    '/wallet.html',
+    '/docs/',
+    '/docs/field-guide.html',
+    '/docs/architecture/overview.html',
+  ])('serves %s and its local assets', async (route) => {
+    const page = await fetch(`${base}${route}`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get('content-type')).toContain('text/html');
+    const html = await page.text();
+    expect(html).toContain('<h1');
+    // Follow the page's actual asset references, so missing packaged assets fail.
+    const assets = [...html.matchAll(/(?:src|href)="([^"#?]+\.(?:css|js|jpg|svg|png))"/g)];
+    expect(assets.length).toBeGreaterThanOrEqual(3);
+    for (const [, path] of assets) {
+      const asset = await fetch(new URL(path!, page.url));
+      expect(asset.status).toBe(200);
+      expect(asset.headers.get('content-type')).not.toContain('text/html');
+      expect((await asset.arrayBuffer()).byteLength).toBeGreaterThan(0);
+    }
+    const head = await fetch(`${base}${route}`, { method: 'HEAD' });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe('');
+    for (const path of ['/missing', '/api/missing', '/package.json']) {
+      expect((await fetch(`${base}${path}`)).status).toBe(404);
+    }
+    expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
+  });
 
   it.each(['/guide', '/guide/', '/guide.html'])('redirects legacy %s to the book', async (path) => {
     const res = await fetch(`${base}${path}?from=old`, { redirect: 'manual' });
@@ -172,6 +298,14 @@ describe('HTTP gateway to node RPC', () => {
         const res = await fetch(`http://127.0.0.1:${custom.port}${path}`);
         expect(res.status).toBe(200);
         expect(await res.text()).toBe('<h1>My app</h1>');
+      }
+      const wallet = await fetch(`http://127.0.0.1:${custom.port}/wallet`);
+      expect(wallet.url).toBe(`http://127.0.0.1:${custom.port}/wallet.html`);
+      expect(await wallet.text()).toContain('id="wallet-generate"');
+      for (const asset of ['wallet.js', 'mordecai.css', 'faucet.js']) {
+        const res = await fetch(`http://127.0.0.1:${custom.port}/wallet-assets/${asset}`);
+        expect(res.status).toBe(200);
+        expect(res.headers.get('content-type')).not.toContain('text/html');
       }
     } finally {
       await custom.close();

@@ -101,6 +101,16 @@ header h1 {
   min-width: 220px;
 }
 
+.lobby input[type='file'] {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 8px 0 16px;
+}
+
+.lobby a {
+  color: var(--text);
+}
+
 input {
   background: var(--bg);
   border: 1px solid var(--line);

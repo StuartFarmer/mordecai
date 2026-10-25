@@ -1,12 +1,11 @@
-// Two-chain access for the hex client. The wallet is a fresh Ed25519 seed
-// generated in the browser and kept in localStorage — the SAME identity
+// Two-chain access for the hex client. A loaded browser wallet uses the SAME identity
 // signs game moves on the app chain and escrow stakes on L1. The gateways
 // and the faucet never see a key; only signed transactions travel.
 
-import { ed25519 } from '@noble/curves/ed25519';
+import { loadBrowserWallet, signBrowserTransaction } from '@mordecai/wallet/browser';
 import { sha256 } from '@noble/hashes/sha2';
 import z32 from 'z32';
-import { encodeTransaction, transactionSigningBytes } from '@mordecai/protocol';
+import { encodeTransaction } from '@mordecai/protocol';
 
 export const SIZE = 11;
 
@@ -37,17 +36,14 @@ export async function fetchConfig() {
   };
 }
 
-/** The browser wallet: one seed in localStorage, one identity everywhere. */
+/** Preserve existing demo identities; new wallets are explicitly loaded in memory. */
 export function wallet() {
-  let seedHex = localStorage.getItem('hex-wallet-seed');
-  if (!seedHex) {
-    const seed = crypto.getRandomValues(new Uint8Array(32));
-    seedHex = bytesToHex(seed);
-    localStorage.setItem('hex-wallet-seed', seedHex);
+  try {
+    const seedHex = localStorage.getItem('hex-wallet-seed');
+    return seedHex ? loadBrowserWallet(seedHex) : null;
+  } catch {
+    return null;
   }
-  const seed = hexToBytes(seedHex);
-  const publicKey = ed25519.getPublicKey(seed);
-  return { address: z32.encode(publicKey), publicKey, seed };
 }
 
 /** Ask the host's faucet to fund this identity on both chains. */
@@ -139,11 +135,11 @@ async function sendTx(base, chainId, player, contract, action, args, value = 0n)
       args,
     },
   };
-  const signature = ed25519.sign(transactionSigningBytes(unsigned), player.seed);
+  const signed = signBrowserTransaction(player, unsigned);
   const { hash } = await api(base, '/api/tx', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ tx: bytesToHex(encodeTransaction({ ...unsigned, signature })) }),
+    body: JSON.stringify({ tx: bytesToHex(encodeTransaction(signed)) }),
   });
   for (let i = 0; i < 100; i++) {
     const res = await fetch(`${base}/api/tx/${hash}`);
@@ -284,10 +280,16 @@ export async function fetchStatus(config) {
   };
 }
 
-/** L1 currency balance. */
-export async function fetchBalance(player) {
-  const account = await api('', `/api/account/${player.address}`);
-  return Number(account.balance);
+/** Imported wallets need both L1 stakes and an app-chain fee balance. */
+export async function fetchFundingStatus(player, config) {
+  const [l1, app] = await Promise.all([
+    api('', `/api/account/${player.address}`),
+    api(config.appApi, `/api/account/${player.address}`),
+  ]);
+  return {
+    balance: Number(l1.balance),
+    needsFunds: BigInt(l1.balance) < 2_500_000n || BigInt(app.balance) < 5_000_000n,
+  };
 }
 
 // ------------------------------------------------------------ hex geometry

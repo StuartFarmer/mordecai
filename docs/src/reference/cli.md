@@ -40,6 +40,13 @@ mordecai l1 start --dir <path>
 `join` prepares a directory for an existing network without starting it.
 `start` resumes an initialized directory.
 
+`l1 start` and `l1 connect` accept `--faucet-keystore <file>` to enable the
+homepage's test CAI faucet. Set `MORDECAI_FAUCET_PASSPHRASE` in the process
+environment and fund the dedicated wallet on that chain. The standalone gateway
+(`node packages/gateway/dist/cli.js --node <rpc-key-hex>`) accepts the same flag.
+Without it, the faucet is disabled. See [the field guide](../field-guide.md#faucet)
+for funding and claim limits.
+
 ### App network (`mordecai app`)
 
 ```sh
@@ -131,7 +138,8 @@ node apps/devnet/devnet.mjs [validators=4]
 ```
 
 In-process DHT testnet + N consensus validators; prints RPC keys, the DHT
-bootstrap address, and a funded faucet wallet (address + mnemonic). Data
+bootstrap address, node website URLs, and a funded faucet wallet (address + mnemonic).
+Node 0 enables the homepage faucet. Data
 lives in a fresh temp dir per run; Ctrl-C tears everything down.
 
 ## Repo scripts

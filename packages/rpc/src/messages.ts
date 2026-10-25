@@ -79,7 +79,8 @@ export interface ContractStateEntry {
   value: string;
 }
 
-export type RpcEnvelope<T> = { ok: true; result: T } | { ok: false; error: string };
+export type RpcEnvelope<T> =
+  { ok: true; result: T } | { ok: false; error: string; rejected?: boolean };
 
 export const RPC_METHODS = [
   'get_head',

@@ -9,6 +9,7 @@ target/
 compiler/build/
 docs/book/
 packages/gateway/public/docs/
+packages/gateway/public/wallet-assets/
 
 # Terminal Paste Image folder
 .cp-images/

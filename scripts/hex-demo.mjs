@@ -35,6 +35,7 @@ import { appAddress, contractIdFor } from '../packages/chain/dist/index.js';
 import { NodeRpcClient } from '../packages/rpc/dist/index.js';
 import { Node } from '../packages/node/dist/index.js';
 import { Gateway } from '../packages/gateway/dist/index.js';
+import { Wallet } from '../packages/wallet/dist/index.js';
 import { AnchorDaemon, AppChain } from '../packages/appchain/dist/index.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -53,6 +54,7 @@ const hosts = {
 };
 const relayer = keyPairFromSeed(generateSeed());
 const faucet = keyPairFromSeed(generateSeed());
+const { wallet: webFaucet } = Wallet.create();
 
 const utf8 = (s) => new TextEncoder().encode(s);
 const u64 = (n) => {
@@ -77,6 +79,7 @@ const genesis = {
   allocations: [
     { address: encodeAddress(relayer.publicKey), balance: 100_000_000n },
     { address: encodeAddress(faucet.publicKey), balance: 100_000_000_000n },
+    { address: webFaucet.address, balance: 1_000_000_000n },
   ],
 };
 const base = mkdtempSync(join(tmpdir(), 'mordecai-hex-demo-'));
@@ -259,6 +262,7 @@ const appGateway = await Gateway.start({
   port: APP_PORT,
 });
 const gateway = await Gateway.start({
+  faucet: webFaucet,
   nodeKey: nodes[0].rpcPublicKey,
   bootstrap: testnet.bootstrap,
   port: L1_PORT,
@@ -277,6 +281,7 @@ const gateway = await Gateway.start({
 });
 
 console.log(`\n⬡ hex is live: http://127.0.0.1:${gateway.port}`);
+console.log(`   web wallet:        http://127.0.0.1:${gateway.port}/wallet.html`);
 console.log(`   app-chain gateway: http://127.0.0.1:${appGateway.port}`);
 console.log(`   faucet:            http://127.0.0.1:${FAUCET_PORT}`);
 console.log('\nplay: open the site on two machines (or two browsers), agree on a game');

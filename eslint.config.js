@@ -8,6 +8,7 @@ export default tseslint.config(
       '**/coverage/**',
       'docs/book/**',
       'packages/gateway/public/docs/**',
+      'packages/gateway/public/wallet-assets/**',
       'compiler/build/**',
     ],
   },

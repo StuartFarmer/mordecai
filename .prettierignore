@@ -2,3 +2,4 @@ dist/
 pnpm-lock.yaml
 coverage/
 packages/gateway/public/docs/
+packages/gateway/public/wallet-assets/

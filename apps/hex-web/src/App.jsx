@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import WalletPicker, { downloadWallet } from './WalletPicker.jsx';
 import {
   SIZE,
-  fetchBalance,
+  fetchFundingStatus,
   fetchConfig,
   fetchGame,
   fetchPot,
@@ -15,7 +16,6 @@ import {
 } from './chain.js';
 
 const DEFAULT_STAKE = 1_000_000;
-const FUND_FLOOR = 2_500_000; // ask the faucet when the L1 balance drops below this
 
 // ------------------------------------------------------------ board maths
 
@@ -57,7 +57,9 @@ const fmtClock = (ms) => {
 export default function App() {
   const [config, setConfig] = useState(null);
   const [fatal, setFatal] = useState(null);
-  const [player] = useState(() => wallet());
+  const [legacy] = useState(() => wallet());
+  const [player, setPlayer] = useState(null);
+  const [backedUp, setBackedUp] = useState(false);
   const [balance, setBalance] = useState(null);
   const [funding, setFunding] = useState(false);
   const [status, setStatus] = useState(null);
@@ -84,20 +86,31 @@ export default function App() {
   // -------------------------------------------------- config + faucet
 
   useEffect(() => {
+    const warn = (event) => {
+      if (player && !backedUp) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [player, backedUp]);
+
+  useEffect(() => {
     fetchConfig()
       .then(setConfig)
       .catch((e) => setFatal(`${e.message || e} — is the host running scripts/hex-demo.mjs?`));
   }, []);
 
   useEffect(() => {
-    if (!config) return undefined;
+    if (!config || !player) return undefined;
     let stop = false;
     const tick = async () => {
       try {
-        const b = await fetchBalance(player);
+        const { balance: b, needsFunds } = await fetchFundingStatus(player, config);
         if (stop) return;
         setBalance(b);
-        if (b < FUND_FLOOR && !funding) {
+        if (needsFunds && !funding) {
           setFunding(true);
           try {
             await requestFunds(config, player);
@@ -150,7 +163,7 @@ export default function App() {
 
   // -------------------------------------------------- derived game facts
 
-  const me = player.address;
+  const me = player?.address;
   const iAmCreator = game && game.creator === me;
   const iAmOpponent = game && game.phase > 0 && game.opponent === me;
   const iPlay = iAmCreator || iAmOpponent;
@@ -260,6 +273,16 @@ export default function App() {
 
   if (fatal) return <div className="fatal">⚠️ {fatal}</div>;
   if (!config) return <div className="fatal">connecting to the gateway…</div>;
+  if (!player)
+    return (
+      <WalletPicker
+        legacy={legacy}
+        onLoad={(loaded, saved) => {
+          setPlayer(loaded);
+          setBackedUp(saved);
+        }}
+      />
+    );
 
   const header = (
     <header>
@@ -269,10 +292,19 @@ export default function App() {
           ? `L1 block ${status.l1Height} · game block ${status.appHeight} · anchor epoch ${status.anchor?.epoch ?? '—'}`
           : 'syncing…'}
       </span>
-      <span className="wallet">
+      <span className="wallet" title={me}>
         <b>{balance ?? '…'}</b> 🪙 · {short(me)}
         {funding && ' · faucet…'}
       </span>
+      <button
+        onClick={() => {
+          downloadWallet(player);
+          setBackedUp(true);
+        }}
+      >
+        Download wallet
+      </button>
+      {!backedUp && <span className="hint">Download your key before leaving this tab.</span>}
     </header>
   );
 
@@ -308,12 +340,15 @@ export default function App() {
           </div>
           <div className="code-actions">
             <button
-              disabled={busy || !code.trim() || (balance ?? 0) < stakeAmount}
+              disabled={busy || funding || !code.trim() || (balance ?? 0) < stakeAmount}
               onClick={createGame}
             >
               create game (escrows {stakeAmount} 🪙)
             </button>
-            <button disabled={busy || !code.trim()} onClick={joinGame}>
+            <button
+              disabled={busy || funding || balance === null || !code.trim()}
+              onClick={joinGame}
+            >
               join game (matches the creator's stake)
             </button>
           </div>

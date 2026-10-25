@@ -155,6 +155,38 @@ pnpm mordecai app connect \
 
 ## Send a payment {#payments}
 
+For a browser-only walkthrough, see [Web Wallet → Faucet → Hex](examples/hex-web.md).
+Every gateway provides `/wallet.html`: generate or load a key, download a private
+backup, read the balance, and claim from the same node's faucet. The wallet uses
+in-memory keys and unencrypted test backups, distinct from the CLI keystore.
+
+### Get test CAI from a faucet {#faucet}
+
+On a node with a faucet enabled, open its homepage, enter your **public wallet
+address** in Get test CAI, and submit. You never need to share your mnemonic,
+keystore, or passphrase. Each claim sends 10,000 CAI base units; the faucet pays
+the fee. Follow View transaction and wait for confirmation before spending.
+
+Claims are limited to one per address and IP per minute, and 100 per hour per
+gateway. A node without a configured faucet shows a disabled form. If a claim
+is submitted but confirmation is unavailable, check the transaction or your
+balance before requesting again.
+
+**Node operators:** create a separate wallet with the wallet CLI, fund its address
+on your network, set `MORDECAI_FAUCET_PASSPHRASE` to that wallet's passphrase, then
+add `--faucet-keystore ./faucet-wallet.json` when starting the node or standalone
+gateway. For a new chain, `l1 init --alloc '<faucet-address>=1000000000'` can
+fund it at genesis. An existing chain needs an ordinary transfer; editing its
+genesis would create a different network. Keep this wallet separate from validator
+keys and other spending wallets. Never place its secret in the public node config.
+
+For this MVP, limits reset on restart and one faucet gateway must own the wallet.
+The IP limit uses the socket address, so users behind the same reverse proxy
+share a cooldown. Run `node apps/devnet/devnet.mjs` for a temporary funded faucet
+on the first printed node website.
+
+### Send from your wallet
+
 Use your funded wallet and the intended L1 gateway. Run these steps in the
 same terminal, from the checkout root. Replace values in angle brackets
 before signing.

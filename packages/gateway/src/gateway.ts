@@ -2,7 +2,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NodeRpcClient } from '@mordecai/rpc';
+import { NodeRpcClient, RpcError } from '@mordecai/rpc';
+import type { Wallet } from '@mordecai/wallet';
+import { Faucet, FaucetError } from './faucet.js';
 
 /**
  * Browser-facing edge of the network (web tier of the frontend-flow design):
@@ -23,6 +25,8 @@ import { NodeRpcClient } from '@mordecai/rpc';
  * Outside /api, serves `staticDir` (SPA fallback) or the built-in page and book.
  */
 export interface GatewayOptions {
+  /** Dedicated funded wallet for an opt-in test-token faucet. Never put this in config. */
+  faucet?: Wallet;
   /** RPC public key of the chain node to bridge to. */
   nodeKey: Uint8Array;
   bootstrap?: { host: string; port: number }[];
@@ -59,8 +63,17 @@ const LANDING_PATHS = new Set([
   '/index.html',
   '/mordecai.css',
   '/mordecai.js',
+  '/faucet.js',
   '/favicon.svg',
+  '/mordecai-image.jpg',
 ]);
+
+const WALLET_FILES: Record<string, string> = {
+  '/wallet.html': '/wallet.html',
+  '/wallet-assets/wallet.js': '/wallet-assets/wallet.js',
+  '/wallet-assets/mordecai.css': '/mordecai.css',
+  '/wallet-assets/faucet.js': '/faucet.js',
+};
 
 function json(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json' });
@@ -90,6 +103,7 @@ export class Gateway {
       options.nodeKey,
       options.bootstrap ? { bootstrap: options.bootstrap } : {},
     );
+    const faucet = options.faucet ? new Faucet(rpc, options.faucet) : undefined;
 
     const server = createServer((req, res) => {
       handle(req, res).catch((err) => {
@@ -113,6 +127,16 @@ export class Gateway {
       const path = url.pathname;
 
       if (path.startsWith('/api/')) return handleApi(req, res, path, url);
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        if (path === '/wallet') {
+          res.writeHead(308, { location: './wallet.html' });
+          res.end();
+          return;
+        }
+        if (Object.hasOwn(WALLET_FILES, path)) {
+          return serveStatic(res, LANDING_DIR, WALLET_FILES[path]!, false);
+        }
+      }
       if (options.staticDir) return serveStatic(res, options.staticDir, path);
       if (req.method === 'GET' || req.method === 'HEAD') {
         if (path === '/docs' || ['/guide', '/guide/', '/guide.html'].includes(path)) {
@@ -150,6 +174,21 @@ export class Gateway {
       url: URL,
     ): Promise<void> => {
       try {
+        if (path === '/api/faucet' && req.method === 'GET') {
+          return json(res, 200, faucet?.info() ?? { enabled: false });
+        }
+        if (path === '/api/faucet' && req.method === 'POST') {
+          if (!faucet) return json(res, 503, { error: 'This node has not enabled a faucet.' });
+          const body = JSON.parse(await readBody(req, 512)) as { address?: unknown } | null;
+          try {
+            const result = await faucet.claim(body?.address, req.socket.remoteAddress ?? 'unknown');
+            return json(res, 202, result);
+          } catch (error) {
+            if (!(error instanceof FaucetError)) throw error;
+            if (error.retryAfter) res.setHeader('retry-after', error.retryAfter);
+            return json(res, error.status, { error: error.message });
+          }
+        }
         if (req.method === 'GET' && path === '/api/connect') {
           return options.connection
             ? json(res, 200, options.connection)
@@ -176,8 +215,17 @@ export class Gateway {
           if (typeof body.tx !== 'string' || !HEX_RE.test(body.tx)) {
             return json(res, 400, { error: 'expected {"tx": "<hex>"}' });
           }
-          const hash = await rpc.submitTx(new Uint8Array(Buffer.from(body.tx, 'hex')));
-          return json(res, 200, { hash });
+          try {
+            const hash = await rpc.submitTx(new Uint8Array(Buffer.from(body.tx, 'hex')));
+            return json(res, 200, { hash });
+          } catch (error) {
+            if (error instanceof RpcError && error.rejected)
+              return json(res, 400, { error: error.message, rejected: true });
+            return json(res, 503, {
+              error:
+                'Submission could not be confirmed. Check the transaction hash before retrying.',
+            });
+          }
         }
         const app = path.match(/^\/api\/app\/([^/]+)$/);
         if (req.method === 'GET' && app) {

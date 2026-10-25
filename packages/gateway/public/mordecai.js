@@ -26,16 +26,16 @@ async function refresh() {
     chainId.textContent = head.chainId;
     height.textContent = BigInt(head.height).toLocaleString();
     headHash.textContent = head.headHash;
-    status.textContent = 'Node reachable';
+    status.textContent = 'Online';
     status.dataset.state = 'reachable';
-    lastChecked.textContent = `Last checked ${new Date().toLocaleTimeString()}. Updates every 10 seconds.`;
+    lastChecked.textContent = `Last checked ${new Date().toLocaleTimeString()}. Updates every second.`;
   } catch {
-    status.textContent = 'Node unavailable';
+    status.textContent = 'Offline';
     status.dataset.state = 'unavailable';
     chainId.textContent = height.textContent = headHash.textContent = '—';
-    lastChecked.textContent = 'Could not fetch chain data. Retrying in 10 seconds.';
+    lastChecked.textContent = 'Could not fetch chain data. Retrying in 1 second.';
   } finally {
-    setTimeout(refresh, 10000);
+    setTimeout(refresh, 1000);
   }
 }
 

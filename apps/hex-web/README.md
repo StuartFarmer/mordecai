@@ -2,8 +2,16 @@
 
 The full app-chain vertical with strangers: one person runs
 `scripts/hex-demo.mjs` (L1 devnet, app chain, anchor daemon, faucet,
-gateways); everyone else just opens the site, gets a wallet generated in
-the page, and plays.
+gateways); everyone else opens the site, loads a wallet or creates a temporary
+one in the browser, and plays.
+
+For the complete onboarding flow, open `/wallet.html` on the demo gateway,
+create a wallet, download its unencrypted private-key backup, and claim test CAI.
+Return to the game and load the same file. Hex also funds that identity on both
+chains when needed for stakes and app fees. New keys remain in browser memory;
+load the backup again after refreshing. Legacy saved Hex identities remain
+available through **Use saved Hex wallet**. Keep backups private and use only
+test tokens. Full walkthrough: [Web Wallet, Faucet, and Hex](../../docs/src/examples/hex-web.md).
 
 - **Game codes.** Players agree on any string out of band. Its hash keys
   both the app-chain `Game` and the L1 `Pot` — create a game by entering a

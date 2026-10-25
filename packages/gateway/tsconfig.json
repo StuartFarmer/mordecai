@@ -5,5 +5,18 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "references": [{ "path": "../rpc" }]
+  "references": [
+    {
+      "path": "../crypto"
+    },
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../rpc"
+    },
+    {
+      "path": "../wallet"
+    }
+  ]
 }
