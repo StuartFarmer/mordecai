@@ -1,15 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createRoom, joinRoom } from './rooms.js';
+import { watchRoomLink } from './room-link.js';
+import { watchFunding } from './funding.js';
 import WalletPicker, { downloadWallet } from './WalletPicker.jsx';
 import {
   SIZE,
-  fetchFundingStatus,
   fetchConfig,
   fetchGame,
   fetchPot,
-  fetchStatus,
   gameIdFromCode,
   play,
-  requestFunds,
   stake,
   wallet,
   winningPath,
@@ -54,17 +54,30 @@ const fmtClock = (ms) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-export default function App() {
-  const [config, setConfig] = useState(null);
+const noSubscribe = () => () => {};
+const noPlayer = () => null;
+
+export default function App({ session, initialConfig } = {}) {
+  const [config, setConfig] = useState(initialConfig ?? null);
   const [fatal, setFatal] = useState(null);
-  const [legacy] = useState(() => wallet());
-  const [player, setPlayer] = useState(null);
+  const [legacy] = useState(() => (session ? null : wallet()));
+  const [localPlayer, setPlayer] = useState(null);
+  const sharedPlayer = useSyncExternalStore(
+    session?.subscribe ?? noSubscribe,
+    session?.getSnapshot ?? noPlayer,
+  );
+  const player = session ? sharedPlayer : localPlayer;
   const [backedUp, setBackedUp] = useState(false);
   const [balance, setBalance] = useState(null);
   const [funding, setFunding] = useState(false);
   const [status, setStatus] = useState(null);
-  const [code, setCode] = useState(() => localStorage.getItem('hex-game-code') ?? '');
-  const [entered, setEntered] = useState(() => localStorage.getItem('hex-game-code'));
+  const storageKey = initialConfig
+    ? `hex-game-code:${initialConfig.chainId}:${initialConfig.hex}`
+    : 'hex-game-code';
+  const roomLink = () =>
+    session ? new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('room') : null;
+  const [code, setCode] = useState(() => roomLink() ?? localStorage.getItem(storageKey) ?? '');
+  const [entered, setEntered] = useState(() => roomLink() ?? localStorage.getItem(storageKey));
   const [stakeAmount, setStakeAmount] = useState(DEFAULT_STAKE);
   const [game, setGame] = useState(null);
   const [pot, setPot] = useState(null);
@@ -78,6 +91,20 @@ export default function App() {
   logRef.current = log;
 
   const gameId = entered ? gameIdFromCode(entered) : null;
+  const gameIdRef = useRef(gameId);
+  const codeRef = useRef(code);
+  gameIdRef.current = gameId;
+  codeRef.current = code;
+
+  useEffect(() => {
+    if (!session) return;
+    return watchRoomLink((room) => {
+      setCode(room);
+      setEntered(room);
+      setGame(null);
+      setPot(null);
+    });
+  }, [session]);
 
   const addLog = useCallback((ok, text) => {
     setLog([{ time: new Date().toLocaleTimeString(), ok, text }, ...logRef.current].slice(0, 10));
@@ -87,54 +114,42 @@ export default function App() {
 
   useEffect(() => {
     const warn = (event) => {
-      if (player && !backedUp) {
+      if (!session && player && !backedUp) {
         event.preventDefault();
         event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [player, backedUp]);
+  }, [player, backedUp, session]);
 
   useEffect(() => {
+    if (initialConfig) return;
     fetchConfig()
       .then(setConfig)
       .catch((e) => setFatal(`${e.message || e} — is the host running scripts/hex-demo.mjs?`));
-  }, []);
+  }, [initialConfig]);
 
-  useEffect(() => {
-    if (!config || !player) return undefined;
-    let stop = false;
-    const tick = async () => {
-      try {
-        const { balance: b, needsFunds } = await fetchFundingStatus(player, config);
-        if (stop) return;
-        setBalance(b);
-        if (needsFunds && !funding) {
-          setFunding(true);
-          try {
-            await requestFunds(config, player);
-            addLog(true, 'faucet funded this wallet on both chains');
-          } finally {
-            setFunding(false);
-          }
-        }
-      } catch {
-        /* gateway hiccups are retried on the next tick */
-      }
-      try {
-        setStatus(await fetchStatus(config));
-      } catch {
-        /* ditto */
-      }
-    };
-    tick();
-    const t = setInterval(tick, 2500);
-    return () => {
-      stop = true;
-      clearInterval(t);
-    };
-  }, [config, player, funding, addLog]);
+  useEffect(
+    () =>
+      watchFunding(
+        player,
+        config,
+        (update) => {
+          if ('balance' in update) setBalance(update.balance);
+          if ('funding' in update) setFunding(update.funding);
+          if ('status' in update) setStatus(update.status);
+        },
+        () =>
+          addLog(
+            true,
+            config.manualFunding
+              ? 'App-chain fee funding requested'
+              : 'faucet funded this wallet on both chains',
+          ),
+      ),
+    [config, player, addLog],
+  );
 
   // -------------------------------------------------- game state polling
 
@@ -142,6 +157,7 @@ export default function App() {
     if (!config || gameId === null) return;
     try {
       const [g, p] = await Promise.all([fetchGame(config, gameId), fetchPot(config, gameId)]);
+      if (gameIdRef.current !== gameId) return;
       setGame(g);
       setPot(p);
     } catch {
@@ -169,7 +185,7 @@ export default function App() {
   const iPlay = iAmCreator || iAmOpponent;
   const mySide = iAmCreator ? 0 : 1;
   const toMove = game?.phase === 1 ? (game.turn === 0 ? game.creator : game.opponent) : null;
-  const myTurn = toMove === me;
+  const myTurn = toMove === me && pot?.phase === 1;
   const msLeft = game?.phase === 1 ? game.deadline - now : 0;
 
   // -------------------------------------------------- automatic actions
@@ -177,7 +193,8 @@ export default function App() {
   // Auto-prove: when my stones connect my edges, walk the contract along
   // the path (prove_start + prove_steps). The chain checks every step.
   useEffect(() => {
-    if (!config || !game || game.phase !== 1 || !iPlay || provingRef.current) return;
+    if (!config || !game || game.phase !== 1 || pot?.phase !== 1 || !iPlay || provingRef.current)
+      return;
     const path = winningPath(game.board, mySide);
     if (!path) return;
     provingRef.current = true;
@@ -200,12 +217,12 @@ export default function App() {
         refreshGame();
       }
     })();
-  }, [config, game, gameId, iPlay, mySide, player, addLog, refreshGame]);
+  }, [config, game, pot, gameId, iPlay, mySide, player, addLog, refreshGame]);
 
   // Auto-forfeit: when the player to move blows the 3-minute deadline,
   // the other player's browser claims the win.
   useEffect(() => {
-    if (!config || !game || game.phase !== 1 || !iPlay || myTurn) return;
+    if (!config || !game || game.phase !== 1 || pot?.phase !== 1 || !iPlay || myTurn) return;
     if (now <= game.deadline + 1500 || claimedRef.current === game.deadline) return;
     claimedRef.current = game.deadline;
     play(player, config, { claim_timeout: { game_id: gameId } })
@@ -214,7 +231,7 @@ export default function App() {
         claimedRef.current = 0; // clock skew; retry on a later tick
       })
       .finally(refreshGame);
-  }, [config, game, gameId, iPlay, myTurn, now, player, addLog, refreshGame]);
+  }, [config, game, pot, gameId, iPlay, myTurn, now, player, addLog, refreshGame]);
 
   // -------------------------------------------------- user actions
 
@@ -231,7 +248,9 @@ export default function App() {
   }
 
   function enter(newCode) {
-    localStorage.setItem('hex-game-code', newCode);
+    localStorage.setItem(storageKey, newCode);
+    if (session)
+      window.history.replaceState(null, '', `#/demos/hex?room=${encodeURIComponent(newCode)}`);
     setEntered(newCode);
     setGame(null);
     setPot(null);
@@ -239,31 +258,22 @@ export default function App() {
 
   const createGame = () =>
     run(`created game “${code}” and escrowed ${stakeAmount}`, async () => {
-      const id = gameIdFromCode(code);
-      await play(player, config, { create: { game_id: id } });
-      await stake(player, config, { create: { game_id: id } }, BigInt(stakeAmount));
-      enter(code);
+      await createRoom(player, config, code, stakeAmount);
+      if (codeRef.current === code) enter(code);
     });
 
   const joinGame = () =>
     run(`joined game “${code}”`, async () => {
-      const id = gameIdFromCode(code);
-      const g = await fetchGame(config, id);
-      if (!g) throw new Error('no game with that code — ask the creator to check it');
-      if (g.phase !== 0) throw new Error('that game has already started');
-      const p = await fetchPot(config, id);
-      await play(player, config, { join: { game_id: id } });
-      if (p && p.phase === 0) {
-        await stake(player, config, { join: { game_id: id } }, BigInt(p.stake));
-      }
-      enter(code);
+      await joinRoom(player, config, code);
+      if (codeRef.current === code) enter(code);
     });
 
   const placeStone = (r, c) =>
     run(`placed at ${r},${c}`, () => play(player, config, { place: { game_id: gameId, r, c } }));
 
   const leave = () => {
-    localStorage.removeItem('hex-game-code');
+    localStorage.removeItem(storageKey);
+    if (session) window.history.replaceState(null, '', '#/demos/hex');
     setEntered(null);
     setGame(null);
     setPot(null);
@@ -273,6 +283,12 @@ export default function App() {
 
   if (fatal) return <div className="fatal">⚠️ {fatal}</div>;
   if (!config) return <div className="fatal">connecting to the gateway…</div>;
+  if (!player && session)
+    return (
+      <p className="fatal">
+        Open a wallet in the <a href="#/wallet">Wallet tab</a>, then return to Hex.
+      </p>
+    );
   if (!player)
     return (
       <WalletPicker
@@ -296,15 +312,25 @@ export default function App() {
         <b>{balance ?? '…'}</b> 🪙 · {short(me)}
         {funding && ' · faucet…'}
       </span>
-      <button
-        onClick={() => {
-          downloadWallet(player);
-          setBackedUp(true);
-        }}
-      >
-        Download wallet
-      </button>
-      {!backedUp && <span className="hint">Download your key before leaving this tab.</span>}
+      {!session && (
+        <button
+          onClick={() => {
+            downloadWallet(player);
+            setBackedUp(true);
+          }}
+        >
+          Download wallet
+        </button>
+      )}
+      {!session && !backedUp && (
+        <span className="hint">Download your key before leaving this tab.</span>
+      )}
+      {session && <a href="#/wallet">Manage wallet</a>}
+      {config.manualFunding && balance !== null && balance < 2_500_000 && (
+        <p className="hint">
+          Claim test CAI in the <a href="#/faucet">Faucet tab</a> before creating or joining a room.
+        </p>
+      )}
     </header>
   );
 
@@ -332,6 +358,8 @@ export default function App() {
               <input
                 type="number"
                 min="1"
+                step="1"
+                max={Number.MAX_SAFE_INTEGER}
                 value={stakeAmount}
                 onChange={(e) => setStakeAmount(Math.max(1, Number(e.target.value)))}
               />{' '}
@@ -340,13 +368,13 @@ export default function App() {
           </div>
           <div className="code-actions">
             <button
-              disabled={busy || funding || !code.trim() || (balance ?? 0) < stakeAmount}
+              disabled={busy || funding || !code.trim() || (balance ?? 0) < stakeAmount + 500000}
               onClick={createGame}
             >
               create game (escrows {stakeAmount} 🪙)
             </button>
             <button
-              disabled={busy || funding || balance === null || !code.trim()}
+              disabled={busy || funding || (balance ?? 0) <= 500000 || !code.trim()}
               onClick={joinGame}
             >
               join game (matches the creator's stake)
@@ -405,14 +433,54 @@ export default function App() {
 
         <div className="panel">
           <h3>game “{entered}”</h3>
+          {session && (
+            <button
+              onClick={async () => {
+                try {
+                  const url = new URL(window.location.href);
+                  url.hash = `/demos/hex?room=${encodeURIComponent(entered)}`;
+                  await navigator.clipboard.writeText(url.href);
+                  addLog(true, 'Room link copied');
+                } catch {
+                  addLog(false, 'Copy the room code and share this site with your opponent.');
+                }
+              }}
+            >
+              Copy room link
+            </button>
+          )}
           <p className="pot">{potLine}</p>
 
+          {game?.phase === 0 && iAmCreator && !pot && (
+            <button disabled={busy || funding} onClick={createGame}>
+              Complete room stake
+            </button>
+          )}
+          {game?.phase === 1 && iAmOpponent && pot?.phase === 0 && (
+            <>
+              <p className="hint">
+                Your game join is recorded, but your stake still needs funding. Use Faucet if
+                needed, then complete it here.
+              </p>
+              <button disabled={busy || funding} onClick={joinGame}>
+                Complete room stake
+              </button>
+            </>
+          )}
           {game?.phase === 0 && (
             <>
               <p>
                 waiting for an opponent — share the code <b>“{entered}”</b> (and this site's
                 address) with them.
               </p>
+              {!iAmCreator && pot?.phase === 0 && (
+                <button
+                  disabled={busy || funding || (balance ?? 0) < pot.stake + 500000}
+                  onClick={joinGame}
+                >
+                  Join this room
+                </button>
+              )}
               {iAmCreator && (
                 <button
                   disabled={busy}

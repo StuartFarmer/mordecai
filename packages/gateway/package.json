@@ -18,7 +18,7 @@
     "public"
   ],
   "scripts": {
-    "build": "tsc -b && vite build --config vite.config.js && mdbook build ../../docs",
+    "build": "tsc -b && vite build --config vite.config.js && node ../../apps/hex-web/node_modules/vite/bin/vite.js build --config ../../apps/hex-web/vite.embed.config.js && mdbook build ../../docs",
     "test": "vitest run",
     "build:web": "vite build --config vite.config.js"
   },

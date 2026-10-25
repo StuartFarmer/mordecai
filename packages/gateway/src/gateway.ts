@@ -73,6 +73,7 @@ const LANDING_PATHS = new Set([
   '/faucet.js',
   '/favicon.svg',
   '/mordecai-image.jpg',
+  '/demo-assets/hex.js',
 ]);
 
 const WALLET_FILES: Record<string, string> = {

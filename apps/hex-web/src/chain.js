@@ -48,7 +48,7 @@ export function wallet() {
 
 /** Ask the host's faucet to fund this identity on both chains. */
 export function requestFunds(config, player) {
-  return api(config.faucet, '/faucet', {
+  return api(config.appFaucet ? '' : config.faucet, config.appFaucet || '/faucet', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ address: player.address }),
@@ -121,6 +121,19 @@ function encodeArgs(schema, fields) {
 }
 
 async function sendTx(base, chainId, player, contract, action, args, value = 0n) {
+  if (player.sendTransaction)
+    return player.sendTransaction(
+      base,
+      chainId,
+      {
+        kind: 'execute_contract',
+        contract: hexToBytes(contract),
+        value,
+        action,
+        args,
+      },
+      500000n,
+    );
   const account = await api(base, `/api/account/${player.address}`);
   const unsigned = {
     chainId,
@@ -288,7 +301,9 @@ export async function fetchFundingStatus(player, config) {
   ]);
   return {
     balance: Number(l1.balance),
-    needsFunds: BigInt(l1.balance) < 2_500_000n || BigInt(app.balance) < 5_000_000n,
+    needsFunds: config.manualFunding
+      ? BigInt(app.balance) < 5_000_000n
+      : BigInt(l1.balance) < 2_500_000n || BigInt(app.balance) < 5_000_000n,
   };
 }
 
@@ -340,4 +355,8 @@ export function winningPath(board, side) {
     }
   }
   return null;
+}
+
+export async function fetchL1Balance(player) {
+  return BigInt((await api('', `/api/account/${player.address}`)).balance);
 }

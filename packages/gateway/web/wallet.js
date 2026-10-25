@@ -5,9 +5,8 @@ import {
   exportBrowserWallet,
 } from '@mordecai/wallet/browser';
 import { initNavigation } from './navigation.js';
+import { createDemoSession } from './demo-session.js';
 import { TransactionClient, transactionSummary } from './transactions.js';
-
-initNavigation();
 
 const byId = (id) => document.getElementById(id);
 const message = byId('wallet-message');
@@ -18,6 +17,12 @@ let backedUp = false;
 const transactions = new TransactionClient();
 let prepared = null;
 let working = false;
+const demoClients = new Map();
+const clients = () => [transactions, ...demoClients.values()];
+const pendingClient = () => clients().find((client) => client.pending);
+const demoSession = createDemoSession(() => wallet, sendDemoTransaction);
+let hexMounted = false;
+let hexLoading = false;
 
 function showWallet(next, saved = false) {
   wallet = next;
@@ -34,10 +39,11 @@ function showWallet(next, saved = false) {
     ? 'Wallet loaded. Keys stay in this tab.'
     : 'Download your private key before closing or reloading this tab.';
   byId('wallet-balance').textContent = 'Checking…';
-  byId('tx-message').textContent = transactions.pending
+  byId('tx-message').textContent = pendingClient()
     ? 'A transaction is still pending. Keep this tab open until it is confirmed.'
     : 'Review the details before sending.';
   clearReview();
+  demoSession.refresh();
   void refreshBalance();
 }
 
@@ -127,18 +133,19 @@ byId('wallet-close').addEventListener('click', () => {
   byId('transfer-form').reset();
   byId('transaction-form').reset();
   clearReview();
+  demoSession.refresh();
   byId('wallet-generate').focus();
 });
 
 window.addEventListener('beforeunload', (event) => {
-  if ((wallet && !backedUp) || transactions.pending || working) {
+  if ((wallet && !backedUp) || pendingClient() || working) {
     event.preventDefault();
     event.returnValue = '';
   }
 });
 
 function updateControls() {
-  const locked = working || !!transactions.pending;
+  const locked = working || !!pendingClient();
   byId('wallet-actions').hidden = !wallet;
   byId('wallet-notice').hidden = !wallet;
   byId('transfer-fields').disabled = locked || !wallet;
@@ -149,7 +156,7 @@ function updateControls() {
   byId('wallet-generate').disabled = working;
   byId('wallet-file').disabled = working;
   byId('wallet-load').querySelector('button').disabled = working;
-  byId('tx-retry').hidden = !transactions.pending;
+  byId('tx-retry').hidden = !pendingClient();
   byId('tx-retry').disabled = working;
 }
 
@@ -161,12 +168,16 @@ function clearReview() {
 }
 
 function renderHistory() {
-  byId('tx-history').hidden = transactions.history.length === 0;
+  const history = clients()
+    .flatMap((client) => client.history)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 10);
+  byId('tx-history').hidden = history.length === 0;
   byId('tx-list').replaceChildren(
-    ...transactions.history.map((tx) => {
+    ...history.map((tx) => {
       const item = document.createElement('li');
       const link = document.createElement('a');
-      link.href = `./api/tx/${tx.hash}`;
+      link.href = `${tx.apiBase || '.'}/api/tx/${tx.hash}`;
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = tx.hash;
@@ -181,7 +192,7 @@ function renderHistory() {
 }
 
 async function review(make) {
-  if (!wallet || working || transactions.pending) return;
+  if (!wallet || working || pendingClient()) return;
   working = true;
   clearReview();
   byId('tx-message').textContent = 'Preparing transaction…';
@@ -230,11 +241,11 @@ async function send(retry = false) {
   updateControls();
   byId('tx-message').textContent = 'Submitting transaction…';
   try {
-    if (retry) await transactions.retry();
+    if (retry) await pendingClient()?.retry();
     else await transactions.submit(prepared);
     byId('tx-message').textContent = 'Submitted. Waiting for confirmation; keep this tab open.';
   } catch (error) {
-    byId('tx-message').textContent = transactions.pending
+    byId('tx-message').textContent = pendingClient()
       ? `${error.message} Confirmation is uncertain. Keep this tab open; retry sends the same transaction.`
       : error.message;
   } finally {
@@ -267,16 +278,87 @@ async function refreshBalance() {
   }
 }
 
+async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFee) {
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (working || pendingClient())
+    throw new Error('Another transaction is pending. Check Wallet before sending again.');
+  if (base !== '' && base !== '/api/demos/hex') throw new Error('Unsupported demo network.');
+  let client = transactions;
+  if (base) {
+    if (!demoClients.has(base))
+      demoClients.set(
+        base,
+        new TransactionClient((path, init) => fetch(`${base}${path.slice(1)}`, init)),
+      );
+    client = demoClients.get(base);
+  }
+  working = true;
+  clearReview();
+  try {
+    const draft = await client.preparePayload(expectedWallet, payload, maxFee);
+    if (draft.tx.chainId !== chainId) throw new Error('The demo network does not match this node.');
+    draft.apiBase = base;
+    await client.submit(draft);
+    for (let i = 0; i < 60 && client.pending; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await client.checkPending();
+    }
+    const result = client.history[0];
+    if (result.status !== 'confirmed')
+      throw new Error(
+        result.error || `Transaction ${result.status}. Check Wallet before retrying.`,
+      );
+    return { height: Number(result.height), fee: result.fee };
+  } finally {
+    working = false;
+    renderHistory();
+    void refreshBalance();
+  }
+}
+
+async function openDemo(route) {
+  if (route !== 'demos/hex' || hexMounted || hexLoading) return;
+  const container = byId('hex-demo');
+  if (!container) return;
+  hexLoading = true;
+  try {
+    const response = await fetch('./api/config', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error('Demo configuration is unavailable.');
+    const config = (await response.json()).demos?.hex;
+    if (!config)
+      throw new Error('Hex is not enabled on this node. Start the node demo launcher to play.');
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = './demo-assets/hex.js';
+      script.onload = resolve;
+      script.onerror = () => {
+        script.remove();
+        reject(new Error('Hex assets are unavailable. Run the project build.'));
+      };
+      document.head.append(script);
+    });
+    container.textContent = '';
+    window.MordecaiHex.mount(container, { session: demoSession, config });
+    hexMounted = true;
+  } catch (error) {
+    container.textContent = error.message;
+  } finally {
+    hexLoading = false;
+  }
+}
+
 async function poll() {
-  await Promise.all([
-    refreshBalance(),
-    (async () => {
-      if (!transactions.pending || working) return;
+  await refreshBalance();
+  if (!working) {
+    for (const client of clients()) {
+      if (!client.pending) continue;
       try {
-        await transactions.checkPending();
-        if (working) return;
-        if (!transactions.pending) {
-          const latest = transactions.history[0];
+        await client.checkPending();
+        if (!working && !client.pending) {
+          const latest = client.history[0];
           byId('tx-message').textContent =
             `Transaction ${latest.status}.${latest.error ? ` ${latest.error}` : ''}`;
         }
@@ -286,9 +368,10 @@ async function poll() {
             'Confirmation is unavailable. Keep this tab open; the transaction may still be pending.';
       }
       renderHistory();
-    })(),
-  ]);
+    }
+  }
   setTimeout(poll, 1000);
 }
 updateControls();
+initNavigation(document, window, (route) => void openDemo(route));
 void poll();

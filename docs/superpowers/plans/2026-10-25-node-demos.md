@@ -25,18 +25,33 @@ existing TransactionClient, gateway-mounted app RPC, and persistent demo bootstr
 
 ## Task 1: Gateway and persistent host
 
-- [ ] Test configurable faucet grant and app RPC/faucet namespace.
-- [ ] Implement bounded named RPC mounts and reuse Faucet with operator-set amount.
-- [ ] Extract reusable Hex host; add persistent identity and bootstrap journal.
-- [ ] Add node-demo launcher and verify restart preserves chain/deployments/balances.
-- [ ] Commit gateway/host increment.
+- [x] Test configurable faucet grant and app RPC/faucet namespace.
+- [x] Implement bounded named RPC mounts and reuse Faucet with operator-set amount.
+- [x] Extract reusable Hex host; add persistent identity and bootstrap journal.
+- [x] Add node-demo launcher and verify restart preserves chain/deployments/balances.
+- [x] Commit gateway/host increment.
 
 ## Task 2: Embedded Hex and shared wallet
 
-- [ ] Test signer facade, closed wallet, send locking/pending state and mounted funding URLs.
-- [ ] Add Demos dropdown, Hex view, lazy embed bundle and isolated styling.
-- [ ] Reuse wallet transaction clients for game sends and receipt/retry state.
-- [ ] Adapt Hex to supplied config/session, manual L1 faucet and app fee funding.
-- [ ] Verify standalone and embedded builds, two-wallet create/join/move/settlement.
-- [ ] Update docs, run full suite/lint/format, independent review and fixes.
-- [ ] Commit frontend/integration increment.
+- [x] Test signer facade, closed wallet, send locking/pending state and mounted funding URLs.
+- [x] Add Demos dropdown, Hex view, lazy embed bundle and isolated styling.
+- [x] Reuse wallet transaction clients for game sends and receipt/retry state.
+- [x] Adapt Hex to supplied config/session, manual L1 faucet and app fee funding.
+- [x] Verify standalone and embedded builds, two-wallet create/join/move/settlement.
+- [x] Update docs, run full suite/lint/format, independent review and fixes.
+- [x] Commit frontend/integration increment.
+
+## Verification
+
+- Full regression suite: 301 tests across 49 files passed.
+- Root build (TypeScript, wallet, embedded Hex, mdBook), standalone Hex build, ESLint and Prettier passed.
+- Browser: load/create wallet and faucet, create/join through a room link, place a stone, resign, and confirm L1 payout with two distinct wallets.
+- Browser: close wallet disconnects the mounted Hex app; mobile Demos dropdown stays inside the viewport.
+- Restart: public configuration, deployed contract state, rooms and both player balances stayed identical; live chain heads continued advancing.
+- Independent review fixed L1 funding preflight and partial join recovery, stale wallet funding state, and room-link changes after mounting. Regression tests cover all three.
+
+## Remaining scope
+
+Frontier, Outpost and Chess link to their guides until their wallet/room conversion.
+No public deployment or push. This is a local test-token demo; cross-chain game
+and escrow actions commit separately, with UI retries for incomplete room funding.

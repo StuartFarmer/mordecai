@@ -293,3 +293,41 @@ pre {
 h3 {
   font-size: 16px;
 }
+
+.demo-menu {
+  position: relative;
+}
+.demo-menu summary {
+  color: #ffcc66;
+}
+.demo-menu-links {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  padding: 12px;
+  border: 1px solid #323a44;
+  border-radius: 6px;
+  background: #171e26;
+  box-shadow: 0 8px 20px #0006;
+}
+.demo-menu-links a {
+  display: block;
+  padding: 6px;
+}
+main:has([data-page='demos/hex']:not([hidden])) {
+  max-width: 1120px;
+}
+@media (max-width: 480px) {
+  .status-bar nav {
+    position: relative;
+  }
+  .demo-menu {
+    position: static;
+  }
+  .demo-menu-links {
+    left: auto;
+    right: 0;
+  }
+}

@@ -9,6 +9,7 @@ export default tseslint.config(
       'docs/book/**',
       'packages/gateway/public/docs/**',
       'packages/gateway/public/wallet-assets/**',
+      'packages/gateway/public/demo-assets/**',
       'compiler/build/**',
     ],
   },
@@ -46,6 +47,9 @@ export default tseslint.config(
         DataView: 'readonly',
         setTimeout: 'readonly',
         window: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        URLSearchParams: 'readonly',
         localStorage: 'readonly',
         crypto: 'readonly',
         process: 'readonly', // vite.config.js reads env at build time

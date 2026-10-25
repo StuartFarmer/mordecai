@@ -148,7 +148,7 @@ export class TransactionClient {
             : 0n;
       if (BigInt(account.balance) < spend + prepared.tx.maxFee)
         throw new Error('The balance changed. Review the transaction again.');
-      this.pending = { ...prepared, status: 'submitted' };
+      this.pending = { ...prepared, status: 'submitted', createdAt: Date.now() };
       this.history.unshift(this.pending);
       this.history = this.history.slice(0, 10);
       await this.broadcast(false);
@@ -231,6 +231,7 @@ export class TransactionClient {
       throw new Error('Invalid transaction receipt.');
     pending.status = receipt.success ? 'confirmed' : 'failed';
     pending.fee = receipt.fee;
+    pending.height = receipt.height;
     pending.error = receipt.error;
     this.pending = null;
   }

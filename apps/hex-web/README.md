@@ -33,3 +33,12 @@ node scripts/hex-demo.mjs        # → http://<host>:8787
 ```
 
 Dev mode against a running demo: `pnpm --filter @mordecai/example-hex-web dev`.
+
+## Integrated node site
+
+Run `pnpm build` then `node scripts/node-demo.mjs`; open port 8790 and choose
+**Demos → Hex**. Wallet and Faucet are shared with the node site. The embedded
+build receives a revocable transaction facade instead of a private key; its
+Shadow DOM keeps game styles separate from the site. The standalone build and
+launcher above remain available. The integrated launcher's data persists in
+`.mordecai-demo/`; see the book guide for restart and deployment details.

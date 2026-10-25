@@ -18,6 +18,19 @@
         <a href="#/" data-route="home" aria-current="page">Home</a>
         <a href="#/wallet" data-route="wallet">Wallet</a>
         <a href="#/faucet" data-route="faucet">Faucet</a>
+        <details class="demo-menu">
+          <summary>Demos</summary>
+          <div class="demo-menu-links">
+            <a href="#/demos/hex" data-route="demos/hex">Hex</a>
+            <a href="./docs/examples/frontier-web.html" target="_blank" rel="noopener"
+              >Frontier — guide</a
+            >
+            <a href="./docs/examples/outpost.html" target="_blank" rel="noopener"
+              >Outpost — guide</a
+            >
+            <a href="./docs/examples/chess.html" target="_blank" rel="noopener">Chess — guide</a>
+          </div>
+        </details>
         <a href="./docs/" target="_blank" rel="noopener" title="Opens in a new tab"
           >Documentation</a
         >
@@ -222,6 +235,11 @@
           Enable JavaScript to use the faucet.
         </p>
         <a id="faucet-tx" target="_blank" rel="noopener" hidden>View transaction</a>
+      </section>
+      <section data-page="demos/hex" aria-labelledby="hex-title" hidden>
+        <h1 id="hex-title" tabindex="-1">Hex</h1>
+        <p class="tagline">Create a room, invite another player, and play with test CAI.</p>
+        <div id="hex-demo" class="intro">Loading Hex…</div>
       </section>
     </main>
     <footer>

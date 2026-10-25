@@ -3,7 +3,41 @@
 Hex is the example for bringing your own browser wallet. One operator runs the
 demo network; players only need a browser and their own test-wallet keys.
 
-## Start the demo
+## Run Hex inside the node site
+
+```sh
+pnpm build
+node scripts/node-demo.mjs
+```
+
+Open `http://127.0.0.1:8790`. Create/load a wallet, use the **Faucet** tab,
+then choose **Demos → Hex**. The same in-memory wallet signs game actions and
+L1 stakes; no second key import is needed. Closing it in Wallet disconnects Hex.
+Create a room and use **Copy room link** to invite another player with a different
+wallet. A fresh visitor can join from that link. Frontier, Outpost and Chess
+currently link to their guides in the dropdown; their integrated wallet/room
+conversion remains pending.
+
+The node-demo L1 faucet grants 10,000,000 base units, enough for the default
+1,000,000-unit stake plus fees. Hex requests app-chain fee tokens separately.
+The existing address/IP cooldown applies, so two browsers sharing an IP must
+wait a minute between faucet claims. Public users reach one HTTP origin; the
+app API is mounted at `/api/demos/hex/api/`.
+
+The launcher stores identities, chain data and signed deployment records in
+`.mordecai-demo/` (git-ignored). Restart with that directory to resume balances,
+rooms and contracts. Back up the directory privately: it contains unencrypted
+operator test keys with restrictive file permissions. Do not run two hosts on
+one data directory. Keep the same contract binaries and timeout configuration;
+changed bootstrap payloads fail explicitly rather than redeploying silently.
+
+Use `PORT=8805 DEMO_DIR=/path/to/demo node scripts/node-demo.mjs` to choose the
+HTTP port and data directory. This starts a persistent local test network; it
+does not attach to a different running preview chain. For public HTTPS, terminate
+TLS in front of this HTTP origin and keep the process/data directory persistent.
+No domain or public deployment is configured by this command.
+
+## Start the standalone demo
 
 From the repository root:
 
