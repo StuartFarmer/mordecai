@@ -1,5 +1,7 @@
 # Mordecai
 
+![Mordecai](static/mordecai-image.jpg)
+
 **A decentralized operating system for peer-to-peer software.** Apps get
 identity, payments, contracts, and distribution the way they get a
 filesystem — by asking the runtime. Holepunch/Pear provides networking,
@@ -255,6 +257,7 @@ The [mdBook](docs/) covers all of it — serve with `mdbook serve docs`:
 
 Specs: [`SPEC_PT_01–03.md`](SPEC_PT_01.md) (platform) ·
 [`SPEC_APPCHAINS.md`](SPEC_APPCHAINS.md) (app chains) ·
+[`SPEC_TOKENOMICS.md`](SPEC_TOKENOMICS.md) (validator policy + CAI emission, _design draft_) ·
 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)
 
 ## Status
