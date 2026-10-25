@@ -3,7 +3,7 @@ services:
     name: mordecai-demo
     runtime: docker
     repo: https://github.com/StuartFarmer/mordecai
-    branch: feat/simple-node-site
+    branch: main
     region: frankfurt
     plan: 0.5c-512mb
     numInstances: 1

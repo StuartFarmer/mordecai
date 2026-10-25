@@ -6,9 +6,9 @@ port `10000`, and the `/api/head` readiness check.
 
 ## Deploy
 
-1. Open [Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FStuartFarmer%2Fmordecai%2Ftree%2Ffeat%2Fsimple-node-site).
+1. Open [Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FStuartFarmer%2Fmordecai%2Ftree%2Fmain).
    Alternatively, select **New → Blueprint**, connect `StuartFarmer/mordecai`,
-   select branch **`feat/simple-node-site`**, and use `render.yaml`.
+   select branch **`main`**, and use `render.yaml`.
 2. Review the proposed resources and current cost. The Blueprint selects the
    **paid `0.5c-512mb` plan** (formerly Starter), a **1 GB disk**, and Frankfurt.
    Render's free web services cannot attach persistent disks and are unsuitable

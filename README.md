@@ -36,7 +36,7 @@ response. The launcher keeps its data across restarts in `.mordecai-demo/`.
 
 To host the whole demo on Render, use the root `render.yaml` Blueprint, which
 configures one Docker service and a persistent disk at `/data`.
-[Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FStuartFarmer%2Fmordecai%2Ftree%2Ffeat%2Fsimple-node-site)
+[Deploy to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FStuartFarmer%2Fmordecai%2Ftree%2Fmain)
 or follow the [Render deployment guide](docs/src/render.md). This requires a paid
 service and disk. The [Railway deployment guide](docs/src/railway.md) is also available.
 
