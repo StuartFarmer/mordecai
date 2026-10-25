@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Outpost MMORTS web client: game on the app chain, goods market on L1, one wallet identity across both",
+  "description": "Outpost goods exchange: buy orders on L1, fulfillment on the app chain, verified payment settlement",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

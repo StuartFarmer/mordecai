@@ -1,6 +1,11 @@
-# outpost — the MMORTS cross-chain demo
+# Outpost — cross-chain goods exchange
 
-A small MMORTS proving the app-chains design end to end: the **game runs
+Buy goods, fulfill orders and follow their payment through settlement. Outpost
+puts the order book first; **Supply & production** is a collapsed panel for
+claiming land, building and harvesting inventory. Frontier remains the land
+and trading game.
+
+The exchange proves the app-chains design end to end: the **game runs
 on a player-run app chain** (claim land, build farms/lumbermills, harvest
 by block height), the **goods market runs on L1** (buyers escrow CAI),
 and **one wallet identity acts on both** — the same Ed25519 key that
@@ -31,7 +36,12 @@ node scripts/outpost-demo.mjs
 Open http://127.0.0.1:8787. Two funded identities (alice, bob) come from
 `/api/config`; the L1 gateway is same-origin, the app-chain gateway
 (:8788) is called cross-origin. Delivered orders show
-“settling on next anchor…” and flip to “settled” within one ~5s epoch.
+“awaiting verified anchor and L1 payment…” until confirmed L1 state shows
+“Paid on L1”. The standalone demo targets ~5s anchor epochs; confirmation
+can take longer. Delivery alone does not establish payment.
+
+MVP limitation: delivery and cancellation commit separately. Cancellation
+racing a delivery can leave goods transferred without payment.
 
 Contracts: `compiler/examples/outpost.pysc` (game),
 `compiler/examples/goods_market.pysc` (market). The protocol-level proof

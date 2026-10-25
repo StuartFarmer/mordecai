@@ -129,7 +129,7 @@ export default function App({ session, initialConfig }) {
   if (session && !player)
     return (
       <div className="fatal">
-        <a href="#/wallet">Open Wallet to play Outpost</a>
+        <a href="#/wallet">Open Wallet to trade on Outpost</a>
       </div>
     );
   if (!config || !player) return <div className="fatal">connecting to gateways…</div>;
@@ -140,11 +140,11 @@ export default function App({ session, initialConfig }) {
   const orders = Object.entries(market).sort(([a], [b]) => Number(a) - Number(b));
 
   const orderStatus = (id, o) => {
-    if (o.phase === 2) return { text: 'cancelled', cls: 'err' };
+    if (o.phase === 2) return { text: 'Cancelled · escrow refunded', cls: 'err' };
     if (o.phase === 1) {
       const d = world.deliveries[id];
       return {
-        text: `confirmed — ${d ? nameOf(d.seller) : 'seller'} paid ${o.price} 🪙`,
+        text: `Paid on L1 — ${d ? nameOf(d.seller) : 'seller'} paid ${o.price} 🪙`,
         cls: 'ok',
       };
     }
@@ -153,7 +153,7 @@ export default function App({ session, initialConfig }) {
       if (d.buyer !== o.buyer || d.good !== o.good || d.amount !== o.amount)
         return { text: 'delivery mismatch — buyer can cancel and place a new order', cls: 'err' };
       return {
-        text: `delivered by ${nameOf(world.deliveries[id].seller)} — settling on next anchor…`,
+        text: `Delivered by ${nameOf(world.deliveries[id].seller)} · awaiting verified anchor and L1 payment…`,
         cls: 'hint',
       };
     }
@@ -163,72 +163,52 @@ export default function App({ session, initialConfig }) {
   return (
     <div className="app">
       <header>
-        <h1>outpost</h1>
+        <div>
+          <p className="eyebrow">Cross-chain goods exchange</p>
+          <h1>Outpost</h1>
+          <p className="intro">Buy goods. Fulfill orders. Get paid on L1.</p>
+        </div>
         <span className="chain-meta">
-          L1 block {status.l1Height} · game block {status.appHeight} · anchor epoch{' '}
+          L1 block {status.l1Height} · app block {status.appHeight} · anchor epoch{' '}
           {status.anchor?.epoch ?? '—'} · one wallet, two chains
         </span>
       </header>
 
-      <div className="columns">
-        <div className="map">
-          <div className="grid" style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}>
-            {Array.from({ length: GRID * GRID }, (_, id) => {
-              const t = world.tiles[id];
-              const ownerName =
-                t &&
-                (session
-                  ? t.owner === me
-                    ? 'alice'
-                    : 'other'
-                  : Object.values(players).find((p) => p.address === t.owner)?.name);
-              const cls = [
-                'tile',
-                t ? `owner-${ownerName || 'other'}` : 'unclaimed',
-                selected === id ? 'selected' : '',
-              ].join(' ');
-              return (
-                <button
-                  key={id}
-                  className={cls}
-                  title={`tile ${id}`}
-                  onClick={() => setSelected(id)}
-                >
-                  {BUILDING_ICON[t?.building] || ''}
-                </button>
-              );
-            })}
-          </div>
-          <div className="legend">
-            <span>
-              <i className="swatch owner-alice" /> {session ? 'your land' : 'alice'}
-            </span>
-            <span>
-              <i className={`swatch owner-${session ? 'other' : 'bob'}`} />{' '}
-              {session ? 'other players' : 'bob'}
-            </span>
-            <span>
-              <i className="swatch unclaimed" /> unclaimed
-            </span>
-            <span>🌾 farm</span>
-            <span>🪵 lumbermill</span>
-          </div>
+      <ol className="trade-flow" aria-label="How an order settles">
+        <li>
+          <b>1 · Buy</b>
+          <span>Lock test CAI in an L1 order.</span>
+        </li>
+        <li>
+          <b>2 · Fulfill</b>
+          <span>A supplier delivers goods on the app chain.</span>
+        </li>
+        <li>
+          <b>3 · Settle</b>
+          <span>A verified anchor releases payment on L1.</span>
+        </li>
+      </ol>
 
+      <div className="columns">
+        <main className="exchange">
           <div className="market">
+            <h2>Buy goods</h2>
             <p className="hint">
-              Test exchange uses separate chain commits. Cancellation racing delivery can leave
-              goods unpaid. Growth follows game blocks.
+              Offer a total payment in test CAI. Your order holds it in escrow until settlement or
+              cancellation.
             </p>
-            <h3>goods market — in-game goods for L1 🪙</h3>
             <div className="place-form">
               <span>buy</span>
               <input
+                aria-label="Quantity to buy"
                 type="number"
                 min="1"
+                step="1"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
               />
               <select
+                aria-label="Goods to buy"
                 value={form.good}
                 onChange={(e) => setForm({ ...form, good: e.target.value })}
               >
@@ -237,8 +217,10 @@ export default function App({ session, initialConfig }) {
               </select>
               <span>for</span>
               <input
+                aria-label="Total payment in test CAI"
                 type="number"
                 min="1"
+                step="1"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
               />
@@ -265,26 +247,40 @@ export default function App({ session, initialConfig }) {
                   )
                 }
               >
-                place order (escrows 🪙)
+                Place buy order
               </button>
             </div>
+            <p className="hint">Keep 500000 L1 fee units available in addition to your offer.</p>
+          </div>
+          <section className="market" aria-labelledby="orders-heading">
+            <h2 id="orders-heading">Orders &amp; settlement</h2>
+            <p className="hint">
+              Supply an open order from your inventory. Delivered orders wait for an anchor; only
+              confirmed L1 state means the supplier is paid.
+            </p>
             {orders.length === 0 ? (
               <p className="hint">
-                no orders — escrow L1 currency for goods someone grows in-game.
+                No orders yet. Place the first buy order, then use another wallet to fulfill it.
               </p>
             ) : (
               <div className="orders">
                 {orders.map(([id, o]) => {
                   const st = orderStatus(id, o);
                   return (
-                    <div key={id} className="order">
-                      <span className={`owner-text owner-${nameOf(o.buyer)}`}>
-                        {nameOf(o.buyer)}
+                    <article key={id} className="order" aria-label={`Order ${id}`}>
+                      <div className="order-heading">
+                        <b>
+                          #{id} · {o.amount} {RESOURCE_ICON[o.good]} {o.good}
+                        </b>
+                        <b>{o.price} test CAI</b>
+                      </div>
+                      <span className="hint">
+                        Buyer: {nameOf(o.buyer)}
+                        {o.buyer === me ? ' (you)' : ''}
                       </span>
-                      <span>
-                        buys {o.amount} {RESOURCE_ICON[o.good]} for {o.price} 🪙
+                      <span className={`status ${st?.cls ?? 'open'}`}>
+                        {st?.text ?? 'Open · payment escrowed, awaiting supplier'}
                       </span>
-                      {st && <span className={`status ${st.cls}`}>{st.text}</span>}
                       {o.phase === 0 && o.buyer === me ? (
                         <button
                           disabled={busy}
@@ -294,7 +290,7 @@ export default function App({ session, initialConfig }) {
                             )
                           }
                         >
-                          cancel
+                          Cancel & refund escrow
                         </button>
                       ) : st ? null : (
                         <button
@@ -317,19 +313,24 @@ export default function App({ session, initialConfig }) {
                           }
                         >
                           {(goods[o.good] ?? 0) >= o.amount
-                            ? `deliver ${RESOURCE_ICON[o.good]} in-game`
+                            ? `Fulfill order · deliver ${o.amount} ${o.good}`
                             : `need ${o.amount} ${RESOURCE_ICON[o.good]}`}
                         </button>
                       )}
-                    </div>
+                    </article>
                   );
                 })}
               </div>
             )}
-          </div>
-        </div>
+            <p className="exchange-limit">
+              MVP limitation: delivery and cancellation commit on separate chains. A cancellation
+              racing a delivery can leave goods unpaid.
+            </p>
+          </section>
+        </main>
 
-        <div className="panel">
+        <aside className="panel">
+          <h2>Your trading account</h2>
           <div className="player-switch">
             {session && (
               <>
@@ -359,105 +360,169 @@ export default function App({ session, initialConfig }) {
             App fee balance: {appBalances[current] ?? '…'}. Each move reserves up to 500000 fee
             units.
           </p>
+          <h3>Available inventory &amp; funds</h3>
           <div className="resources">
             <div>
-              <b>{goods.wood}</b> 🪵 wood <small>(game)</small>
+              <b>{goods.wood}</b> 🪵 wood <small>(app chain)</small>
             </div>
             <div>
-              <b>{goods.wheat}</b> 🌾 wheat <small>(game)</small>
+              <b>{goods.wheat}</b> 🌾 wheat <small>(app chain)</small>
             </div>
             <div>
-              <b>{balances[current] ?? '…'}</b> 🪙 CAI <small>(L1)</small>
+              <b>{balances[current] ?? '…'}</b> 🪙 test CAI <small>(L1)</small>
             </div>
           </div>
 
-          {selected == null ? (
-            <p className="hint">Select a tile to play. Goods grow here; money lives on L1.</p>
-          ) : (
-            <div className="tile-info">
-              <h3>tile {selected}</h3>
-              {tile ? (
-                <>
-                  <p>
-                    owner:{' '}
-                    <span className={`owner-text owner-${nameOf(tile.owner)}`}>
-                      {nameOf(tile.owner)}
-                    </span>
-                  </p>
-                  <p>building: {tile.building || 'none'}</p>
-                  {tile.building && (
-                    <p>
-                      unharvested: ~{Math.max(growing, 0)} {tile.building === 'farm' ? '🌾' : '🪵'}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p>unclaimed wilderness</p>
-              )}
-              <div className="actions">
-                {!tile && (
-                  <button
-                    disabled={busy || (appBalances[current] ?? 0) < 500000}
-                    onClick={() =>
-                      run(`claim tile ${selected}`, () =>
-                        play(player, config, { claim_tile: { tile_id: selected } }),
-                      )
-                    }
-                  >
-                    claim (+25 🪵)
-                  </button>
-                )}
-                {mine && !tile.building && (
-                  <>
-                    <button
-                      disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
-                      onClick={() =>
-                        run(`build farm on ${selected}`, () =>
-                          play(player, config, { build: { tile_id: selected, kind: 'farm' } }),
-                        )
-                      }
-                    >
-                      build farm 🌾 (−10 🪵)
-                    </button>
-                    <button
-                      disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
-                      onClick={() =>
-                        run(`build lumbermill on ${selected}`, () =>
-                          play(player, config, {
-                            build: { tile_id: selected, kind: 'lumbermill' },
-                          }),
-                        )
-                      }
-                    >
-                      build lumbermill 🪵 (−10 🪵)
-                    </button>
-                  </>
-                )}
-                {mine && tile.building && (
-                  <button
-                    disabled={busy || (appBalances[current] ?? 0) < 500000}
-                    onClick={() =>
-                      run(`harvest tile ${selected}`, () =>
-                        play(player, config, { harvest: { tile_id: selected } }),
-                      )
-                    }
-                  >
-                    harvest {BUILDING_ICON[tile.building]}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="log">
+          <p className="hint">
+            Need stock to fulfill an order? Open Supply &amp; production below. Claim a tile for 25
+            wood, or build and harvest more goods.
+          </p>
+          <h3>Transaction activity</h3>
+          <div className="log" aria-live="polite">
             {log.map((entry, i) => (
               <div key={i} className={entry.ok ? 'ok' : 'err'}>
                 <span className="t">{entry.time}</span> {entry.text}
               </div>
             ))}
           </div>
-        </div>
+        </aside>
       </div>
+      <details className="supply">
+        <summary>
+          Supply &amp; production <span>Grow inventory for your next delivery</span>
+        </summary>
+        <p className="hint">
+          Claim land for starter wood, then build a farm or lumbermill. Production grows with
+          app-chain blocks; harvest to add goods to your inventory.
+        </p>
+        <div className="columns">
+          <div className="map">
+            <div className="grid" style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}>
+              {Array.from({ length: GRID * GRID }, (_, id) => {
+                const t = world.tiles[id];
+                const ownerName =
+                  t &&
+                  (session
+                    ? t.owner === me
+                      ? 'alice'
+                      : 'other'
+                    : Object.values(players).find((p) => p.address === t.owner)?.name);
+                const cls = [
+                  'tile',
+                  t ? `owner-${ownerName || 'other'}` : 'unclaimed',
+                  selected === id ? 'selected' : '',
+                ].join(' ');
+                return (
+                  <button
+                    key={id}
+                    className={cls}
+                    title={`tile ${id}`}
+                    aria-label={`Tile ${id}: ${t ? `${nameOf(t.owner)}, ${t.building || 'no building'}` : 'unclaimed'}`}
+                    aria-pressed={selected === id}
+                    onClick={() => setSelected(id)}
+                  >
+                    {BUILDING_ICON[t?.building] || ''}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="legend">
+              <span>
+                <i className="swatch owner-alice" /> {session ? 'your land' : 'alice'}
+              </span>
+              <span>
+                <i className={`swatch owner-${session ? 'other' : 'bob'}`} />{' '}
+                {session ? 'other players' : 'bob'}
+              </span>
+              <span>
+                <i className="swatch unclaimed" /> unclaimed
+              </span>
+              <span>🌾 farm</span>
+              <span>🪵 lumbermill</span>
+            </div>
+          </div>
+          <div className="supply-actions">
+            {selected == null ? (
+              <p className="hint">Select a tile to claim, build or harvest inventory.</p>
+            ) : (
+              <div className="tile-info">
+                <h3>tile {selected}</h3>
+                {tile ? (
+                  <>
+                    <p>
+                      owner:{' '}
+                      <span className={`owner-text owner-${nameOf(tile.owner)}`}>
+                        {nameOf(tile.owner)}
+                      </span>
+                    </p>
+                    <p>building: {tile.building || 'none'}</p>
+                    {tile.building && (
+                      <p>
+                        unharvested: ~{Math.max(growing, 0)}{' '}
+                        {tile.building === 'farm' ? '🌾' : '🪵'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p>unclaimed wilderness</p>
+                )}
+                <div className="actions">
+                  {!tile && (
+                    <button
+                      disabled={busy || (appBalances[current] ?? 0) < 500000}
+                      onClick={() =>
+                        run(`claim tile ${selected}`, () =>
+                          play(player, config, { claim_tile: { tile_id: selected } }),
+                        )
+                      }
+                    >
+                      claim (+25 🪵)
+                    </button>
+                  )}
+                  {mine && !tile.building && (
+                    <>
+                      <button
+                        disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
+                        onClick={() =>
+                          run(`build farm on ${selected}`, () =>
+                            play(player, config, { build: { tile_id: selected, kind: 'farm' } }),
+                          )
+                        }
+                      >
+                        build farm 🌾 (−10 🪵)
+                      </button>
+                      <button
+                        disabled={busy || (appBalances[current] ?? 0) < 500000 || goods.wood < 10}
+                        onClick={() =>
+                          run(`build lumbermill on ${selected}`, () =>
+                            play(player, config, {
+                              build: { tile_id: selected, kind: 'lumbermill' },
+                            }),
+                          )
+                        }
+                      >
+                        build lumbermill 🪵 (−10 🪵)
+                      </button>
+                    </>
+                  )}
+                  {mine && tile.building && (
+                    <button
+                      disabled={busy || (appBalances[current] ?? 0) < 500000}
+                      onClick={() =>
+                        run(`harvest tile ${selected}`, () =>
+                          play(player, config, { harvest: { tile_id: selected } }),
+                        )
+                      }
+                    >
+                      harvest {BUILDING_ICON[tile.building]}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

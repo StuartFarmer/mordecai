@@ -1,6 +1,11 @@
-# Outpost: An MMORTS Across Two Chains
+# Outpost: Goods, Orders and Settlement
 
-Outpost is the app-chains capstone: a small MMORTS where the **game runs
+Outpost is a cross-chain goods exchange: buy goods, fulfill orders and watch
+payment settle. The order book leads the interface; land and harvesting live
+in a collapsed **Supply & production** panel. Frontier is the land and trading
+game; Outpost focuses on the fulfillment and payment flow.
+
+The **production economy runs
 on a player-run app chain**, the **goods market runs on L1**, and **one
 wallet identity acts on both** — the Ed25519 key that holds CAI on L1
 is the same key that owns tiles and wood in the game. L1 currency buys
@@ -67,9 +72,10 @@ and emitting one `settle` call per epoch.
 `apps/outpost-web` is one page speaking to two gateways: game moves and
 world reads go to the app-chain gateway (`:8788`), market orders and
 balances to the L1 gateway (`:8787`). One seed signs on both chains, in
-the browser. Delivered orders show _"settling on next anchor…"_ and flip
-to _"settled"_ within one ~5s epoch — the anchor cycle, visible in the
-UI.
+the browser. Delivered orders show _"awaiting verified anchor and L1 payment…"_
+until confirmed L1 state shows _"Paid on L1"_. The standalone demo targets
+~5s anchor epochs, but confirmation can take longer. The latest anchor and
+both chain heights remain visible in the UI.
 
 ## What it proves
 
@@ -89,8 +95,9 @@ tab for L1 test CAI and **Fund app fees** for the separate game fee balance.
 The embedded demo never imports the development accounts or operator seeds.
 World state, validator identities and deployment receipts survive host restarts.
 
-Claim a tile, build and harvest as game block height advances. Another wallet
-can escrow L1 test CAI for goods. Delivering the exact buyer, good and amount
+Place a buy order to escrow L1 test CAI for goods. Another wallet can fulfill
+it from available inventory. Suppliers can open **Supply & production** to
+claim a tile, build and harvest as app-chain block height advances. Delivering the exact buyer, good and amount
 lets the next signed anchor settle payment; confirmed L1 state determines payout.
 A mismatched delivery cannot release payment or block other valid orders, but
 it occupies that order's delivery slot: its buyer can cancel and create a new order.
