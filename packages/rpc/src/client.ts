@@ -25,10 +25,16 @@ export interface RpcClientOptions {
   bootstrap?: { host: string; port: number }[];
 }
 
+export interface RpcReadOptions {
+  timeout?: number;
+}
+
 export class NodeRpcClient {
   private constructor(
     private readonly rpc: RPC,
-    private readonly client: { request(method: string, data: Buffer): Promise<Buffer> },
+    private readonly client: {
+      request(method: string, data: Buffer, options?: RpcReadOptions): Promise<Buffer>;
+    },
   ) {}
 
   static connect(serverPublicKey: Uint8Array, options: RpcClientOptions = {}): NodeRpcClient {
@@ -36,8 +42,8 @@ export class NodeRpcClient {
     return new NodeRpcClient(rpc, rpc.connect(serverPublicKey));
   }
 
-  private async call<T>(method: string, params: unknown): Promise<T> {
-    const raw = await this.client.request(method, Buffer.from(JSON.stringify(params)));
+  private async call<T>(method: string, params: unknown, options?: RpcReadOptions): Promise<T> {
+    const raw = await this.client.request(method, Buffer.from(JSON.stringify(params)), options);
     const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<T>;
     if (!envelope.ok) throw new RpcError(envelope.error, envelope.rejected === true);
     return envelope.result;
@@ -60,8 +66,8 @@ export class NodeRpcClient {
     return envelope.result.hash;
   }
 
-  getBlock(height: bigint): Promise<BlockInfo | null> {
-    return this.call('get_block', { height: height.toString() });
+  getBlock(height: bigint, options?: RpcReadOptions): Promise<BlockInfo | null> {
+    return this.call('get_block', { height: height.toString() }, options);
   }
 
   getApp(appId: string): Promise<AppInfo | null> {
@@ -73,8 +79,8 @@ export class NodeRpcClient {
     return this.call('get_app_anchor', { appId });
   }
 
-  getTx(hashHex: string): Promise<TxInfo | null> {
-    return this.call('get_tx', { hash: hashHex });
+  getTx(hashHex: string, options?: RpcReadOptions): Promise<TxInfo | null> {
+    return this.call('get_tx', { hash: hashHex }, options);
   }
 
   /** A contract's storage entries, optionally narrowed by inner-key prefix. */

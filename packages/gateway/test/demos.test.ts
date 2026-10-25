@@ -29,11 +29,13 @@ it('loads each known demo once and passes only its config and wallet session', a
         frontier: { contract: 'frontier' },
         outpost: { contract: 'outpost' },
         chess: { contract: 'chess' },
+        microblog: { feedId: 'feed' },
+        bounties: { contract: 'bounties' },
       },
     }),
   );
   const open = createDemoLoader(doc, win, session, fetcher);
-  for (const name of ['hex', 'frontier', 'outpost', 'chess']) {
+  for (const name of ['hex', 'frontier', 'outpost', 'chess', 'microblog', 'bounties']) {
     await Promise.all([open(`demos/${name}`), open(`demos/${name}`)]);
     await open(`demos/${name}`);
   }
@@ -42,14 +44,16 @@ it('loads each known demo once and passes only its config and wallet session', a
     './demo-assets/frontier.js',
     './demo-assets/outpost.js',
     './demo-assets/chess.js',
+    './demo-assets/microblog.js',
+    './demo-assets/bounties.js',
   ]);
-  expect(mount).toHaveBeenCalledTimes(4);
-  expect(mount).toHaveBeenLastCalledWith(containers.get('chess-demo'), {
+  expect(mount).toHaveBeenCalledTimes(6);
+  expect(mount).toHaveBeenLastCalledWith(containers.get('bounties-demo'), {
     session,
-    config: { contract: 'chess' },
+    config: { contract: 'bounties' },
   });
   await open('demos/unknown');
-  expect(fetcher).toHaveBeenCalledTimes(4);
+  expect(fetcher).toHaveBeenCalledTimes(6);
 });
 
 it('shows an unavailable demo and permits retry after configuration is enabled', async () => {

@@ -1,0 +1,11 @@
+# Microblog
+
+The node launcher mounts this app at `#/demos/microblog`. Reading is public. The shared wallet signs free plain-text posts and sends ordinary CAI test-token transfers after review; private keys never enter the app facade. Posts allow 280 Unicode code points and 2 KiB UTF-8. Post links use `?post=<id>` in the demo hash route.
+
+`bootMicroblog` stores a stable feed identity and an atomically replaced, fsynced `microblog/feed.json` under the launcher's data directory. Accepted posts and signed payment intents survive restart. The server saves each intent before the browser broadcasts and verifies the signed transfer, successful receipt and exact indexed block transaction before counting it. An unavailable receipt remains pending. There is no automatic broadcast after reload; use Wallet to retry an uncertain payment with the same bytes. A never-broadcast intent is harmless and remains pending. No seed examples, ranking, custody or platform fees.
+
+Authors can sign a hide request in **Manage your post**. The service's operator-only `hide(id)` and `block(address)` methods support local moderation; they have no unauthenticated public HTTP equivalent. Hidden posts return payment tombstones without text or the signed original. Hiding does not erase the local store, backups, downloaded copies or chain payments. Back up the entire microblog directory with restricted permissions. Before public operation, establish content removal and backup retention procedures.
+
+This MVP is for a local or trusted test network. Write limits are 30 requests/minute per connection source and 30 new records/minute per signing wallet. They are not Sybil protection. The durable store is loaded in memory and rewritten on mutation; migrate to an indexed transactional store when feed size warrants it. Only one process should own a feed directory. Confirmation follows the configured node rather than independent finality verification.
+
+Run `node node_modules/vitest/vitest.mjs run packages/wallet/test/microblog.test.ts packages/gateway/test/microblog.test.ts apps/microblog-web/test/tip-flow.test.ts` from the repository root. Build the embed with its Vite configuration after building the wallet package.

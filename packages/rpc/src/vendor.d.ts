@@ -7,7 +7,7 @@ declare module '@hyperswarm/rpc' {
   }
 
   interface HyperswarmRpcClient {
-    request(method: string, data: Buffer): Promise<Buffer>;
+    request(method: string, data: Buffer, options?: { timeout?: number }): Promise<Buffer>;
     destroy(): Promise<void>;
   }
 

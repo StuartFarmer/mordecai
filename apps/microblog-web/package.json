@@ -1,0 +1,19 @@
+{
+  "name": "@mordecai/example-microblog-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Signed public posts with verified direct CAI tips",
+  "scripts": {
+    "build": "vite build --config vite.embed.config.js"
+  },
+  "dependencies": {
+    "@mordecai/wallet": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

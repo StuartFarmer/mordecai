@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     // Tests exercise package sources directly instead of built dist output.
     alias: {
+      '@mordecai/wallet/microblog': fileURLToPath(
+        new URL('./packages/wallet/src/microblog.ts', import.meta.url),
+      ),
       '@mordecai/wallet/chess': fileURLToPath(
         new URL('./packages/wallet/src/chess.ts', import.meta.url),
       ),

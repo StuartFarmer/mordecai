@@ -20,13 +20,27 @@ the app's peers            app chain       same chain stack, per-app
 everyone (money)           L1              the settlement chain
 ```
 
-## The demo: an MMORTS across two chains
+## Try the node website
+
+```sh
+pnpm install && pnpm build
+node scripts/node-demo.mjs           # → http://127.0.0.1:8790
+```
+
+Create or load a wallet, back it up, claim test CAI from the faucet, and open
+**Demos**. Hex and Chess offer game rooms; Frontier is a shared land-and-trading
+world; Outpost focuses on goods orders and settlement. The
+[Microblog](docs/src/examples/microblog.md) lets readers tip authors, and
+[Bounties](docs/src/examples/bounties.md) lets people fund questions and award a
+response. The launcher keeps its data across restarts in `.mordecai-demo/`.
+
+## Outpost: goods, orders and settlement across two chains
 
 ![outpost — game on an app chain, market on L1, one wallet](docs/assets/outpost-ui.png)
 
-**Outpost** is a small MMORTS where the game runs on a **player-run app
-chain** (claim land, build, harvest — 300ms blocks, ~zero fees) and the
-**goods market runs on L1** (real currency, escrowed). One wallet identity
+**Outpost** is a goods exchange where production runs on a **player-run app
+chain** (claim land, build, harvest) and the
+**goods market runs on L1** (test CAI, escrowed). One wallet identity
 acts on both. The trade in that screenshot:
 
 1. **bob (L1)** escrows 1000 CAI for 10 wood — a good that _only exists

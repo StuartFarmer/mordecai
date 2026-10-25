@@ -1,0 +1,19 @@
+{
+  "name": "@mordecai/example-bounties-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Public funded information bounties on the shared test chain",
+  "scripts": {
+    "build": "vite build --config vite.embed.config.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "z32": "^1.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

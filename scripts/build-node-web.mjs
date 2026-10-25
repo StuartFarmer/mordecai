@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const builds = [
   ['packages/gateway', 'vite.config.js'],
-  ...['hex', 'frontier', 'outpost', 'chess'].map((name) => [
+  ...['hex', 'frontier', 'outpost', 'chess', 'microblog', 'bounties'].map((name) => [
     `apps/${name}-web`,
     'vite.embed.config.js',
   ]),

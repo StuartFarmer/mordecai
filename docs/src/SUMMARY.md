@@ -39,7 +39,9 @@
 - [The Marketplace Contract](examples/marketplace.md)
 - [Land: State Maps & Config](examples/land.md)
 - [Frontier in the Browser](examples/frontier-web.md)
-- [Outpost: An MMORTS Across Two Chains](examples/outpost.md)
+- [Outpost: Goods, Orders and Settlement](examples/outpost.md)
+- [Microblog: Posts and Tips](examples/microblog.md)
+- [Information Bounties](examples/bounties.md)
 
 # Reference
 

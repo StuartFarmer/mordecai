@@ -79,6 +79,8 @@ const LANDING_PATHS = new Set([
   '/demo-assets/frontier.js',
   '/demo-assets/outpost.js',
   '/demo-assets/chess.js',
+  '/demo-assets/microblog.js',
+  '/demo-assets/bounties.js',
 ]);
 
 const WALLET_FILES: Record<string, string> = {
@@ -175,7 +177,10 @@ export class Gateway {
       const path = url.pathname;
 
       if (
-        (path === '/api/demos/chess/rooms' || path.startsWith('/api/demos/chess/rooms/')) &&
+        (path === '/api/demos/chess/rooms' ||
+          path.startsWith('/api/demos/chess/rooms/') ||
+          path === '/api/demos/microblog' ||
+          path.startsWith('/api/demos/microblog/')) &&
         (await options.demoHandler?.(req, res, url))
       )
         return;

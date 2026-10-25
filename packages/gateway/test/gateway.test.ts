@@ -96,14 +96,15 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
-  it('mounts the Chess room handler without intercepting ordinary API requests', async () => {
+  it('mounts demo handlers only at their exact API namespaces', async () => {
     const paths: string[] = [];
     const gw = await Gateway.start({
       nodeKey: node.rpcPublicKey,
       bootstrap: testnet.bootstrap,
       demoHandler: async (_req, res, url) => {
         paths.push(url.pathname);
-        if (url.pathname !== '/api/demos/chess/rooms/test') return false;
+        if (!['/api/demos/chess/rooms/test', '/api/demos/microblog/posts'].includes(url.pathname))
+          return false;
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ room: 'test' }));
         return true;
@@ -117,7 +118,13 @@ describe('HTTP gateway to node RPC', () => {
       expect((await fetch(`${origin}/api/head`)).status).toBe(200);
       expect((await fetch(`${origin}/api/demos/chess/rooms/missing`)).status).toBe(404);
       expect((await fetch(`${origin}/api/demos/chess/roomsevil`)).status).toBe(404);
-      expect(paths).toEqual(['/api/demos/chess/rooms/test', '/api/demos/chess/rooms/missing']);
+      expect((await fetch(`${origin}/api/demos/microblog/posts`)).status).toBe(200);
+      expect((await fetch(`${origin}/api/demos/microblogevil/posts`)).status).toBe(404);
+      expect(paths).toEqual([
+        '/api/demos/chess/rooms/test',
+        '/api/demos/chess/rooms/missing',
+        '/api/demos/microblog/posts',
+      ]);
     } finally {
       await gw.close();
     }

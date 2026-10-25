@@ -190,6 +190,10 @@ if (nodeSite) {
   demos.set('outpost', await bootOutpost(context));
   const { bootChess } = await import('./lib/chess-demo.mjs');
   demos.set('chess', await bootChess(context));
+  const { bootMicroblog } = await import('./lib/microblog-demo.mjs');
+  demos.set('microblog', await bootMicroblog(context));
+  const { bootBounties } = await import('./lib/bounties-demo.mjs');
+  demos.set('bounties', await bootBounties(context));
 }
 
 // -------------------------------------------------- anchor daemon (settler)
@@ -296,7 +300,12 @@ const gateway = await Gateway.start({
   ...(nodeSite
     ? {
         faucetAmount: L1_GRANT,
-        demoHandler: demos.get('chess')?.handleRequest,
+        demoHandler: async (req, res, url) => {
+          for (const demo of demos.values()) {
+            if (await demo.handleRequest?.(req, res, url)) return true;
+          }
+          return false;
+        },
         networks: {
           ...Object.assign({}, ...[...demos.values()].map((demo) => demo.networks ?? {})),
           hex: {

@@ -1,0 +1,173 @@
+:host {
+  display: block;
+  color: #eae8df;
+  font-family: system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 50px;
+}
+h1 {
+  font-size: 42px;
+  letter-spacing: -1.5px;
+  margin: 8px 0;
+}
+h2 {
+  font-size: 22px;
+}
+.eyebrow {
+  letter-spacing: 2px;
+  font-size: 11px;
+  color: #b9c78d;
+}
+header > p:last-child,
+small,
+footer,
+.wallet,
+time {
+  color: #b8bdb4;
+}
+a {
+  color: #d4e8a7;
+}
+a:hover {
+  text-decoration: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+article,
+.composer,
+.tip,
+.empty {
+  border: 1px solid #394039;
+  border-radius: 14px;
+  padding: 22px;
+  margin: 20px 0;
+  background: #172019;
+}
+.composer {
+  background: #1d2921;
+}
+.composer label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+}
+textarea,
+input {
+  font: inherit;
+  width: 100%;
+  color: inherit;
+  background: #111a14;
+  border: 1px solid #4b594c;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0 14px;
+}
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+button {
+  background: #c1da91;
+  color: #162015;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: 600 14px system-ui;
+  cursor: pointer;
+  margin: 6px 0;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.secondary {
+  background: transparent;
+  border: 1px solid #65745d;
+  color: inherit;
+  margin-left: 12px;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #c1da91;
+  outline-offset: 4px;
+}
+.post {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 19px;
+  line-height: 1.6;
+}
+.author {
+  font-weight: 600;
+}
+time {
+  font-size: 12px;
+}
+code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 5px 0;
+}
+.tip {
+  border-color: #a8c379;
+}
+.error {
+  background: #4a2424;
+  padding: 14px;
+  border-radius: 8px;
+}
+.notice {
+  background: #25372c;
+  padding: 14px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+details {
+  font-size: 13px;
+  margin: 12px 0;
+}
+summary {
+  cursor: pointer;
+  color: #bdc8b5;
+}
+li {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+footer {
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 30px;
+}
+small {
+  font-weight: 400;
+}
+.empty {
+  text-align: center;
+  padding: 40px;
+}
+@media (max-width: 480px) {
+  main {
+    padding: 12px 0;
+  }
+  article,
+  .composer,
+  .tip {
+    padding: 16px;
+  }
+  h1 {
+    font-size: 34px;
+  }
+}

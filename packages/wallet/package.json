@@ -13,6 +13,10 @@
       "types": "./dist/browser.d.ts",
       "default": "./dist/browser.js"
     },
+    "./microblog": {
+      "types": "./dist/microblog.d.ts",
+      "default": "./dist/microblog.js"
+    },
     "./chess": {
       "types": "./dist/chess.d.ts",
       "default": "./dist/chess.js"

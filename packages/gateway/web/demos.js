@@ -4,6 +4,8 @@ export const DEMOS = {
   frontier: { title: 'Frontier', global: 'MordecaiFrontier' },
   outpost: { title: 'Outpost', global: 'MordecaiOutpost', network: '/api/demos/outpost' },
   chess: { title: 'Chess', global: 'MordecaiChess' },
+  microblog: { title: 'Microblog', global: 'MordecaiMicroblog' },
+  bounties: { title: 'Bounties', global: 'MordecaiBounties' },
 };
 
 export function createDemoLoader(doc, win, session, fetcher = fetch) {

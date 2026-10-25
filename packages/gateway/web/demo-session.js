@@ -1,5 +1,5 @@
 // Bundled demos receive a revocable transaction facade, never the wallet seed.
-export function createDemoSession(getWallet, send, signChess) {
+export function createDemoSession(getWallet, send, signChess, microblog = {}) {
   const listeners = new Set();
   let current = null;
   let player = null;
@@ -28,6 +28,18 @@ export function createDemoSession(getWallet, send, signChess) {
               if (!signChess) throw new Error('Chess signing is unavailable.');
               return signChess(next, message);
             },
+            ...Object.fromEntries(
+              Object.entries(microblog).map(([name, action]) => [
+                name,
+                async (...args) => {
+                  if (getWallet() !== next)
+                    throw new Error(
+                      'Wallet closed or changed. Open the current wallet to continue.',
+                    );
+                  return action(next, ...args);
+                },
+              ]),
+            ),
           }
         : null;
       for (const listener of listeners) listener();

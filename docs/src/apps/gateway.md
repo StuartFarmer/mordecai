@@ -37,6 +37,14 @@ starting an app network, joining an app, and signing and submitting a payment.
 The old `/guide`, `/guide/`, and `/guide.html` URLs redirect to that chapter.
 A custom `staticDir` replaces both the built-in homepage and documentation.
 
+`node scripts/node-demo.mjs` starts the persistent demo site on port 8790.
+Its Demos menu shares the in-memory wallet across Hex, Frontier, Outpost, Chess,
+Microblog and Bounties. Games receive a revocable signing/transaction interface,
+never the private key. Microblog posts are signed off-chain; tip attribution is
+stored before the browser broadcasts a reviewed payment. Bounty rewards and
+public responses live on the settlement chain. See the
+[Microblog](../examples/microblog.md) and [Bounties](../examples/bounties.md) guides.
+
 `pnpm build` builds the packages and bundles the book in
 `packages/gateway/public/docs/`. Install mdBook 0.5.2 on the build machine;
 running the built node needs no mdBook process. After documentation edits,

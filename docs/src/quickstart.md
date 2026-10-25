@@ -13,6 +13,19 @@ pnpm build        # typecheck + emit all packages and bundle documentation
 pnpm test         # the full suite: 150+ tests incl. multi-validator devnets
 ```
 
+## Try the browser demos
+
+After building, run `node scripts/node-demo.mjs` and open
+<http://127.0.0.1:8790>. Create or load a wallet in **Wallet**, download its backup,
+and claim test CAI in **Faucet**. The **Demos** menu includes Hex, Frontier,
+Outpost, Chess, [Microblog](examples/microblog.md), and
+[Bounties](examples/bounties.md). The same wallet works across every tab.
+
+The launcher preserves its chains, worlds, posts and deployment journal under
+`.mordecai-demo/`. Restarting keeps that state; do not delete it to update the UI.
+Wallet keys stay in the browser tab and must be loaded again after a page reload.
+Use another wallet or browser tab to play an opponent, tip an author, or answer a bounty.
+
 ## 1. Run a local devnet
 
 ```sh

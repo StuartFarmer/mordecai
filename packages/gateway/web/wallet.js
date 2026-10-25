@@ -5,6 +5,7 @@ import {
   exportBrowserWallet,
 } from '@mordecai/wallet/browser';
 import { signChessMessage } from '@mordecai/wallet/chess';
+import { signMicroblogPost, signMicroblogTip, signMicroblogHide } from '@mordecai/wallet/microblog';
 import { initNavigation } from './navigation.js';
 import { createDemoSession } from './demo-session.js';
 import { DEMOS, createDemoLoader } from './demos.js';
@@ -19,10 +20,18 @@ let backedUp = false;
 const transactions = new TransactionClient();
 let prepared = null;
 let working = false;
+let tipDraft = null;
 const demoClients = new Map();
 const clients = () => [transactions, ...demoClients.values()];
 const pendingClient = () => clients().find((client) => client.pending);
-const demoSession = createDemoSession(() => wallet, sendDemoTransaction, signDemoChessMessage);
+const demoSession = createDemoSession(() => wallet, sendDemoTransaction, signDemoChessMessage, {
+  signMicroblogPost: (current, input) => signDemoMicroblog(current, input, signMicroblogPost),
+  signMicroblogHide: (current, input) => signDemoMicroblog(current, input, signMicroblogHide),
+  signMicroblogTip: signDemoMicroblogTip,
+  prepareMicroblogTip,
+  submitMicroblogTip,
+  cancelMicroblogTip,
+});
 const openDemo = createDemoLoader(document, window, demoSession);
 
 function showWallet(next, saved = false) {
@@ -124,6 +133,7 @@ byId('wallet-close').addEventListener('click', () => {
     return;
   wallet?.seed.fill(0);
   wallet = null;
+  tipDraft = null;
   backedUp = false;
   byId('wallet-private').value = '';
   byId('wallet-address').textContent = '';
@@ -146,7 +156,7 @@ window.addEventListener('beforeunload', (event) => {
 });
 
 function updateControls() {
-  const locked = working || !!pendingClient();
+  const locked = working || !!pendingClient() || !!tipDraft;
   byId('wallet-actions').hidden = !wallet;
   byId('wallet-notice').hidden = !wallet;
   byId('transfer-fields').disabled = locked || !wallet;
@@ -193,7 +203,7 @@ function renderHistory() {
 }
 
 async function review(make) {
-  if (!wallet || working || pendingClient()) return;
+  if (!wallet || working || pendingClient() || tipDraft) return;
   working = true;
   clearReview();
   byId('tx-message').textContent = 'Preparing transaction…';
@@ -237,7 +247,7 @@ byId('tx-cancel').addEventListener('click', () => {
 });
 
 async function send(retry = false) {
-  if (working || (!retry && !prepared)) return;
+  if (working || tipDraft || (!retry && !prepared)) return;
   working = true;
   updateControls();
   byId('tx-message').textContent = 'Submitting transaction…';
@@ -281,7 +291,7 @@ async function refreshBalance() {
 
 async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFee) {
   if (wallet !== expectedWallet) throw new Error('Wallet changed.');
-  if (working || pendingClient())
+  if (working || pendingClient() || tipDraft)
     throw new Error('Another transaction is pending. Check Wallet before sending again.');
   if (base !== '' && !Object.values(DEMOS).some((demo) => demo.network === base))
     throw new Error('Unsupported demo network.');
@@ -300,17 +310,115 @@ async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFe
     const draft = await client.preparePayload(expectedWallet, payload, maxFee);
     if (draft.tx.chainId !== chainId) throw new Error('The demo network does not match this node.');
     draft.apiBase = base;
-    await client.submit(draft);
-    for (let i = 0; i < 60 && client.pending; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await client.checkPending();
-    }
-    const result = client.history[0];
-    if (result.status !== 'confirmed')
-      throw new Error(
-        result.error || `Transaction ${result.status}. Check Wallet before retrying.`,
-      );
-    return { success: true, hash: result.hash, height: Number(result.height), fee: result.fee };
+    return await confirmDemoTransaction(client, draft);
+  } finally {
+    working = false;
+    renderHistory();
+    void refreshBalance();
+  }
+}
+
+async function confirmDemoTransaction(client, draft) {
+  await client.submit(draft);
+  for (let i = 0; i < 60 && client.pending; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await client.checkPending();
+  }
+  const result = client.history[0];
+  if (result.status !== 'confirmed')
+    throw new Error(result.error || `Transaction ${result.status}. Check Wallet before retrying.`);
+  return { success: true, hash: result.hash, height: Number(result.height), fee: result.fee };
+}
+
+async function microblogConfig(expectedWallet) {
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  const response = await fetch('./api/config', {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error('Microblog configuration is unavailable.');
+  const config = (await response.json()).demos?.microblog;
+  if (!config) throw new Error('Microblog is unavailable on this node.');
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  return config;
+}
+
+async function signDemoMicroblog(expectedWallet, input, sign) {
+  const config = await microblogConfig(expectedWallet);
+  if (input.chainId !== config.chainId || input.feedId !== config.feedId)
+    throw new Error('The Microblog message does not match this node.');
+  return sign(expectedWallet, input);
+}
+
+async function signDemoMicroblogTip(expectedWallet, input) {
+  const message = { ...input };
+  if (
+    !tipDraft ||
+    tipDraft.wallet !== expectedWallet ||
+    tipDraft.public.hash !== message.transactionHash
+  )
+    throw new Error('Review a tip before signing its attribution.');
+  const reservation = tipDraft;
+  const signed = await signDemoMicroblog(expectedWallet, message, signMicroblogTip);
+  if (tipDraft !== reservation) throw new Error('The tip review was cancelled.');
+  return signed;
+}
+
+async function prepareMicroblogTip(expectedWallet, recipient, amountText) {
+  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (working || pendingClient() || tipDraft)
+    throw new Error(
+      'Another transaction or tip review is pending. Check Wallet or cancel the tip.',
+    );
+  if (recipient.trim() === expectedWallet.address) throw new Error('Choose another author to tip.');
+  working = true;
+  clearReview();
+  try {
+    const config = await microblogConfig(expectedWallet);
+    const draft = await transactions.prepareTransfer(expectedWallet, recipient, amountText);
+    if (draft.tx.chainId !== config.chainId)
+      throw new Error('The demo network does not match this node.');
+    const publicDraft = Object.freeze({
+      hash: draft.hash,
+      hex: draft.hex,
+      chainId: draft.tx.chainId,
+      recipient: recipient.trim(),
+      amount: draft.tx.payload.amount.toString(),
+      maxFee: draft.tx.maxFee.toString(),
+    });
+    tipDraft = { wallet: expectedWallet, draft, public: publicDraft };
+    byId('tx-message').textContent =
+      'A tip is awaiting review. Open Demos → Microblog to send or cancel it.';
+    return publicDraft;
+  } finally {
+    working = false;
+    updateControls();
+  }
+}
+
+function cancelMicroblogTip(expectedWallet, preparedTip) {
+  if (tipDraft?.wallet === expectedWallet && tipDraft.public === preparedTip && !working) {
+    tipDraft = null;
+    byId('tx-message').textContent = 'Tip review cancelled. Nothing was sent.';
+    updateControls();
+  }
+}
+
+async function submitMicroblogTip(expectedWallet, preparedTip) {
+  if (
+    wallet !== expectedWallet ||
+    !tipDraft ||
+    tipDraft.wallet !== expectedWallet ||
+    tipDraft.public !== preparedTip
+  )
+    throw new Error('This tip review expired. Review the tip again.');
+  if (working || pendingClient()) throw new Error('Another transaction is pending. Check Wallet.');
+  const { draft } = tipDraft;
+  tipDraft = null;
+  working = true;
+  updateControls();
+  try {
+    return await confirmDemoTransaction(transactions, draft);
   } finally {
     working = false;
     renderHistory();
