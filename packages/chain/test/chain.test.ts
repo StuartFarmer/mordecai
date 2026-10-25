@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { encodeAddress, generateSeed, keyPairFromSeed, sign, type KeyPair } from '@mordecai/crypto';
-import { transactionSigningBytes, type Payload, type Transaction } from '@mordecai/protocol';
+import {
+  encodeTransaction,
+  transactionSigningBytes,
+  type Payload,
+  type Transaction,
+} from '@mordecai/protocol';
 import {
   Chain,
   ChainError,
@@ -204,6 +209,28 @@ describe('applyBlock (follower replay)', () => {
     await follower.applyBlock(block);
     await expect(follower.applyBlock(block)).rejects.toThrow(/bad height/);
   });
+
+  it('supports parallel transaction signature verification on follower replay', async () => {
+    const producer = await openChain(genesis());
+    const follower = await Chain.open(tmp(), genesis(), { signatureVerificationConcurrency: 2 });
+    cleanups.push(() => follower.close());
+    const { block } = await producer.produceBlock(
+      [transfer(alice, 0n, bob.publicKey, 5_000n)],
+      val,
+      1_000n,
+    );
+
+    await follower.applyBlock(block);
+    expect(follower.headHash).toEqual(producer.headHash);
+
+    const badFollower = await Chain.open(tmp(), genesis(), { signatureVerificationConcurrency: 2 });
+    cleanups.push(() => badFollower.close());
+    const badBlock = {
+      ...block,
+      txs: [{ ...block.txs[0]!, signature: new Uint8Array(64) }],
+    };
+    await expect(badFollower.applyBlock(badBlock)).rejects.toThrow(/invalid signature/);
+  });
 });
 
 describe('persistence', () => {
@@ -232,6 +259,20 @@ describe('persistence', () => {
 });
 
 describe('mempool', () => {
+  it('does not admit a different chain ID by stripping a signed BOM', async () => {
+    const mempool = new Mempool(await openChain(genesis()));
+    const tx = signedTx(
+      alice,
+      0n,
+      { kind: 'transfer', to: bob.publicKey, amount: 1n },
+      {
+        chainId: `\uFEFF${CHAIN_ID}`,
+      },
+    );
+    await expect(mempool.addEncoded(encodeTransaction(tx))).rejects.toThrow(/wrong chain id/);
+    expect(mempool.size).toBe(0);
+  });
+
   it('admits, orders, and prunes transactions', async () => {
     const chain = await openChain(genesis());
     const mempool = new Mempool(chain);

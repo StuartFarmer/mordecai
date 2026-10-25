@@ -91,6 +91,8 @@ export class MemoryStore implements StateStore {
 
 export class LevelStore implements StateStore {
   private readonly db: ClassicLevel<Buffer, Buffer>;
+  private readonly cache = new Map<string, Uint8Array | null>();
+  private readonly maxCacheEntries = 100_000;
 
   constructor(path: string) {
     this.db = new ClassicLevel<Buffer, Buffer>(path, {
@@ -99,29 +101,73 @@ export class LevelStore implements StateStore {
     });
   }
 
+  private cacheKey(key: Uint8Array): string {
+    return Buffer.from(key).toString('hex');
+  }
+
+  private readCached(
+    keyHex: string,
+  ): { hit: true; value: Uint8Array | undefined } | { hit: false } {
+    if (!this.cache.has(keyHex)) return { hit: false };
+    const value = this.cache.get(keyHex)!;
+    this.cache.delete(keyHex);
+    this.cache.set(keyHex, value);
+    return { hit: true, value: value === null ? undefined : value.slice() };
+  }
+
+  private remember(keyHex: string, value: Uint8Array | null): void {
+    this.cache.delete(keyHex);
+    this.cache.set(keyHex, value === null ? null : value.slice());
+    while (this.cache.size > this.maxCacheEntries) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest === undefined) break;
+      this.cache.delete(oldest);
+    }
+  }
+
   async get(key: Uint8Array): Promise<Uint8Array | undefined> {
+    const keyHex = this.cacheKey(key);
+    const cached = this.readCached(keyHex);
+    if (cached.hit) return cached.value;
+
     try {
       const value = await this.db.get(Buffer.from(key));
-      return value === undefined ? undefined : new Uint8Array(value);
+      const bytes = value === undefined ? undefined : new Uint8Array(value);
+      this.remember(keyHex, bytes ?? null);
+      return bytes;
     } catch (err) {
-      if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') return undefined;
+      if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') {
+        this.remember(keyHex, null);
+        return undefined;
+      }
       throw err;
     }
   }
 
   getSync(key: Uint8Array): Uint8Array | undefined {
+    const keyHex = this.cacheKey(key);
+    const cached = this.readCached(keyHex);
+    if (cached.hit) return cached.value;
+
     try {
       const value = this.db.getSync(Buffer.from(key));
-      return value === undefined ? undefined : new Uint8Array(value);
+      const bytes = value === undefined ? undefined : new Uint8Array(value);
+      this.remember(keyHex, bytes ?? null);
+      return bytes;
     } catch (err) {
-      if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') return undefined;
+      if ((err as { code?: string }).code === 'LEVEL_NOT_FOUND') {
+        this.remember(keyHex, null);
+        return undefined;
+      }
       throw err;
     }
   }
 
   async applyChanges(changes: Iterable<Change>): Promise<void> {
     const ops = [];
+    const cacheUpdates: [string, Uint8Array | null][] = [];
     for (const [key, value] of changes) {
+      cacheUpdates.push([this.cacheKey(key), value === null ? null : value]);
       ops.push(
         value === null
           ? ({ type: 'del', key: Buffer.from(key) } as const)
@@ -129,6 +175,7 @@ export class LevelStore implements StateStore {
       );
     }
     await this.db.batch(ops);
+    for (const [keyHex, value] of cacheUpdates) this.remember(keyHex, value);
   }
 
   async *entries(): AsyncIterable<[Uint8Array, Uint8Array]> {

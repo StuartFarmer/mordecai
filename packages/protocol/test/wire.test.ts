@@ -88,6 +88,13 @@ describe('Writer/Reader primitives', () => {
     expect(() => r.string(10)).toThrow(/UTF-8/);
   });
 
+  it('preserves leading BOM characters so signed strings round-trip unchanged', () => {
+    const w = new Writer();
+    w.string('\uFEFFchain', 32);
+    const decoded = new Reader(w.finish()).string(32);
+    expect(decoded).toBe('\uFEFFchain');
+  });
+
   it('reads correctly from an offset view into a larger buffer', () => {
     const backing = new Uint8Array(16).fill(0xaa);
     const view = backing.subarray(4, 12);

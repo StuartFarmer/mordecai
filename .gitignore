@@ -8,3 +8,8 @@ target/
 !contracts/dist/*.wasm
 compiler/build/
 docs/book/
+
+# Terminal Paste Image folder
+.cp-images/
+/benchmark-results
+.railway-test/

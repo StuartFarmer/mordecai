@@ -16,7 +16,8 @@ export class WireError extends Error {
 }
 
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+// Preserve BOM characters: decoded fields must encode back to the signed bytes.
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 const U32_MAX = 0xffffffff;
 const U64_MAX = 0xffffffffffffffffn;
@@ -191,6 +192,17 @@ export class Reader {
 
   remaining(): number {
     return this.buf.length - this.off;
+  }
+
+  position(): number {
+    return this.off;
+  }
+
+  slice(start: number, end: number): Uint8Array {
+    if (start < 0 || end < start || end > this.buf.length) {
+      throw new WireError(`invalid slice ${start}..${end}`);
+    }
+    return this.buf.slice(start, end);
   }
 
   /** Canonicality check: every byte of input must have been consumed. */

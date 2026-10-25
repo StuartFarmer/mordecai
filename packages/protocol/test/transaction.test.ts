@@ -9,6 +9,7 @@ import {
   decodeTransaction,
   encodeTransaction,
   transactionSigningBytes,
+  transactionSigningBytesFromEncoded,
   type AnchorPayload,
   type Transaction,
 } from '../src/index.js';
@@ -49,6 +50,13 @@ describe('transaction encoding', () => {
     const a = transferTx();
     const b = { ...a, signature: fill(64, 0x00) };
     expect(transactionSigningBytes(a)).toEqual(transactionSigningBytes(b));
+  });
+
+  it.each(allFixtures)('derives %s signing bytes from encoded transaction bytes', (_name, make) => {
+    const tx = make();
+    expect(transactionSigningBytesFromEncoded(encodeTransaction(tx))).toEqual(
+      transactionSigningBytes(tx),
+    );
   });
 
   it('signing bytes change with any unsigned field', () => {
