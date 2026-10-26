@@ -18,9 +18,9 @@
         <a href="#/" data-route="home" aria-current="page">Home</a>
         <a href="#/wallet" data-route="wallet">Wallet</a>
         <a href="#/faucet" data-route="faucet">Faucet</a>
-        <details class="demo-menu">
+        <details class="nav-menu" name="main-menu">
           <summary>Demos</summary>
-          <div class="demo-menu-links">
+          <div class="nav-menu-links">
             <a href="#/demos/hex" data-route="demos/hex">Hex</a>
             <a href="#/demos/frontier" data-route="demos/frontier">Frontier</a>
             <a href="#/demos/outpost" data-route="demos/outpost">Outpost</a>
@@ -29,10 +29,17 @@
             <a href="#/demos/bounties" data-route="demos/bounties">Bounties</a>
           </div>
         </details>
-        <a href="./docs/" target="_blank" rel="noopener" title="Opens in a new tab"
-          >Documentation</a
-        >
-        <a href="./api/head" target="_blank" rel="noopener" title="Opens in a new tab">API</a>
+        <details class="nav-menu" name="main-menu">
+          <summary>About</summary>
+          <div class="nav-menu-links">
+            <a href="#/about/manifesto" data-route="about/manifesto">Manifesto</a>
+            <a href="#/about/design" data-route="about/design">Design</a>
+            <a href="./docs/" target="_blank" rel="noopener" title="Opens in a new tab"
+              >Documentation</a
+            >
+            <a href="./api/head" target="_blank" rel="noopener" title="Opens in a new tab">API</a>
+          </div>
+        </details>
         <a
           href="https://github.com/StuartFarmer/mordecai"
           target="_blank"
@@ -68,6 +75,71 @@
           Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
           ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
           ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        </p>
+      </section>
+      <section data-page="about/manifesto" aria-labelledby="manifesto-title" hidden>
+        <h1 id="manifesto-title" tabindex="-1">Manifesto</h1>
+        <p class="tagline">P2P toolkit for a distributed world.</p>
+        <p class="intro">
+          Software should give people the means to build and run things together. A community should
+          be able to keep its conversations, markets, and games alive through the people who use
+          them. Identity, payments, and distribution should be tools they can carry with them.
+        </p>
+        <p class="intro">
+          Mordecai exists to make that kind of software easier to build. It brings peer-to-peer
+          networking, shared data, wallets, and programmable agreements into one toolkit. Developers
+          can build applications whose participants help run the network, share its data, and verify
+          its rules.
+        </p>
+        <p class="intro">
+          The idea is simple: keep everyday activity between the people involved, and use shared
+          consensus where agreement matters. A conversation can travel directly between peers. A
+          game can run among its players. Payments and ownership can settle on a common chain. Each
+          part does the work it needs to do.
+        </p>
+        <p class="intro">
+          Mordecai is a work in progress. These demos are a place to try the tools, question the
+          design, and help shape what comes next.
+        </p>
+      </section>
+      <section data-page="about/design" aria-labelledby="design-title" hidden>
+        <h1 id="design-title" tabindex="-1">Design</h1>
+        <p class="tagline">Start with one question: who needs to agree?</p>
+        <h2 class="intro">Data between peers</h2>
+        <p>
+          Holepunch connects peers over encrypted connections. Hypercore feeds provide signed,
+          append-only histories that interested peers can replicate. Conversations, documents, and
+          application content can be shared without asking the whole network to agree on every
+          update.
+        </p>
+        <h2 class="intro">Agreement within an app</h2>
+        <p>
+          When participants need a shared order of events, an application can run its own chain. Its
+          validators execute the same rules and agree on the result. Games and shared worlds can use
+          this layer for state that matters to their participants.
+        </p>
+        <h2 class="intro">A common settlement layer</h2>
+        <p>
+          The settlement chain handles CAI payments, ownership, escrow, and contracts. App chains
+          can submit results signed by their registered validator quorum to settle an agreement.
+          Payments stay on the settlement chain; the result is trusted to that app's quorum.
+        </p>
+        <h2 class="intro">One identity across applications</h2>
+        <p>
+          An Ed25519 wallet gives a person a signing identity they can use across apps. The SDK
+          connects that identity to payments, contracts, and peer-to-peer data. Contracts run as
+          deterministic WebAssembly, with Rust and a Python-like contract language available to
+          developers.
+        </p>
+        <h2 class="intro">This website is a gateway</h2>
+        <p>
+          The browser signs with your wallet and talks to this node over HTTP. The hosted demo runs
+          its validators together on one host and uses test CAI. It lets you explore the toolkit;
+          independent peers and validators are part of running a distributed network.
+        </p>
+        <p class="intro">
+          Read more in the <a href="./docs/architecture/overview.html">architecture guide</a> and
+          <a href="./docs/architecture/app-chains.html">app-chain design</a>.
         </p>
       </section>
       <section id="wallet" data-page="wallet" aria-labelledby="wallet-title" hidden>

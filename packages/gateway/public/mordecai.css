@@ -294,13 +294,13 @@ h3 {
   font-size: 16px;
 }
 
-.demo-menu {
+.nav-menu {
   position: relative;
 }
-.demo-menu summary {
+.nav-menu summary {
   color: #ffcc66;
 }
-.demo-menu-links {
+.nav-menu-links {
   position: absolute;
   z-index: 2;
   top: 100%;
@@ -312,7 +312,7 @@ h3 {
   background: #171e26;
   box-shadow: 0 8px 20px #0006;
 }
-.demo-menu-links a {
+.nav-menu-links a {
   display: block;
   padding: 6px;
 }
@@ -323,10 +323,10 @@ main:has([data-page^='demos/']:not([hidden])) {
   .status-bar nav {
     position: relative;
   }
-  .demo-menu {
+  .nav-menu {
     position: static;
   }
-  .demo-menu-links {
+  .nav-menu-links {
     left: auto;
     right: 0;
   }

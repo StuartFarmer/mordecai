@@ -18,7 +18,13 @@ export function initNavigation(doc = document, win = window, onChange = () => {}
     }
     const title = route.startsWith('demos/')
       ? DEMOS[route.slice(6)]?.title
-      : { home: 'Node', wallet: 'Wallet', faucet: 'Faucet' }[route];
+      : {
+          home: 'Node',
+          wallet: 'Wallet',
+          faucet: 'Faucet',
+          'about/manifesto': 'Manifesto',
+          'about/design': 'Design',
+        }[route];
     doc.title = `Mordecai — ${title ?? 'Node'}`;
     for (const menu of doc.querySelectorAll('nav details')) menu.open = false;
     onChange(route);
