@@ -331,3 +331,61 @@ main:has([data-page^='demos/']:not([hidden])) {
     right: 0;
   }
 }
+
+main:has(.chain-browser:not([hidden])) {
+  max-width: 1120px;
+}
+.chain-browser {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.chain-browser h2 {
+  font-size: 22px;
+}
+.chain-browser p,
+.chain-browser dl,
+.chain-browser form,
+.chain-browser table,
+.chain-browser details {
+  margin: 16px 0;
+}
+.chain-browser dd {
+  margin-bottom: 12px;
+}
+.chain-browser table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+.chain-browser th,
+.chain-browser td {
+  min-width: 100px;
+  max-width: 280px;
+  padding: 8px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid #323a44;
+}
+.chain-browser select {
+  font: inherit;
+  color: inherit;
+  background: #171e26;
+  border: 1px solid #596473;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.chain-browser select:focus-visible {
+  outline: 2px solid #ffcc66;
+  outline-offset: 3px;
+}
+.chain-browser input {
+  width: 100%;
+}
+.chain-browser [role='alert'] {
+  color: #e6b38b;
+}
+.chain-browser a + a {
+  margin-left: 16px;
+}

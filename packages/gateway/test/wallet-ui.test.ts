@@ -15,32 +15,40 @@ interface MockElement {
   replaceChildren(): void;
 }
 
+function walletDOM() {
+  const elements = new Map<string, MockElement>();
+  const get = (id: string): MockElement => {
+    if (!elements.has(id))
+      elements.set(id, {
+        value: '',
+        textContent: '',
+        hidden: ['wallet-account', 'tx-review'].includes(id),
+        events: {},
+        addEventListener(name: string, fn: Handler) {
+          this.events[name] = fn;
+        },
+        querySelector: () => get(`${id}-button`),
+        focus: vi.fn(),
+        reset: vi.fn(),
+        replaceChildren: vi.fn(),
+      });
+    return elements.get(id)!;
+  };
+  return get;
+}
+
 // Minimal DOM for exercising the real wallet entry's lifecycle, without a browser dependency.
 afterEach(() => vi.unstubAllGlobals());
 it.each([false, true])(
   'keeps the account key through registration and clears it on close (interrupted: %s)',
   async (interrupted) => {
-    const elements = new Map<string, MockElement>();
-    const get = (id: string): MockElement => {
-      if (!elements.has(id))
-        elements.set(id, {
-          value: '',
-          textContent: '',
-          hidden: ['wallet-account', 'tx-review'].includes(id),
-          events: {} as Record<string, Handler>,
-          addEventListener(name: string, fn: Handler) {
-            this.events[name] = fn;
-          },
-          querySelector() {
-            return get(`${id}-button`);
-          },
-          focus: vi.fn(),
-          reset: vi.fn(),
-          replaceChildren: vi.fn(),
-        });
-      return elements.get(id)!;
-    };
-    vi.stubGlobal('document', { getElementById: get, querySelectorAll: () => [] });
+    const get = walletDOM();
+    // The standalone account page has no explorer containers or SPA sections.
+    vi.stubGlobal('document', {
+      getElementById: (id: string) =>
+        ['explorer-content', 'apps-content'].includes(id) ? null : get(id),
+      querySelectorAll: () => [],
+    });
     vi.stubGlobal('window', { addEventListener: vi.fn(), confirm: () => true });
     vi.stubGlobal('setTimeout', () => 0);
     const registrations: unknown[] = [];
@@ -117,3 +125,99 @@ it.each([false, true])(
     expect(get('wallet-generate').focus).toHaveBeenCalled();
   },
 );
+
+it('opens explorer reads without signing and preserves a loaded account across site navigation', async () => {
+  const get = walletDOM();
+  class Content {
+    children: Content[] = [];
+    text = '';
+    value = '';
+    set textContent(value: string) {
+      this.text = value;
+      this.children = [];
+    }
+    get textContent(): string {
+      return this.text + this.children.map((child) => child.textContent).join(' ');
+    }
+    append(...children: Content[]) {
+      this.children.push(...children);
+    }
+    replaceChildren(...children: Content[]) {
+      this.text = '';
+      this.children = children;
+    }
+    setAttribute() {}
+    addEventListener() {}
+  }
+  const explorer = new Content();
+  const apps = new Content();
+  const views = ['home', 'account', 'explorer', 'apps'].map((route) => ({
+    dataset: { page: route },
+    hidden: true,
+    querySelector: () => ({ focus() {} }),
+  }));
+  const events: Record<string, () => void> = {};
+  const win = {
+    location: { hash: '#/explorer?height=0' },
+    addEventListener: (name: string, handler: () => void) => (events[name] = handler),
+    scrollTo() {},
+    confirm: () => true,
+  };
+  vi.stubGlobal('document', {
+    getElementById: (id: string) =>
+      id === 'explorer-content' ? explorer : id === 'apps-content' ? apps : get(id),
+    querySelectorAll: (selector: string) => (selector === '[data-page]' ? views : []),
+    addEventListener() {},
+    createElement: () => new Content(),
+  });
+  vi.stubGlobal('window', win);
+  vi.stubGlobal('setTimeout', () => 0);
+  const requests: { url: string; method: string }[] = [];
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    requests.push({ url, method: init?.method || 'GET' });
+    if (url === './api/accounts') return Response.json({ enabled: true });
+    if (url === './api/config') return Response.json({ demos: {} });
+    if (url.startsWith('./api/apps?')) return Response.json({ apps: [], nextAfter: null });
+    if (url === './api/block/0')
+      return Response.json({
+        hash: 'ab'.repeat(32),
+        header: {
+          version: 1,
+          chainId: 'test',
+          height: '0',
+          prevHash: '00'.repeat(32),
+          timestampMs: '1750000000000',
+          proposer: 'test-validator',
+          stateRoot: 'cd'.repeat(32),
+          txsRoot: 'ef'.repeat(32),
+        },
+        txs: [],
+      });
+    return Response.json(
+      url.endsWith('/head') ? { chainId: 'test' } : { balance: '1000000', nonce: '0' },
+    );
+  });
+  vi.resetModules();
+  await import('../web/wallet.js');
+  await vi.waitFor(() => expect(explorer.textContent).toContain('Block 0'));
+  expect(get('wallet-account').hidden).toBe(true);
+  expect(get('wallet-private').value).toBe('');
+  expect(requests.some((request) => request.method !== 'GET')).toBe(false);
+
+  win.location.hash = '#/account';
+  events.hashchange!();
+  get('wallet-key').value = '01'.repeat(32);
+  get('wallet-load').events.submit({ preventDefault() {} });
+  await vi.waitFor(() => expect(get('wallet-balance').textContent).toContain('1,000,000'));
+  const key = get('wallet-private').value;
+  const address = get('wallet-address').textContent;
+  for (const hash of ['#/apps', '#/explorer?height=0', '#/', '#/account']) {
+    win.location.hash = hash;
+    events.hashchange!();
+    expect(get('wallet-private').value === key).toBe(true);
+    expect(get('wallet-address').textContent).toBe(address);
+    expect(get('wallet-account').hidden).toBe(false);
+  }
+  await vi.waitFor(() => expect(apps.textContent).toContain('Registered apps'));
+  expect(requests.some((request) => request.method !== 'GET')).toBe(false);
+});

@@ -1,12 +1,18 @@
 import RPC from '@hyperswarm/rpc';
-import type { Chain, Mempool } from '@mordecai/chain';
+import type { AppEntry, Chain, Mempool } from '@mordecai/chain';
 import { blockHash } from '@mordecai/chain';
 import { decodeAddress, encodeAddress, type KeyPair } from '@mordecai/crypto';
-import { decodeTransaction, encodeTransaction, type Transaction } from '@mordecai/protocol';
+import {
+  decodeTransaction,
+  encodeTransaction,
+  MAX_APP_ID_BYTES,
+  type Transaction,
+} from '@mordecai/protocol';
 import type {
   AccountInfo,
   AnchorInfo,
   AppInfo,
+  AppPage,
   BlockInfo,
   ContractStateEntry,
   HeadInfo,
@@ -17,6 +23,18 @@ import type {
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');
 const fromHex = (h: string) => new Uint8Array(Buffer.from(h, 'hex'));
+
+function appInfo(appId: string, entry: AppEntry): AppInfo {
+  return {
+    appId,
+    owner: encodeAddress(entry.owner),
+    pearKey: hex(entry.pearKey),
+    version: entry.version,
+    contractAddress: hex(entry.contractAddress),
+    metadataHash: hex(entry.metadataHash),
+    chainValidators: entry.chainValidators.map(hex),
+  };
+}
 
 export interface RpcServerOptions {
   bootstrap?: { host: string; port: number }[];
@@ -181,15 +199,27 @@ export class NodeRpcServer {
 
     respond<AppInfo | null>('get_app', async (params: { appId: string }) => {
       const entry = await deps.chain.getApp(params.appId);
-      if (!entry) return null;
+      return entry ? appInfo(params.appId, entry) : null;
+    });
+
+    respond<AppPage>('get_apps', async (params: { after?: string; limit?: number }) => {
+      if (
+        params.after !== undefined &&
+        (typeof params.after !== 'string' ||
+          params.after.length === 0 ||
+          Buffer.byteLength(params.after, 'utf8') > MAX_APP_ID_BYTES)
+      )
+        throw new Error(
+          `after must be a nonempty app ID of at most ${MAX_APP_ID_BYTES} UTF-8 bytes`,
+        );
+      const limit = params.limit === undefined ? 50 : params.limit;
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new Error('limit must be an integer between 1 and 100');
+      }
+      const page = await deps.chain.listApps({ ...params, limit });
       return {
-        appId: params.appId,
-        owner: encodeAddress(entry.owner),
-        pearKey: hex(entry.pearKey),
-        version: entry.version,
-        contractAddress: hex(entry.contractAddress),
-        metadataHash: hex(entry.metadataHash),
-        chainValidators: entry.chainValidators.map(hex),
+        apps: page.apps.map(({ appId, entry }) => appInfo(appId, entry)),
+        nextAfter: page.nextAfter,
       };
     });
 

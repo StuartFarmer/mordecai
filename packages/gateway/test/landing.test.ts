@@ -1,6 +1,41 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { expect, it, vi } from 'vitest';
+import { initNavigation } from '../web/navigation.js';
+
+it('makes the built-in explorer and app directory reachable through focusable site sections', () => {
+  const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  const views = [
+    ...html.matchAll(/<section\b([^>]*\bdata-page="([^"]+)"[^>]*)>([\s\S]*?)<\/section>/g),
+  ].map(([, attrs, route, body]) => ({
+    dataset: { page: route },
+    hidden: /\bhidden\b/.test(attrs!),
+    body: body!,
+    querySelector: () => ({ focus: vi.fn() }),
+  }));
+  const links = [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*data-route="([^"]+)"[^>]*>/g)].map(
+    ([, href, route]) => ({
+      href: href!,
+      dataset: { route },
+      setAttribute() {},
+      removeAttribute() {},
+    }),
+  );
+  for (const route of ['explorer', 'apps']) {
+    const link = links.find((item) => item.dataset.route === route);
+    expect(link).toBeDefined();
+    const doc = {
+      title: '',
+      querySelectorAll: (selector: string) =>
+        selector === '[data-page]' ? views : selector === '[data-route]' ? links : [],
+    };
+    initNavigation(doc, { location: { hash: link!.href }, addEventListener() {} });
+    const current = views.filter((view) => !view.hidden);
+    expect(current.map((view) => view.dataset.page)).toEqual([route]);
+    expect(current[0]!.body).toMatch(/<h1\b[^>]*tabindex="-1"/);
+    expect(current[0]!.body).toContain(`id="${route}-content"`);
+  }
+});
 
 it('updates the readout, clears stale data on failure, and recovers on the next poll', async () => {
   const elements = Object.fromEntries(

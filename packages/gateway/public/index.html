@@ -16,6 +16,8 @@
       <nav aria-label="Main navigation">
         <a href="#/" data-route="home" aria-current="page">Home</a>
         <a href="#/account" data-route="account">Account</a>
+        <a href="#/explorer" data-route="explorer">Explorer</a>
+        <a href="#/apps" data-route="apps">Apps</a>
         <details class="nav-menu" name="main-menu">
           <summary>Demos</summary>
           <div class="nav-menu-links">
@@ -139,6 +141,24 @@
           Read more in the <a href="./docs/architecture/overview.html">architecture guide</a> and
           <a href="./docs/architecture/app-chains.html">app-chain design</a>.
         </p>
+      </section>
+      <section data-page="explorer" class="chain-browser" aria-labelledby="explorer-title" hidden>
+        <h1 id="explorer-title" tabindex="-1">Explorer</h1>
+        <p class="tagline">Browse Settlement (L0) blocks and transactions without an account.</p>
+        <p class="intro">
+          Choose an app through <a href="#/apps">Apps</a> to explore its chain. Data is reported by
+          this node and its connected peers; this browser does not independently verify consensus.
+        </p>
+        <div id="explorer-content" class="intro"></div>
+      </section>
+      <section data-page="apps" class="chain-browser" aria-labelledby="apps-title" hidden>
+        <h1 id="apps-title" tabindex="-1">Apps</h1>
+        <p class="tagline">Registered apps and their latest settlement anchors.</p>
+        <p class="intro">
+          App history depends on available peers. Registration and settlement anchors remain
+          readable when app peers are unavailable.
+        </p>
+        <div id="apps-content" class="intro"></div>
       </section>
       <section id="wallet" data-page="account" aria-labelledby="wallet-title" hidden>
         <h1 id="wallet-title" tabindex="-1">Account</h1>

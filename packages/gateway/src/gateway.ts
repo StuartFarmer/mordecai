@@ -3,10 +3,12 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeRpcClient, RpcError } from '@mordecai/rpc';
+import { MAX_APP_ID_BYTES } from '@mordecai/protocol';
 import type { Wallet } from '@mordecai/wallet';
 import { Faucet, FaucetError } from './faucet.js';
 import { assertSameOrigin, clientIp } from './request-context.js';
 import { Accounts } from './accounts.js';
+import { readAppChain, type AppReadRequest } from './explorer.js';
 
 /**
  * Browser-facing edge of the network (web tier of the frontend-flow design):
@@ -17,10 +19,17 @@ import { Accounts } from './accounts.js';
  *
  *   GET  /api/config                       → the operator-provided app config
  *   GET  /api/head                         → chain head
+ *   GET  /api/block/<height>               → block header + encoded transactions
+ *   GET  /api/apps[?after=<id>&limit=<n>]  → registered apps page
  *   GET  /api/account/<z32 address>        → balance + nonce
  *   GET  /api/tx/<hash hex>                → tx status or 404
  *   POST /api/tx        {"tx": "<hex>"}    → {"hash": "<hex>"} (signed, encoded tx)
  *   GET  /api/app/<appId>                  → registry entry + latest anchor
+ *   GET  /api/app/<appId>/chain/{head,block/<height>,tx/<hash>}
+ *                                          → registered app-chain reads
+ *   GET  /api/app?appId=<id>               → registry entry + latest anchor
+ *   GET  /api/app/chain/{head,block/<height>,tx/<hash>}?appId=<id>
+ *                                          → query aliases for dot-only IDs
  *   GET  /api/contract/<id hex>/state[?prefix=<hex>]
  *                                          → [{key, value}] storage entries
  *
@@ -73,6 +82,7 @@ const MIME: Record<string, string> = {
 };
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
+const EXPLORER_READ_TIMEOUT = 5000;
 const LANDING_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const DOCS_DIR = join(LANDING_DIR, 'docs');
 const LANDING_PATHS = new Set([
@@ -155,6 +165,7 @@ export class Gateway {
           name,
           {
             rpc: client,
+            bootstrap: network.bootstrap,
             faucet: network.faucet
               ? new Faucet(client, network.faucet, network.faucetAmount)
               : undefined,
@@ -162,6 +173,28 @@ export class Gateway {
         ] as const;
       }),
     );
+    const config = options.config;
+    const demos =
+      config &&
+      typeof config === 'object' &&
+      'demos' in config &&
+      config.demos &&
+      typeof config.demos === 'object'
+        ? config.demos
+        : {};
+    const appMounts = new Map(
+      Object.entries(demos).flatMap(([name, demo]) => {
+        const network = networks.get(name);
+        return network &&
+          demo &&
+          typeof demo === 'object' &&
+          'appId' in demo &&
+          typeof demo.appId === 'string'
+          ? [[demo.appId, network] as const]
+          : [];
+      }),
+    );
+    let activeAppReads = 0;
     const networkClients = [...networks.values()].map((network) => network.rpc);
     if (options.accountsDir && !options.faucet)
       throw new Error('Account registration requires a funding key');
@@ -298,6 +331,16 @@ export class Gateway {
       json(res, 404, { error: 'not found' });
     };
 
+    const readAppDetails = async (
+      res: ServerResponse,
+      client: NodeRpcClient,
+      id: string,
+    ): Promise<void> => {
+      const [entry, anchor] = await Promise.all([client.getApp(id), client.getAppAnchor(id)]);
+      if (!entry) return json(res, 404, { error: `app not registered: ${id}` });
+      return json(res, 200, { ...entry, anchor });
+    };
+
     const handleApi = async (
       req: IncomingMessage,
       res: ServerResponse,
@@ -306,6 +349,15 @@ export class Gateway {
       rpc: NodeRpcClient,
       faucet: Faucet | undefined,
     ): Promise<void> => {
+      if (
+        path === '/api/apps' ||
+        path.startsWith('/api/apps/') ||
+        path === '/api/block' ||
+        path.startsWith('/api/block/') ||
+        path === '/api/app' ||
+        /^\/api\/app\/[^/]+\//.test(path)
+      )
+        return handleExplorer(req, res, path, url, rpc);
       try {
         if (accounts && path === '/api/faucet')
           return json(res, req.method === 'GET' ? 200 : 403, {
@@ -368,10 +420,7 @@ export class Gateway {
         }
         const app = path.match(/^\/api\/app\/([^/]+)$/);
         if (req.method === 'GET' && app) {
-          const appId = decodeURIComponent(app[1]!);
-          const [entry, anchor] = await Promise.all([rpc.getApp(appId), rpc.getAppAnchor(appId)]);
-          if (!entry) return json(res, 404, { error: `app not registered: ${appId}` });
-          return json(res, 200, { ...entry, anchor });
+          return await readAppDetails(res, rpc, decodeURIComponent(app[1]!));
         }
         const state = path.match(/^\/api\/contract\/([0-9a-fA-F]{64})\/state$/);
         if (req.method === 'GET' && state) {
@@ -388,6 +437,111 @@ export class Gateway {
         json(res, 404, { error: 'unknown api route' });
       } catch (err) {
         json(res, 400, { error: err instanceof Error ? err.message : String(err) });
+      }
+    };
+
+    const handleExplorer = async (
+      req: IncomingMessage,
+      res: ServerResponse,
+      path: string,
+      url: URL,
+      client: NodeRpcClient,
+    ): Promise<void> => {
+      const fail = (status: number, code: string, error: string) =>
+        json(res, status, { code, error });
+      const invalid = () => fail(400, 'INVALID_REQUEST', 'Invalid explorer request.');
+      const height = (value: string): bigint => {
+        if (!/^\d{1,20}$/.test(value) || BigInt(value) >= 1n << 64n)
+          throw new Error('Invalid block height');
+        return BigInt(value);
+      };
+      const appId = (value: string): string => {
+        if (!value || Buffer.byteLength(value, 'utf8') > MAX_APP_ID_BYTES)
+          throw new Error('Invalid app ID');
+        return value;
+      };
+      let request: AppReadRequest | undefined;
+      let id: string | undefined;
+      let pagination: { after?: string; limit: number } | undefined;
+      let blockHeight: bigint | undefined;
+      if (req.method !== 'GET') return fail(404, 'NOT_FOUND', 'Unknown explorer route.');
+      try {
+        // URLSearchParams replaces invalid UTF-8; reject it before using decoded values.
+        decodeURIComponent(path);
+        decodeURIComponent(url.search.replace(/\+/g, ' '));
+        if (path === '/api/apps') {
+          for (const key of url.searchParams.keys()) {
+            if (!['after', 'limit'].includes(key) || url.searchParams.getAll(key).length !== 1)
+              return invalid();
+          }
+          const rawLimit = url.searchParams.get('limit') ?? '50';
+          if (!/^\d{1,3}$/.test(rawLimit)) return invalid();
+          const limit = Number(rawLimit);
+          if (limit < 1 || limit > 100) return invalid();
+          const after = url.searchParams.get('after');
+          pagination = { limit, ...(after === null ? {} : { after: appId(after) }) };
+        } else {
+          const blockMatch = path.match(/^\/api\/block\/([^/]+)$/);
+          const chain = path.match(
+            /^\/api\/app(?:\/([^/]+))?\/chain\/(head|block\/([^/]+)|tx\/([^/]+))$/,
+          );
+          const queryAlias = path === '/api/app' || (chain && !chain[1]);
+          if (queryAlias) {
+            if (url.searchParams.size !== 1 || !url.searchParams.has('appId')) return invalid();
+            id = appId(url.searchParams.get('appId')!);
+          } else if (url.searchParams.size !== 0) return invalid();
+          if (blockMatch) blockHeight = height(decodeURIComponent(blockMatch[1]!));
+          else if (chain) {
+            if (!queryAlias) id = appId(decodeURIComponent(chain[1]!));
+            if (chain[2] === 'head') request = { kind: 'head' };
+            else if (chain[3])
+              request = { kind: 'block', height: height(decodeURIComponent(chain[3])) };
+            else {
+              const hash = decodeURIComponent(chain[4]!);
+              if (!/^[0-9a-fA-F]{64}$/.test(hash)) return invalid();
+              request = { kind: 'tx', hash: hash.toLowerCase() };
+            }
+          } else if (path !== '/api/app') return fail(404, 'NOT_FOUND', 'Unknown explorer route.');
+        }
+      } catch {
+        return invalid();
+      }
+      if (request && activeAppReads >= 8)
+        return fail(503, 'BUSY', 'App-chain read capacity is busy.');
+      if (request) activeAppReads++;
+      try {
+        if (path === '/api/app') return await readAppDetails(res, client, id!);
+        if (pagination)
+          return json(
+            res,
+            200,
+            await client.getApps(pagination, { timeout: EXPLORER_READ_TIMEOUT }),
+          );
+        if (blockHeight !== undefined) {
+          const block = await client.getBlock(blockHeight, { timeout: EXPLORER_READ_TIMEOUT });
+          return block ? json(res, 200, block) : fail(404, 'NOT_FOUND', 'Block not found.');
+        }
+        const entry = await client.getApp(id!, { timeout: 1000 });
+        if (!entry) return fail(404, 'NOT_FOUND', 'App is not registered.');
+        if (entry.chainValidators.length === 0)
+          return fail(409, 'NO_APP_CHAIN', 'App has no registered chain validators.');
+        const mount = appMounts.get(id!);
+        const bootstrap = mount ? mount.bootstrap : options.bootstrap;
+        const result = await readAppChain(entry, request!, {
+          ...(mount ? { mounted: mount.rpc } : {}),
+          ...(bootstrap ? { bootstrap } : {}),
+        });
+        return result
+          ? json(res, 200, result)
+          : fail(
+              404,
+              'DATA_UNAVAILABLE',
+              'App-chain data is unavailable from the attempted peers.',
+            );
+      } catch {
+        return fail(503, 'UPSTREAM_UNAVAILABLE', 'Explorer upstream is unavailable.');
+      } finally {
+        if (request) activeAppReads--;
       }
     };
 

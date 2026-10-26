@@ -45,15 +45,39 @@ Header fields plus the canonical encoded transactions (hex) — decode with
 
 ### `get_app { appId } → AppInfo | null`
 
-`{ appId, owner, pearKey, version, contractAddress, metadataHash }` — the
+`{ appId, owner, pearKey, version, contractAddress, metadataHash, chainValidators }` — the
 registry entry that installs verify against.
+
+### `get_apps { after?, limit? } → AppPage`
+
+`{ apps: AppInfo[], nextAfter: string | null }` lists registered apps in
+lexicographic UTF-8 byte order. `after` is an exclusive app-ID cursor; pass
+`nextAfter` as the next request's `after`. The default page size is 50 and the
+maximum is 100. App IDs and cursors must be nonempty and at most 64 UTF-8 bytes.
+An empty page is a successful result. Pages read the current registry, so a
+registration or update can change later requests.
+
+Each page currently scans the full registry before sorting and slicing. This
+is suitable for small registries; it is not an indexed archive or a stable
+snapshot across requests.
+
+### `get_app_anchor { appId } → AnchorInfo | null`
+
+`{ appId, epoch, appHeight, stateRoot }` is the latest accepted settlement
+anchor for the registered app chain.
 
 ## Client conveniences
 
 ```ts
 const hash = await rpc.submitTx(encodeTransaction(tx));
 const info = await rpc.waitForTx(hash, { timeoutMs: 30_000 });
+const page = await rpc.getApps({ limit: 50 }, { timeout: 5000 });
 ```
+
+Read calls `getHead`, `getBlock`, `getTx`, `getApp`, `getApps` and
+`getAppAnchor` accept an optional final `{ timeout }` argument in milliseconds.
+Omitting it preserves the transport's default behavior. This does not change
+transaction-submission acknowledgement or rejection handling.
 
 ## Notes
 

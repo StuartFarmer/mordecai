@@ -49,10 +49,15 @@ function signedTx(sender: KeyPair, nonce: bigint, payload: Payload): Transaction
 const pearKey = new Uint8Array(32).fill(0x11);
 const bundleHash = blake2b256(new TextEncoder().encode('the-bundle'));
 
-function registerApp(sender: KeyPair, nonce: bigint, version = '1.0.0'): Transaction {
+function registerApp(
+  sender: KeyPair,
+  nonce: bigint,
+  version = '1.0.0',
+  appId = 'com.example.demo',
+): Transaction {
   return signedTx(sender, nonce, {
     kind: 'register_app',
-    appId: 'com.example.demo',
+    appId,
     pearKey,
     version,
     contractAddress: new Uint8Array(32),
@@ -62,6 +67,37 @@ function registerApp(sender: KeyPair, nonce: bigint, version = '1.0.0'): Transac
 }
 
 describe('application registry (M6)', () => {
+  it('returns an empty page for an empty registry', async () => {
+    const chain = await openChain();
+    expect(await chain.listApps()).toEqual({ apps: [], nextAfter: null });
+  });
+
+  it('pages exclusively in UTF-8 key order, including nonexistent cursors', async () => {
+    const chain = await openChain();
+    const result = await chain.produceBlock(
+      [
+        registerApp(dev, 0n, '1.0.0', 'app.\u{10000}'),
+        registerApp(dev, 1n, '1.0.0', 'app.a'),
+        registerApp(dev, 2n, '1.0.0', 'app.\uE000'),
+      ],
+      val,
+      1_000n,
+    );
+    expect(result.receipts.every((receipt) => receipt.success)).toBe(true);
+    const first = await chain.listApps({ limit: 2 });
+    expect(first.apps.map(({ appId }) => appId)).toEqual(['app.a', 'app.\uE000']);
+    expect(first.apps[0]!.entry.owner).toEqual(dev.publicKey);
+    expect(first.nextAfter).toBe('app.\uE000');
+    const second = await chain.listApps({ after: first.nextAfter!, limit: 2 });
+    expect(second.apps.map(({ appId }) => appId)).toEqual(['app.\u{10000}']);
+    expect(second.nextAfter).toBeNull();
+    expect((await chain.listApps({ after: 'app.b' })).apps.map(({ appId }) => appId)).toEqual([
+      'app.\uE000',
+      'app.\u{10000}',
+    ]);
+    expect(await chain.listApps({ after: 'app.\u{10000}' })).toEqual({ apps: [], nextAfter: null });
+  });
+
   it('registers an app and serves the entry', async () => {
     const chain = await openChain();
     const { receipts } = await chain.produceBlock([registerApp(dev, 0n)], val, 1_000n);
@@ -100,6 +136,8 @@ describe('application registry (M6)', () => {
     expect(r.receipts[0]!.success).toBe(false);
     expect(r.receipts[0]!.error).toMatch(/registering key/);
     expect((await chain.getApp('com.example.demo'))!.version).toBe('1.0.0');
+    expect((await chain.listApps()).apps).toHaveLength(1);
+    expect((await chain.listApps()).apps[0]!.entry.owner).toEqual(dev.publicKey);
   });
 
   it('lets the owner publish a new version', async () => {
@@ -117,5 +155,6 @@ describe('application registry (M6)', () => {
     const r = await chain.produceBlock([update], val, 2_000n);
     expect(r.receipts[0]!.success).toBe(true);
     expect((await chain.getApp('com.example.demo'))!.version).toBe('1.1.0');
+    expect((await chain.listApps()).apps[0]!.entry.version).toBe('1.1.0');
   });
 });

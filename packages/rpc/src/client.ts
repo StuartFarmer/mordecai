@@ -3,6 +3,7 @@ import type {
   AccountInfo,
   AnchorInfo,
   AppInfo,
+  AppPage,
   BlockInfo,
   ContractStateEntry,
   HeadInfo,
@@ -43,14 +44,31 @@ export class NodeRpcClient {
   }
 
   private async call<T>(method: string, params: unknown, options?: RpcReadOptions): Promise<T> {
-    const raw = await this.client.request(method, Buffer.from(JSON.stringify(params)), options);
-    const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<T>;
-    if (!envelope.ok) throw new RpcError(envelope.error, envelope.rejected === true);
-    return envelope.result;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const request = this.client.request(method, Buffer.from(JSON.stringify(params)), options);
+      const raw =
+        options?.timeout === undefined
+          ? await request
+          : await Promise.race([
+              request,
+              new Promise<Buffer>((_, reject) => {
+                timer = setTimeout(
+                  () => reject(new RpcError(`RPC read timeout after ${options.timeout}ms`)),
+                  options.timeout,
+                );
+              }),
+            ]);
+      const envelope = JSON.parse(raw.toString('utf8')) as RpcEnvelope<T>;
+      if (!envelope.ok) throw new RpcError(envelope.error, envelope.rejected === true);
+      return envelope.result;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  getHead(): Promise<HeadInfo> {
-    return this.call('get_head', {});
+  getHead(options?: RpcReadOptions): Promise<HeadInfo> {
+    return this.call('get_head', {}, options);
   }
 
   getAccount(address: string): Promise<AccountInfo> {
@@ -70,13 +88,20 @@ export class NodeRpcClient {
     return this.call('get_block', { height: height.toString() }, options);
   }
 
-  getApp(appId: string): Promise<AppInfo | null> {
-    return this.call('get_app', { appId });
+  getApp(appId: string, options?: RpcReadOptions): Promise<AppInfo | null> {
+    return this.call('get_app', { appId }, options);
+  }
+
+  getApps(
+    params: { after?: string; limit?: number } = {},
+    options?: RpcReadOptions,
+  ): Promise<AppPage> {
+    return this.call('get_apps', params, options);
   }
 
   /** Last accepted app-chain anchor for `appId`, or null. */
-  getAppAnchor(appId: string): Promise<AnchorInfo | null> {
-    return this.call('get_app_anchor', { appId });
+  getAppAnchor(appId: string, options?: RpcReadOptions): Promise<AnchorInfo | null> {
+    return this.call('get_app_anchor', { appId }, options);
   }
 
   getTx(hashHex: string, options?: RpcReadOptions): Promise<TxInfo | null> {

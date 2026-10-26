@@ -10,12 +10,26 @@ can refuse service but cannot forge or tamper.
 ```
 GET  /api/config                     operator-provided app config
 GET  /api/head                       chain head
+GET  /api/block/<height>             settlement block and encoded transactions
 GET  /api/account/<z32>              balance + nonce
 GET  /api/tx/<hash>                  tx status (404 until it lands)
+GET  /api/apps[?after=<id>&limit=50]  registered apps, exclusive cursor, max 100
+GET  /api/app/<id>                   registration and latest settlement anchor
+GET  /api/app/<id>/chain/head         app-chain head
+GET  /api/app/<id>/chain/block/<height>   app-chain block
+GET  /api/app/<id>/chain/tx/<hash>     app-chain transaction receipt
+GET  /api/app?appId=<id>             registration and anchor query alias
+GET  /api/app/chain/{head,block/<height>,tx/<hash>}?appId=<id>   chain query aliases
 POST /api/tx {"tx": "<hex>"}         submit a signed, encoded transaction
 GET  /api/contract/<id>/state[?prefix=<hex>]   contract storage entries
 /*                                   staticDir (SPA fallback)
 ```
+
+Use the query aliases for the valid IDs `.` and `..`, which URL parsers remove
+from path segments even when percent-encoded. Aliases accept any registered ID,
+require exactly one `appId` parameter, and reject other parameters and malformed
+encoding. Existing path-based app URLs keep their meaning; encode their IDs once
+with `encodeURIComponent`.
 
 Without `staticDir`, `/` serves a compact Mordecai homepage with the tagline
 “P2P toolkit for a distributed world” and live node details from `/api/head`.
@@ -37,11 +51,47 @@ frontend, including SPA fallback. `/wallet.html`, `/wallet` (redirect), and the
 exact `/wallet-assets/` files remain reserved for the built-in web wallet.
 Unknown paths on the built-in site return 404.
 
-The built-in site is a single-page app: `/#/` shows Home and `/#/wallet`
-shows Wallet; `/#/faucet` shows the faucet. **Demos** opens Hex, Frontier, Outpost and Chess when the operator enables them. The top bar links to all three views, the documentation, chain API,
-and GitHub. Hash navigation and browser back/forward preserve the loaded wallet. Wallet initially shows only create/load controls; opening it reveals account details and transaction forms. Close wallet clears drafts and returns to create/load.
+The built-in site is a single-page app: `/#/` shows Home, `/#/account` shows
+Account, `/#/explorer` opens Explorer and `/#/apps` opens the app directory.
+Legacy `/#/wallet` and `/#/faucet` links open Account. **Demos** opens the
+operator-enabled demos. The top bar also links to documentation, the chain API
+and GitHub. Hash navigation and browser back/forward preserve the loaded account.
+Account initially shows create/load controls; loading it reveals account details
+and transaction forms. Closing the account clears drafts and returns to create/load.
 The standalone `/wallet.html` page remains available for custom app frontends
 such as Hex.
+
+## Explorer and registered apps
+
+Explorer is read-only and needs no account. `/#/explorer` browses ten recent
+**Settlement (L0)** blocks at a time. Choose an explicit block-height or
+transaction-hash lookup; direct links use `/#/explorer?height=42` or
+`/#/explorer?tx=<64-hex-hash>`. App-chain links add `app=<URL-encoded-id>`,
+for example `/#/explorer?app=hex&height=42`. Only the visible latest-block view
+polls, every five seconds. Detail pages and app-directory pages do not poll.
+
+`/#/apps` pages through registrations (50 by default, up to 100), and
+`/#/apps?app=<URL-encoded-id>` shows one registration, its last settlement
+anchor and a separate live app head when available. Configured demo names such
+as Hex and Outpost appear only when `config.demos[name].appId` matches the
+registered ID; other IDs appear unchanged. Explorer displays integer **CAI base
+units** for settlement and **app-chain base units** for app chains.
+
+Registration and settlement anchors remain visible when an app has no chain or
+its peers are offline. Historical blocks and transaction bodies depend on data
+held by reachable peers; this gateway provides no permanent archive or indexer.
+A transaction 404 means not found or unavailable, without implying pending or
+failed execution. Receipts can remain readable when their containing block is
+unavailable. The latest-anchor record has no settlement transaction hash, so
+there is no direct anchor-transaction link from that record; older anchors can
+still be inspected through settlement blocks and transactions.
+
+App reads use operator-mounted networks or registered validator keys, verify the
+reported chain ID, and never accept arbitrary network URLs from the browser.
+These are node-reported results, not independent consensus verification; an
+accepted settlement anchor attests the app quorum's claim. New explorer API
+errors return JSON `{code, error}`; invalid input is 400, missing data is 404,
+an app without a chain is 409, and unavailable or busy peers are 503.
 
 The web wallet generates and loads keys entirely in the browser, shows this
 gateway's balance, and pre-fills the faucet address. Keys stay in memory; its

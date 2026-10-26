@@ -11,6 +11,7 @@ import { initNavigation } from './navigation.js';
 import { createDemoSession } from './demo-session.js';
 import { DEMOS, createDemoLoader } from './demos.js';
 import { TransactionClient, transactionSummary } from './transactions.js';
+import { createExplorer } from './explorer.js';
 
 const byId = (id) => document.getElementById(id);
 const message = byId('wallet-message');
@@ -37,6 +38,7 @@ const demoSession = createDemoSession(() => wallet, sendDemoTransaction, signDem
   cancelMicroblogTip,
 });
 const openDemo = createDemoLoader(document, window, demoSession);
+const explorer = createExplorer(document, window);
 
 function showWallet(next, saved = false, created = false) {
   wallet = next;
@@ -561,5 +563,8 @@ async function poll() {
 }
 updateControls();
 void registrationInfo();
-initNavigation(document, window, (route) => void openDemo(route));
+initNavigation(document, window, (route) => {
+  void openDemo(route);
+  explorer.open(route);
+});
 void poll();

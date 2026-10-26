@@ -22,6 +22,8 @@ export function initNavigation(doc = document, win = window, onChange = () => {}
       : {
           home: 'Node',
           account: 'Account',
+          explorer: 'Explorer',
+          apps: 'Apps',
           'about/manifesto': 'Manifesto',
           'about/design': 'Design',
         }[route];

@@ -59,7 +59,8 @@ async function setup(uncertain = false) {
   let configWait: Promise<void> | null = null;
   const feedId = 'ab'.repeat(32);
   vi.stubGlobal('document', {
-    getElementById: get,
+    getElementById: (id: string) =>
+      ['explorer-content', 'apps-content'].includes(id) ? null : get(id),
     querySelectorAll: () => [],
     createElement: get,
   });

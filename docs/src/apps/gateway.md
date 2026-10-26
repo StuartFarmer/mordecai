@@ -10,10 +10,15 @@ serves a static frontend bundle.
 GET  /api/connect                    public app-network connection document
 GET  /api/config                     operator-provided app config
 GET  /api/head                       chain head
+GET  /api/block/<height>             block header + encoded transactions
+GET  /api/apps[?after=<appId>&limit=<n>]   registered apps page
 GET  /api/account/<z32>              balance + nonce
 GET  /api/tx/<hash>                  tx status (404 until it lands)
 POST /api/tx {"tx": "<hex>"}         submit a signed, encoded transaction
 GET  /api/app/<appId>                registry entry + latest anchor
+GET  /api/app/<appId>/chain/head     registered app-chain head
+GET  /api/app/<appId>/chain/block/<height>  app-chain block
+GET  /api/app/<appId>/chain/tx/<hash> app-chain receipt
 GET  /api/contract/<id>/state[?prefix=<hex>]   contract storage entries
 /*                                   static frontend (SPA fallback)
 ```
@@ -77,6 +82,61 @@ advertise an app connection.
 settlement. Fetches have a ten-second timeout and a 1 MiB response limit.
 A reverse proxy can expose a gateway under a path prefix; direct connection
 appends `/api/connect` to that prefix.
+
+## Explorer reads
+
+Settlement (L0) block reads return the existing `BlockInfo` JSON shape: header,
+hash and canonical encoded transaction hex. Heights are unsigned decimal u64
+values, from `0` to `18446744073709551615`. Receipt `index` identifies the
+transaction within the block's `txs` array. Amounts and fees use integer CAI
+base units on settlement and integer app-chain base units on app chains.
+
+`/api/apps` returns `{ apps, nextAfter }` with 50 entries by default and a
+maximum `limit` of 100. Supply the returned `nextAfter` as the exclusive
+`after` cursor. Each page scans the full registry; pagination is intended for
+small registries, and reads do not create an archive or indexer. Entries
+reflect the current registry, so separate pages are not a frozen snapshot.
+Use `encodeURIComponent` for app IDs and cursors, including IDs with Unicode
+or slashes. For the valid IDs `.` and `..`, use `GET /api/app?appId=<id>` for
+registration and anchor, and
+`GET /api/app/chain/{head,block/<height>,tx/<hash>}?appId=<id>` for chain reads:
+URL parsers remove dot-only path segments even when dots are percent-encoded.
+These aliases also accept other registered IDs and require exactly one `appId`
+parameter. Unknown query parameters, duplicate parameters and malformed
+percent encoding are rejected on explorer routes. Path-based block and
+app-chain reads take no query parameters. Block and registry reads have a
+five-second RPC timeout and are
+also available under enabled `/api/demos/<name>/api/` mounts.
+
+Registered app-chain reads first look up the current registration with a
+one-second timeout. An existing demo mount is reused when
+`config.demos[name].appId` matches the registered ID. If the mount cannot
+serve the data, the gateway tries the current registered `chainValidators`
+using that mount's DHT bootstrap. Without a mount it uses the gateway's
+bootstrap. This supports private-DHT demos without accepting a browser's
+arbitrary peer key or URL. Each peer's head must identify `app:<appId>` before
+its data is read. Discovery and peer reads share a five-second budget with
+one second per attempt to read a head and item, after the registration lookup. This
+is deadline-limited discovery; an unavailable result does not prove that no
+other peer holds the data.
+
+At most eight app-chain requests are in flight per gateway, including
+registration lookup. These routes accept only GET and never submit app-chain
+transactions. Registration and settlement-anchor details remain accessible
+through the existing `/api/app/<appId>` response when app peers are offline.
+
+New explorer routes return errors as `{ code, error }`:
+
+| HTTP status | Code                   | Meaning                                                                                |
+| ----------- | ---------------------- | -------------------------------------------------------------------------------------- |
+| 400         | `INVALID_REQUEST`      | Invalid height, ID, cursor, hash or query                                              |
+| 404         | `NOT_FOUND`            | Missing settlement block, unregistered app or unknown route                            |
+| 404         | `DATA_UNAVAILABLE`     | Matching app peers answered but lacked the item                                        |
+| 409         | `NO_APP_CHAIN`         | Registered app has no chain validators                                                 |
+| 503         | `BUSY`                 | Eight app-chain reads are already in flight                                            |
+| 503         | `UPSTREAM_UNAVAILABLE` | Registry, settlement node or app peers did not answer successfully within the deadline |
+
+Existing API routes keep their established response shapes and behavior.
 
 ## Why gateways are safe to not trust
 

@@ -65,6 +65,11 @@ export interface AppInfo {
   chainValidators: string[];
 }
 
+export interface AppPage {
+  apps: AppInfo[];
+  nextAfter: string | null;
+}
+
 /** Last accepted app-chain anchor (app-chains spec §2.3). */
 export interface AnchorInfo {
   appId: string;
@@ -90,5 +95,6 @@ export const RPC_METHODS = [
   'get_tx',
   'get_contract_state',
   'get_app',
+  'get_apps',
   'get_app_anchor',
 ] as const;
