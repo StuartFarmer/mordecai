@@ -74,10 +74,9 @@ const MIME: Record<string, string> = {
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
 const LANDING_DIR = fileURLToPath(new URL('../public/', import.meta.url));
-const DOCS_DIR = join(LANDING_DIR, 'docs');
+const SITE_DIR = join(LANDING_DIR, 'site');
+const DOCS_DIR = join(SITE_DIR, 'docs');
 const LANDING_PATHS = new Set([
-  '/',
-  '/index.html',
   '/mordecai.css',
   '/mordecai.js',
   '/faucet.js',
@@ -92,10 +91,10 @@ const LANDING_PATHS = new Set([
 ]);
 
 const WALLET_FILES: Record<string, string> = {
-  '/account.html': '/wallet.html',
-  '/wallet.html': '/wallet.html',
   '/wallet-assets/wallet.js': '/wallet-assets/wallet.js',
   '/wallet-assets/mordecai.css': '/mordecai.css',
+  '/wallet-assets/mordecai.js': '/mordecai.js',
+  '/wallet-assets/favicon.svg': '/favicon.svg',
   '/wallet-assets/faucet.js': '/faucet.js',
 };
 
@@ -264,6 +263,8 @@ export class Gateway {
           res.end();
           return;
         }
+        if (path === '/account.html' || path === '/wallet.html')
+          return serveStatic(res, SITE_DIR, '/account.html', false);
         if (Object.hasOwn(WALLET_FILES, path)) {
           return serveStatic(res, LANDING_DIR, WALLET_FILES[path]!, false);
         }
@@ -290,6 +291,19 @@ export class Gateway {
             return json(res, 404, { error: 'not found' });
           }
           return serveStatic(res, DOCS_DIR, docPath, false);
+        }
+        if (path === '/' || path === '/index.html')
+          return serveStatic(res, SITE_DIR, '/index.html', false);
+        if (path.startsWith('/_astro/') || path.startsWith('/pagefind/')) {
+          let asset: string;
+          try {
+            asset = decodeURIComponent(path);
+          } catch {
+            return json(res, 404, { error: 'not found' });
+          }
+          if (asset.split(/[/\\]/).includes('..') || asset.includes('\0'))
+            return json(res, 404, { error: 'not found' });
+          return serveStatic(res, SITE_DIR, asset, false);
         }
         if (LANDING_PATHS.has(path)) {
           return serveStatic(res, LANDING_DIR, path, false);

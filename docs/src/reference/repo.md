@@ -4,7 +4,7 @@
 zechariah/
   SPEC_PT_01..03.md        the platform specification (normative)
   IMPLEMENTATION_PLAN.md   v1 decisions (D1–D8) and milestones (M0–M7)
-  docs/                    this book (mdBook) + threat-model.md
+  docs/                    Markdown/MDX chapters, navigation.json + threat-model.md
   packages/
     protocol/        canonical wire codec; tx/block/vote/gossip schemas; golden vectors
     crypto/          Ed25519, BLAKE2b-256, z32 addresses, keystores, mnemonics
@@ -33,18 +33,17 @@ zechariah/
 
 ## Toolchains
 
-- **Node ≥ 20 + corepack** — required for the packages. pnpm is pinned via
+- **Node ≥ 22.23.4 + pnpm** — required for the packages. pnpm is pinned via
   `packageManager`; `pnpm install && pnpm build && pnpm test`.
 - **Rust (wasm32-unknown-unknown) + Python 3** — only to _rebuild_ wasm
   artifacts (`scripts/build-wasm.sh`) or compile your own DSL contracts.
   All shipped WASM artifacts are committed; tests that need the contract
   toolchain self-skip without it.
-- **mdBook 0.5.2** — required by `pnpm build` to bundle this book into
-  `packages/gateway/public/docs/`. Install a prebuilt mdBook release, or use
-  `cargo install mdbook --version 0.5.2 --locked` if Rust is available.
-  Run `pnpm build:docs` after documentation edits, or `mdbook serve docs`
-  for live-reloading author previews. Built nodes serve the book at `/docs/`
-  without a separate documentation server or mdBook installation.
+- **Astro + MDX + Pagefind** — installed with workspace dependencies. The build
+  writes the site and searchable documentation to `packages/gateway/public/site/`.
+  Run `pnpm build:docs` after content edits, or start the node demo on port 8790
+  and `pnpm dev:site` for live reloading at `http://localhost:4321`.
+  See [Site authoring](site.md) for Markdown, MDX, and interactive components.
 
 ## Testing conventions
 
@@ -66,5 +65,5 @@ zechariah/
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs install → build → lint →
-format check → tests on every push/PR. CI installs mdBook 0.5.2 before the
-build; prebuilt WASM keeps the contract toolchain optional.
+format check → tests on every push/PR. The build checks all documentation
+links and legacy anchors; prebuilt WASM keeps the contract toolchain optional.

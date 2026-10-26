@@ -1,0 +1,180 @@
+[
+  {
+    "title": "Start here",
+    "pages": [
+      {
+        "title": "Introduction",
+        "slug": "introduction"
+      },
+      {
+        "title": "Field Guide",
+        "slug": "field-guide"
+      },
+      {
+        "title": "Quickstart",
+        "slug": "quickstart"
+      },
+      {
+        "title": "Host the Demo on Railway",
+        "slug": "railway"
+      },
+      {
+        "title": "Host the Demo on Render",
+        "slug": "render"
+      }
+    ]
+  },
+  {
+    "title": "Architecture",
+    "pages": [
+      {
+        "title": "The Two Planes",
+        "slug": "architecture/overview"
+      },
+      {
+        "title": "Three Kinds of State",
+        "slug": "architecture/state"
+      },
+      {
+        "title": "Networking: Holepunch",
+        "slug": "architecture/networking"
+      },
+      {
+        "title": "The Settlement Chain",
+        "slug": "architecture/chain"
+      },
+      {
+        "title": "Consensus",
+        "slug": "architecture/consensus"
+      },
+      {
+        "title": "The Contract VM",
+        "slug": "architecture/vm"
+      },
+      {
+        "title": "App Chains",
+        "slug": "architecture/app-chains"
+      },
+      {
+        "title": "Wire Format & Protocol",
+        "slug": "architecture/protocol"
+      },
+      {
+        "title": "Threat Model",
+        "slug": "architecture/threat-model"
+      }
+    ]
+  },
+  {
+    "title": "Building P2P Applications",
+    "pages": [
+      {
+        "title": "What a P2P App Is (and Isn't)",
+        "slug": "apps/what-is-a-p2p-app"
+      },
+      {
+        "title": "The SDK",
+        "slug": "apps/sdk"
+      },
+      {
+        "title": "Wallets, Identity & Sessions",
+        "slug": "apps/identity"
+      },
+      {
+        "title": "Publishing & Installing Apps",
+        "slug": "apps/publishing"
+      },
+      {
+        "title": "The Web Gateway",
+        "slug": "apps/gateway"
+      },
+      {
+        "title": "How-To: Run Your App on Its Own Chain",
+        "slug": "apps/app-chains"
+      }
+    ]
+  },
+  {
+    "title": "Smart Contracts",
+    "pages": [
+      {
+        "title": "The Contract Model",
+        "slug": "contracts/model"
+      },
+      {
+        "title": "Tutorial: A Wager Contract in the DSL",
+        "slug": "contracts/tutorial"
+      },
+      {
+        "title": "DSL Language Reference",
+        "slug": "contracts/dsl-reference"
+      },
+      {
+        "title": "Rust Contracts & the ABI",
+        "slug": "contracts/rust-abi"
+      }
+    ]
+  },
+  {
+    "title": "Examples",
+    "pages": [
+      {
+        "title": "Account, Test CAI, and Hex",
+        "slug": "examples/hex-web"
+      },
+      {
+        "title": "Chess: A Complete P2P App",
+        "slug": "examples/chess"
+      },
+      {
+        "title": "The Marketplace Contract",
+        "slug": "examples/marketplace"
+      },
+      {
+        "title": "Land: State Maps & Config",
+        "slug": "examples/land"
+      },
+      {
+        "title": "Frontier in the Browser",
+        "slug": "examples/frontier-web"
+      },
+      {
+        "title": "Outpost: Goods, Orders and Settlement",
+        "slug": "examples/outpost"
+      },
+      {
+        "title": "Microblog: Posts and Tips",
+        "slug": "examples/microblog"
+      },
+      {
+        "title": "Information Bounties",
+        "slug": "examples/bounties"
+      }
+    ]
+  },
+  {
+    "title": "Reference",
+    "pages": [
+      {
+        "title": "CLI Tools",
+        "slug": "reference/cli"
+      },
+      {
+        "title": "RPC API",
+        "slug": "reference/rpc"
+      },
+      {
+        "title": "Repository Layout & Building",
+        "slug": "reference/repo"
+      },
+      {
+        "title": "Roadmap & Limitations",
+        "slug": "roadmap"
+      },
+      {
+        "title": "Authoring the Node Site",
+        "slug": "reference/site"
+      }
+    ]
+  }
+]

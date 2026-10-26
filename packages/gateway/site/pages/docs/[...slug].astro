@@ -1,0 +1,10 @@
+---
+import Documentation from '../../layouts/Documentation.astro';
+import { chapters } from '../../docs.js';
+export function getStaticPaths() {
+  return chapters.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+const { page } = Astro.props;
+---
+
+<Documentation page={page} />

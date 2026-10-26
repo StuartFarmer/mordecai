@@ -1,7 +1,7 @@
 # Host the demo on Railway
 
 The root `Dockerfile` builds and serves the website, documentation, account registration and all six demos in one service. It compiles all seven required demo
-contracts with Rust 1.94.1 and builds the book with mdBook 0.5.2. Only the HTTP
+contracts with Rust 1.94.1 and builds the site and Markdown/MDX documentation with Astro. Only the HTTP
 gateway is public; the demo validators communicate inside the container.
 
 ## Create the service

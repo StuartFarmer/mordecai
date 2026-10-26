@@ -1,0 +1,9 @@
+---
+import Site from '../layouts/Site.astro';
+import Account from '../components/Account.astro';
+---
+
+<Site title="Account" standalone>
+  <script slot="head" is:inline src="/wallet-assets/wallet.js" defer></script>
+  <Account />
+</Site>

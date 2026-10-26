@@ -44,7 +44,7 @@ mordecai l1 start --dir <path>
 homepage's test CAI faucet. Set `MORDECAI_FAUCET_PASSPHRASE` in the process
 environment and fund the dedicated wallet on that chain. The standalone gateway
 (`node packages/gateway/dist/cli.js --node <rpc-key-hex>`) accepts the same flag.
-Without it, the faucet is disabled. See [the field guide](../field-guide.md#faucet)
+Without it, the faucet is disabled. See [the field guide](../field-guide.mdx#faucet)
 for funding and claim limits.
 
 ### App network (`mordecai app`)
@@ -151,5 +151,5 @@ pnpm build:docs                       # refresh the book bundled with each node
                                        #   VM runtime, Rust contracts,
                                        #   DSL examples → contracts/dist
 python3 -m unittest discover compiler/tests   # DSL compiler unit tests
-mdbook serve docs                      # this book, live-reloading
+pnpm dev:site                         # Astro site/docs, live-reloading; node demo at :8790
 ```

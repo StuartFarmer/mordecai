@@ -19,3 +19,6 @@ packages/gateway/public/wallet-assets/
 
 .mordecai-demo/
 packages/gateway/public/demo-assets/
+
+packages/gateway/public/site/
+.astro/

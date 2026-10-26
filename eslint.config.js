@@ -8,6 +8,8 @@ export default tseslint.config(
       '**/coverage/**',
       'docs/book/**',
       'packages/gateway/public/docs/**',
+      'packages/gateway/public/site/**',
+      '**/.astro/**',
       'packages/gateway/public/wallet-assets/**',
       'packages/gateway/public/demo-assets/**',
       'compiler/build/**',

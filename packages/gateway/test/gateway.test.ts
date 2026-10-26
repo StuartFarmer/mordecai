@@ -322,6 +322,7 @@ describe('HTTP gateway to node RPC', () => {
   it.each([
     '/',
     '/wallet.html',
+    '/account.html',
     '/docs/',
     '/docs/field-guide.html',
     '/docs/architecture/overview.html',
@@ -349,6 +350,21 @@ describe('HTTP gateway to node RPC', () => {
     expect((await fetch(`${base}${route}`, { method: 'POST' })).status).toBe(404);
   });
 
+  it.each(['/', '/index.html', '/account.html', '/wallet.html'])(
+    'keeps account navigation in the same document at %s',
+    async (path) => {
+      const response = await fetch(base + path);
+      const html = await response.text();
+      const links = [...html.matchAll(/<a[^>]*data-route="[^"]+"[^>]*>/g)];
+      expect(links.length).toBeGreaterThan(0);
+      for (const [tag] of links) {
+        const href = tag.match(/href="([^"]+)"/)![1]!;
+        expect(href.startsWith('#')).toBe(true);
+        expect(new URL(href, response.url).pathname).toBe(path);
+      }
+    },
+  );
+
   it.each(['/guide', '/guide/', '/guide.html'])('redirects legacy %s to the book', async (path) => {
     const res = await fetch(`${base}${path}?from=old`, { redirect: 'manual' });
     expect(res.status).toBe(308);
@@ -374,17 +390,32 @@ describe('HTTP gateway to node RPC', () => {
     expect((await fetch(`${base}${path}`)).status).toBe(404);
   });
 
+  it.each([
+    '/_astro/missing.js',
+    '/pagefind/missing.js',
+    '/_astro/%2e%2e%2fpackage.json',
+    '/pagefind/%2e%2e%5cindex.html',
+    '/_astro/%00',
+    '/docs/site/markdown.js',
+  ])('rejects invalid generated-site asset %s', async (path) => {
+    expect((await fetch(`${base}${path}`)).status).toBe(404);
+  });
+
   it('keeps the field guide section anchors and serves the book search index', async () => {
     const html = await (await fetch(`${base}/docs/field-guide.html`)).text();
     for (const id of ['tools', 'join-network', 'wallet', 'create-app', 'join-app', 'payments']) {
       expect(html).toContain(`id="${id}"`);
     }
-    const script = html.match(/window\.path_to_searchindex_js = "([^"]+)"/);
-    expect(script).not.toBeNull();
-    const index = await fetch(new URL(script![1]!, `${base}/docs/field-guide.html`));
-    expect(index.status).toBe(200);
-    expect(index.headers.get('content-type')).toContain('javascript');
-    expect(await index.text()).toContain('Create a wallet');
+    expect(html).toContain('<live-node');
+    for (const path of [
+      '/pagefind/pagefind.js',
+      '/pagefind/pagefind-ui.js',
+      '/pagefind/pagefind-ui.css',
+    ]) {
+      const asset = await fetch(`${base}${path}`);
+      expect(asset.status).toBe(200);
+      expect((await asset.text()).length).toBeGreaterThan(100);
+    }
   });
 
   it('lets a custom frontend replace the landing page and keep its SPA fallback', async () => {

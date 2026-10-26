@@ -7,7 +7,7 @@ const lastChecked = document.getElementById('last-checked');
 
 async function refresh() {
   try {
-    const response = await fetch('./api/head', {
+    const response = await fetch('/api/head', {
       cache: 'no-store',
       signal: AbortSignal.timeout(5000),
     });

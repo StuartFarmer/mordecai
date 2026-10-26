@@ -1,0 +1,86 @@
+---
+const { app = false, standalone = false } = Astro.props;
+const prefix = app ? '' : '/';
+---
+
+<header class="status-bar">
+  <nav aria-label="Main navigation">
+    {standalone ? (
+      <>
+        <a href="/">Back to node or game</a>
+        <a href="#/account" data-route="account">
+          Account
+        </a>
+      </>
+    ) : (
+      <>
+        <a href={`${prefix}#/`} data-route="home">
+          Home
+        </a>
+        <a href={`${prefix}#/account`} data-route="account">
+          Account
+        </a>
+        <details class="nav-menu" name="main-menu">
+          <summary>Demos</summary>
+          <div class="nav-menu-links">
+            <a href={`${prefix}#/demos/hex`} data-route="demos/hex">
+              Hex
+            </a>
+            <a href={`${prefix}#/demos/frontier`} data-route="demos/frontier">
+              Frontier
+            </a>
+            <a href={`${prefix}#/demos/outpost`} data-route="demos/outpost">
+              Outpost
+            </a>
+            <a href={`${prefix}#/demos/chess`} data-route="demos/chess">
+              Chess
+            </a>
+            <a href={`${prefix}#/demos/microblog`} data-route="demos/microblog">
+              Microblog
+            </a>
+            <a href={`${prefix}#/demos/bounties`} data-route="demos/bounties">
+              Bounties
+            </a>
+          </div>
+        </details>
+        <details class="nav-menu" name="main-menu">
+          <summary>About</summary>
+          <div class="nav-menu-links">
+            <a href={`${prefix}#/about/manifesto`} data-route="about/manifesto">
+              Manifesto
+            </a>
+            <a href={`${prefix}#/about/design`} data-route="about/design">
+              Design
+            </a>
+            <a href="/docs/" target="_blank" rel="noopener" title="Opens in a new tab">
+              Documentation
+            </a>
+            <a href="/api/head" target="_blank" rel="noopener" title="Opens in a new tab">
+              API
+            </a>
+          </div>
+        </details>
+      </>
+    )}
+    <a
+      href="https://github.com/StuartFarmer/mordecai"
+      target="_blank"
+      rel="noopener"
+      title="Opens in a new tab"
+    >
+      GitHub
+    </a>
+  </nav>
+  <dl class="node-chips" aria-label="This node">
+    <div>
+      <dt>Network:</dt>
+      <dd id="chain-id">—</dd>
+    </div>
+    <div>
+      <dt>Node status:</dt>
+      <dd id="status" role="status" aria-live="polite" data-state="checking">
+        Checking
+      </dd>
+    </div>
+  </dl>
+</header>

@@ -1,0 +1,31 @@
+---
+import Site from '../layouts/Site.astro';
+import Home from '../components/Home.astro';
+import Account from '../components/Account.astro';
+import Demos from '../components/Demos.astro';
+import { Content as Manifesto } from '../content/manifesto.md';
+import { Content as Design } from '../content/design.md';
+---
+
+<Site>
+  <script slot="head" is:inline src="/wallet-assets/wallet.js" defer></script>
+  <Home />
+  <section data-page="about/manifesto" aria-labelledby="manifesto-title" hidden>
+    <h1 id="manifesto-title" tabindex="-1">
+      Manifesto
+    </h1>
+    <div class="prose">
+      <Manifesto />
+    </div>
+  </section>
+  <section data-page="about/design" aria-labelledby="design-title" hidden>
+    <h1 id="design-title" tabindex="-1">
+      Design
+    </h1>
+    <div class="prose">
+      <Design />
+    </div>
+  </section>
+  <Account />
+  <Demos />
+</Site>

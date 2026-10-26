@@ -126,11 +126,9 @@ escrow touching consensus.
 
 ## Install
 
-Node ≥ 20 with corepack (pnpm is pinned via `packageManager`) and mdBook 0.5.2
-for the bundled documentation. Install a prebuilt mdBook release, or run
-`cargo install mdbook --version 0.5.2 --locked` with Rust installed. Rust and
-Python are only needed to rebuild WASM artifacts — prebuilt contracts are
-committed.
+Node ≥ 22.23.4 with pnpm (pinned via `packageManager`). Astro, MDX, and
+documentation search are installed with the workspace dependencies. Rust and
+Python are only needed to rebuild WASM artifacts — prebuilt contracts are committed.
 
 ```sh
 git clone https://github.com/StuartFarmer/mordecai.git && cd mordecai
@@ -167,8 +165,8 @@ chain: it reads the app's registration through settlement RPC.
 
 ### Build and storage
 
-Node ≥ 20 with corepack. Install mdBook 0.5.2 in the build environment;
-it is not needed at runtime. The WASM runtime and contracts are committed.
+Node ≥ 22.23.4 with pnpm. The site and documentation are built as static assets;
+no separate Astro server is needed at runtime. WASM artifacts are committed.
 
 ```
 Build: corepack enable && pnpm install --frozen-lockfile && pnpm build
@@ -272,12 +270,14 @@ public DHT; pass it only for private testnets.
 
 ## Documentation
 
-Every built node serves the [mdBook](docs/) at `/docs/`, linked from its compact
-homepage. `pnpm build` bundles the book; `pnpm build:docs` refreshes it after
-edits. For live-reloading author previews, use `mdbook serve docs`.
+Every built node serves the [Markdown/MDX documentation](docs/) at `/docs/`.
+Astro builds the site, shared layouts, and interactive examples; Pagefind indexes
+the documentation. `pnpm build:docs` refreshes the site after edits.
+Run the node demo on port 8790 and `pnpm dev:site` for a live-reloading preview
+at `http://localhost:4321`. See [authoring the site](docs/src/reference/site.md).
 
-- [Field Guide](docs/src/field-guide.md): join a network, create a wallet, start or join an app, and send a payment.
-- [Architecture](docs/src/architecture/overview.md) · [Three (four) kinds of state](docs/src/architecture/state.md) · [App chains](docs/src/architecture/app-chains.md) · [Consensus](docs/src/architecture/consensus.md) · [Threat model](docs/src/architecture/threat-model.md)
+- [Field Guide](docs/src/field-guide.mdx): join a network, create a wallet, start or join an app, and send a payment.
+- [Architecture](docs/src/architecture/overview.md) · [Three (four) kinds of state](docs/src/architecture/state.md) · [App chains](docs/src/architecture/app-chains.md) · [Consensus](docs/src/architecture/consensus.md) · [Threat model](docs/src/architecture/threat-model.mdx)
 - [Building p2p apps](docs/src/apps/what-is-a-p2p-app.md) · [The SDK](docs/src/apps/sdk.md) · [The web gateway](docs/src/apps/gateway.md) · [**How-to: run your app on its own chain**](docs/src/apps/app-chains.md)
 - [The DSL](docs/src/contracts/dsl-reference.md) · [Contract tutorial](docs/src/contracts/tutorial.md)
 - Examples: [chess](docs/src/examples/chess.md) · [frontier in the browser](docs/src/examples/frontier-web.md) · [**outpost**](docs/src/examples/outpost.md)

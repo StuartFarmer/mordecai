@@ -31,8 +31,8 @@ If chain data cannot be fetched, the readout shows the node as unavailable
 and retries automatically. Custom frontends continue to use SPA fallback;
 unknown paths on the default page return 404.
 
-The landing page links to the full mdBook at `/docs/`, including the
-[Field Guide](../field-guide.md) for joining the network, creating a wallet,
+The landing page links to the Markdown/MDX documentation at `/docs/`, including the
+[Field Guide](../field-guide.mdx) for joining the network, creating a wallet,
 starting an app network, joining an app, and signing and submitting a payment.
 The old `/guide`, `/guide/`, and `/guide.html` URLs redirect to that chapter.
 A custom `staticDir` replaces both the built-in homepage and documentation.
@@ -45,11 +45,11 @@ stored before the browser broadcasts a reviewed payment. Bounty rewards and
 public responses live on the settlement chain. See the
 [Microblog](../examples/microblog.md) and [Bounties](../examples/bounties.md) guides.
 
-`pnpm build` builds the packages and bundles the book in
-`packages/gateway/public/docs/`. Install mdBook 0.5.2 on the build machine;
-running the built node needs no mdBook process. After documentation edits,
-`pnpm build:docs` refreshes the bundled book. Missing documentation pages and
-assets return 404 rather than falling back to the homepage.
+`pnpm build` builds the packages, existing React demos, Astro site, and documentation
+search index in `packages/gateway/public/site/`. Running a built node needs no
+separate Astro process. `pnpm build:docs` refreshes the site after content edits.
+Missing documentation pages and assets return 404 instead of the homepage.
+See [Site authoring](../reference/site.md) for interactive MDX examples.
 
 A separate gateway is still available when you want an independent web edge.
 Run one from code (`Gateway.start({...})`) or the CLI:

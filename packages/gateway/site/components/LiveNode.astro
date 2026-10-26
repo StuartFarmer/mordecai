@@ -1,0 +1,70 @@
+<live-node class="live-node" data-pagefind-ignore>
+  <p>
+    <strong>Try this node</strong> ·{' '}
+    <span data-status role="status">
+      Checking…
+    </span>
+  </p>
+  <dl>
+    <div>
+      <dt>Network</dt>
+      <dd data-network>—</dd>
+    </div>
+    <div>
+      <dt>Block height</dt>
+      <dd data-height>—</dd>
+    </div>
+  </dl>
+  <button type="button">Refresh now</button>
+  <a href="/api/head" target="_blank" rel="noopener">
+    View the response
+  </a>
+  <p class="tagline">Live data from this node, refreshed every second.</p>
+  <noscript>Enable JavaScript to try the live example.</noscript>
+</live-node>
+<script>
+  class LiveNode extends HTMLElement {
+    timer: ReturnType<typeof setTimeout> | undefined;
+    controller: AbortController | undefined;
+    connectedCallback() {
+      this.querySelector('button')!.onclick = () => void this.refresh();
+      void this.refresh();
+    }
+    disconnectedCallback() {
+      clearTimeout(this.timer);
+      this.controller?.abort();
+    }
+    async refresh() {
+      if (this.controller) return;
+      clearTimeout(this.timer);
+      const controller = (this.controller = new AbortController());
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const button = this.querySelector('button')!;
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/head', { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) throw new Error('Node unavailable');
+        const head = await response.json();
+        if (
+          typeof head.chainId !== 'string' ||
+          typeof head.height !== 'string' ||
+          !/^\d+$/.test(head.height)
+        )
+          throw new Error('Invalid node response');
+        this.querySelector('[data-status]')!.textContent = 'Online';
+        this.querySelector('[data-network]')!.textContent = head.chainId;
+        this.querySelector('[data-height]')!.textContent = BigInt(head.height).toLocaleString();
+      } catch {
+        this.querySelector('[data-status]')!.textContent = 'Offline — retrying';
+        this.querySelector('[data-network]')!.textContent = '—';
+        this.querySelector('[data-height]')!.textContent = '—';
+      } finally {
+        clearTimeout(timeout);
+        this.controller = undefined;
+        button.disabled = false;
+        if (this.isConnected) this.timer = setTimeout(() => void this.refresh(), 1000);
+      }
+    }
+  }
+  if (!customElements.get('live-node')) customElements.define('live-node', LiveNode);
+</script>

@@ -1,0 +1,76 @@
+---
+import Site from './Site.astro';
+import { navigation, chapters, chapter } from '../docs.js';
+const { page, index = false } = Astro.props;
+const { Content, getHeadings } = chapter(page.slug);
+const headings = getHeadings().filter((heading) => heading.depth === 2);
+const position = chapters.findIndex((item) => item.slug === page.slug);
+const previous = chapters[position - 1],
+  next = chapters[position + 1];
+---
+
+<Site title={page.title} docs index={index}>
+  <div id="docs-search" aria-label="Search documentation"></div>
+  <noscript>
+    <p>Use the chapter navigation below. Search needs JavaScript.</p>
+  </noscript>
+  <div class="docs-grid">
+    <aside>
+      <details class="docs-contents" open>
+        <summary>Documentation</summary>
+        <nav class="docs-nav" aria-label="Documentation chapters">
+          {navigation.map((group) => (
+            <section>
+              <h2>{group.title}</h2>
+              <ul>
+                {group.pages.map((item) => (
+                  <li>
+                    <a
+                      href={`/docs/${item.slug}.html`}
+                      aria-current={item.slug === page.slug ? 'page' : undefined}
+                    >
+                      {item.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </nav>
+      </details>
+    </aside>
+    <div>
+      {headings.length > 0 && (
+        <details class="page-contents">
+          <summary>On this page</summary>
+          <ul>
+            {headings.map((heading) => (
+              <li>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <article class="prose" data-pagefind-body>
+        <Content />
+      </article>
+      <nav class="chapter-links" aria-label="Adjacent chapters">
+        {previous && (
+          <a rel="prev" href={`/docs/${previous.slug}.html`}>
+            ← {previous.title}
+          </a>
+        )}
+        {next && (
+          <a rel="next" href={`/docs/${next.slug}.html`}>
+            {next.title} →
+          </a>
+        )}
+      </nav>
+    </div>
+  </div>
+  <script is:inline src="/pagefind/pagefind-ui.js"></script>
+  <script is:inline>
+    new PagefindUI({ element: '#docs-search', showSubResults: true, bundlePath: '/pagefind/' });
+  </script>
+</Site>

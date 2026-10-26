@@ -1,0 +1,165 @@
+<section id="wallet" data-page="account" aria-labelledby="wallet-title" hidden>
+  <h1 id="wallet-title" tabindex="-1">
+    Account
+  </h1>
+  <p class="tagline">Create or load an account to get started.</p>
+  <p id="wallet-notice" hidden>
+    Keys stay in this tab and clear on reload. Download your backup before leaving; it is
+    unencrypted, so keep it private and use test tokens only.
+  </p>
+  <div id="wallet-start" class="intro">
+    <p id="account-registration-info">Checking account registration…</p>
+    <button id="wallet-generate" type="button" disabled>
+      Create account
+    </button>
+    <form id="wallet-load" class="intro">
+      <label for="wallet-key">Load a private key (hexadecimal)</label>
+      <div class="faucet-controls">
+        <input
+          id="wallet-key"
+          type="password"
+          required
+          maxlength="128"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="submit">Load key</button>
+      </div>
+    </form>
+    <label for="wallet-file" class="intro">
+      Or load an account backup
+    </label>
+    <input id="wallet-file" type="file" accept=".json,.txt,application/json,text/plain" />
+  </div>
+  <section id="wallet-account" class="intro" aria-label="Loaded account" hidden>
+    <dl class="wallet-details">
+      <div>
+        <dt>Address</dt>
+        <dd id="wallet-address"></dd>
+      </div>
+      <div>
+        <dt>Network</dt>
+        <dd id="wallet-network">Checking…</dd>
+      </div>
+      <div>
+        <dt>Balance</dt>
+        <dd id="wallet-balance">Checking…</dd>
+      </div>
+    </dl>
+    <div class="faucet-controls intro">
+      <button id="wallet-copy" type="button">
+        Copy address
+      </button>
+      <button id="wallet-download" type="button">
+        Download private key
+      </button>
+      <button id="wallet-close" type="button">
+        Close account
+      </button>
+    </div>
+    <label for="wallet-private" class="intro">
+      Private key
+    </label>
+    <div class="faucet-controls">
+      <input id="wallet-private" type="password" readonly autocomplete="off" />
+      <button id="wallet-reveal" type="button">
+        Show private key
+      </button>
+    </div>
+  </section>
+  <p id="wallet-message" class="intro" role="status" aria-live="polite"></p>
+  <button id="account-registration-retry" type="button" hidden>
+    Retry account registration
+  </button>
+  <section id="wallet-actions" class="faucet" aria-labelledby="transfer-title" hidden>
+    <h2 id="transfer-title">Send CAI</h2>
+    <p>Amounts are whole CAI base units; the maximum fee is 1,000 units.</p>
+    <form id="transfer-form">
+      <fieldset id="transfer-fields" disabled>
+        <label for="transfer-to">Recipient address</label>
+        <input
+          id="transfer-to"
+          type="text"
+          required
+          minlength="52"
+          maxlength="52"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <label for="transfer-amount" class="intro">
+          Amount (CAI base units)
+        </label>
+        <div class="faucet-controls">
+          <input
+            id="transfer-amount"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]+"
+            maxlength="20"
+            required
+            autocomplete="off"
+          />
+          <button type="submit">Review transfer</button>
+        </div>
+      </fieldset>
+    </form>
+    <details class="intro">
+      <summary>Sign and submit a transaction</summary>
+      <p>
+        Paste an unsigned transaction payload in hexadecimal. This account supplies the network,
+        sender, nonce, and signature. Review the decoded details before sending.
+      </p>
+      <form id="transaction-form">
+        <fieldset id="transaction-fields">
+          <label for="transaction-payload">Unsigned payload (hex)</label>
+          <textarea
+            id="transaction-payload"
+            rows="4"
+            maxlength="1048576"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+          <label for="transaction-fee">Maximum fee (CAI base units)</label>
+          <div class="faucet-controls">
+            <input
+              id="transaction-fee"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]+"
+              maxlength="20"
+              value="1000"
+              required
+              autocomplete="off"
+            />
+            <button type="submit">Review transaction</button>
+          </div>
+        </fieldset>
+      </form>
+    </details>
+    <section id="tx-review" class="intro" aria-labelledby="tx-review-title" hidden>
+      <h3 id="tx-review-title" tabindex="-1">
+        Review transaction
+      </h3>
+      <pre id="tx-summary"></pre>
+      <div class="faucet-controls">
+        <button id="tx-send" type="button">
+          Confirm and send
+        </button>
+        <button id="tx-cancel" type="button">
+          Cancel
+        </button>
+      </div>
+    </section>
+    <p id="tx-message" role="status" aria-live="polite">
+      Review the details before sending.
+    </p>
+    <button id="tx-retry" class="intro" type="button" hidden>
+      Retry the same transaction
+    </button>
+    <section id="tx-history" class="intro" aria-labelledby="tx-history-title" hidden>
+      <h3 id="tx-history-title">Transactions this session</h3>
+      <ul id="tx-list"></ul>
+    </section>
+  </section>
+</section>

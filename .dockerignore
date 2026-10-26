@@ -28,3 +28,6 @@ docs/book
 packages/gateway/public/docs
 packages/gateway/public/wallet-assets
 packages/gateway/public/demo-assets
+
+packages/gateway/public/site/
+.astro/

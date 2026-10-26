@@ -331,3 +331,135 @@ main:has([data-page^='demos/']:not([hidden])) {
     right: 0;
   }
 }
+
+/* Shared editorial and documentation styles. */
+.prose {
+  overflow-wrap: anywhere;
+}
+.prose > * + * {
+  margin-top: 1.2rem;
+}
+.prose h2 {
+  margin-top: 2rem;
+  font-size: 1.4rem;
+}
+.prose h3 {
+  margin-top: 1.5rem;
+}
+.prose img {
+  max-width: 100%;
+  height: auto;
+}
+.prose pre {
+  padding: 16px;
+  border: 1px solid #323a44;
+  border-radius: 6px;
+  overflow: auto;
+  white-space: pre;
+}
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+}
+.prose td,
+.prose th {
+  padding: 8px 12px;
+  border: 1px solid #323a44;
+  text-align: left;
+}
+.prose blockquote {
+  margin-left: 0;
+  padding-left: 16px;
+  border-left: 3px solid #ffcc66;
+}
+.skip-link {
+  position: absolute;
+  top: -100px;
+  padding: 8px;
+  background: #171e26;
+  z-index: 10;
+}
+.skip-link:focus {
+  top: 0;
+}
+.docs-main {
+  max-width: 1200px;
+  margin-top: 32px;
+}
+.docs-grid {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 40px;
+  margin-top: 32px;
+}
+.docs-nav {
+  display: block;
+  font-size: 14px;
+}
+.docs-nav h2 {
+  font-size: 14px;
+  margin-top: 20px;
+}
+.docs-nav ul {
+  list-style: none;
+  padding: 0;
+}
+.docs-nav li {
+  margin: 8px 0;
+}
+.docs-nav a {
+  text-decoration: none;
+}
+.docs-nav a[aria-current='page'] {
+  text-decoration: underline;
+}
+.page-contents {
+  margin-bottom: 24px;
+}
+.chapter-links {
+  justify-content: space-between;
+  margin-top: 40px;
+  border-top: 1px solid #323a44;
+  padding-top: 20px;
+}
+.live-node {
+  display: block;
+  padding: 20px;
+  border: 1px solid #323a44;
+  border-radius: 6px;
+  background: #171e26;
+}
+.live-node dl {
+  margin: 12px 0;
+}
+.live-node dl > div {
+  display: flex;
+  gap: 16px;
+}
+.live-node button {
+  margin-right: 12px;
+}
+#docs-search {
+  --pagefind-ui-primary: #ffcc66;
+  --pagefind-ui-text: #d4d8dd;
+  --pagefind-ui-background: #171e26;
+  --pagefind-ui-border: #596473;
+  --pagefind-ui-tag: #323a44;
+  --pagefind-ui-font: system-ui, sans-serif;
+}
+@media (max-width: 760px) {
+  .docs-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .docs-nav {
+    max-height: 240px;
+    overflow: auto;
+  }
+}
+
+#docs-search .pagefind-ui__result-excerpt {
+  overflow-wrap: anywhere;
+}

@@ -1,6 +1,6 @@
 # Quickstart
 
-Requirements: Node ≥ 20 with corepack and mdBook 0.5.2 for building the bundled
+Requirements: Node ≥ 22.23.4 with pnpm for building the packages and Astro
 documentation (see [toolchains](reference/repo.md#toolchains)). Rust (with the
 `wasm32-unknown-unknown` target) and Python 3 are only needed if you want to
 rebuild WASM artifacts or compile DSL contracts — prebuilt artifacts are

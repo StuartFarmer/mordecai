@@ -35,7 +35,7 @@ top (SPEC_APPCHAINS.md):
 
 ## Known limitations (deliberate v1 scope)
 
-Security-relevant items are tracked in the [Threat Model](architecture/threat-model.md);
+Security-relevant items are tracked in the [Threat Model](architecture/threat-model.mdx);
 the headline ones:
 
 - **Permissioned validators.** The set is fixed at genesis; staking,

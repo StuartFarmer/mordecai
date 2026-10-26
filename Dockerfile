@@ -11,24 +11,16 @@ RUN mkdir -p /wasm && for name in hex hex_escrow frontier outpost goods_market c
       && cp "/tmp/contracts/$name/$name.wasm" /wasm/ || exit 1; \
     done
 
-FROM node:22-bookworm-slim AS build
-ARG TARGETARCH
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl python3 make g++ \
+FROM node:22.23.4-bookworm-slim AS build
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3 make g++ \
     && rm -rf /var/lib/apt/lists/* \
     && npm install --global pnpm@10.34.4
-RUN case "$TARGETARCH" in \
-      amd64) target=x86_64-unknown-linux-musl ;; \
-      arm64) target=aarch64-unknown-linux-musl ;; \
-      *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
-    esac \
-    && curl -fsSL --retry 3 "https://github.com/rust-lang/mdBook/releases/download/v0.5.2/mdbook-v0.5.2-$target.tar.gz" \
-       | tar -xz -C /usr/local/bin mdbook
 WORKDIR /app
 COPY . .
 COPY --from=contracts /wasm/ contracts/dist/
 RUN pnpm install --frozen-lockfile && pnpm build
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:22.23.4-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libatomic1 tini \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

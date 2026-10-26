@@ -2,5 +2,14 @@
   "singleQuote": true,
   "printWidth": 100,
   "semi": true,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "plugins": ["./packages/gateway/node_modules/prettier-plugin-astro/dist/index.js"],
+  "overrides": [
+    {
+      "files": "*.astro",
+      "options": {
+        "parser": "astro"
+      }
+    }
+  ]
 }

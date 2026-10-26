@@ -1,0 +1,32 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+const { title = 'Node', docs = false, index = false, standalone = false } = Astro.props;
+const assets = standalone ? '/wallet-assets' : '';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f1419" />
+    <meta name="description" content="Mordecai. P2P toolkit for a distributed world." />
+    <title>Mordecai — {title}</title>
+    <link rel="icon" href={`${assets}/favicon.svg`} type="image/svg+xml" />
+    <link rel="stylesheet" href={`${assets}/mordecai.css`} />
+    <script is:inline src={`${assets}/mordecai.js`} defer></script>
+    {docs && <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />}
+    <slot name="head" />
+  </head>
+  <body data-pagefind-ignore={index ? 'all' : undefined}>
+    <a class="skip-link" href="#main-content">
+      Skip to content
+    </a>
+    <Header app={!docs} standalone={standalone} />
+    <main id="main-content" class:list={{ 'docs-main': docs }}>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

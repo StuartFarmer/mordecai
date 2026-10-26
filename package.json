@@ -7,16 +7,18 @@
   },
   "packageManager": "pnpm@10.34.4",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.23.4"
   },
   "scripts": {
     "mordecai": "node bin/mordecai.mjs",
-    "build": "tsc -b && node scripts/build-node-web.mjs && mdbook build docs",
-    "build:docs": "mdbook build docs",
+    "build": "tsc -b && node scripts/build-node-web.mjs && node scripts/build-site.mjs",
+    "build:docs": "node scripts/build-site.mjs",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dev:site": "pnpm --filter @mordecai/gateway dev:site",
+    "check:site": "node scripts/check-site.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
