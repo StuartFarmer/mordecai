@@ -41,7 +41,7 @@ Preserve current style, documentation URLs/anchors, all content, browser-only ke
 
 - [x] Use isolated preview to verify account creation/load/navigation, all demos, MDX updates, search, legacy URLs and mobile layout.
 - [x] Have a fresh reviewer assess the final diff; address material findings with tests.
-- [ ] Commit verification notes and push migration branch; preserve the active explorer checkout.
+- [x] Commit verification notes and push migration branch; preserve the active explorer checkout.
 
 ## Verification ledger
 
@@ -54,3 +54,6 @@ Preserve current style, documentation URLs/anchors, all content, browser-only ke
 - Ruling: retain hash SPA and separate documentation tabs — avoids changing signing/transaction lifetimes; normal document reload still clears keys as before.
 - Ruling: use a shared minimal docs layout with Pagefind rather than Starlight — preserves existing visual styling and URLs, with a small custom navigation layout to maintain.
 - Existing ignored WASM artifacts were copied into the isolated checkout for tests; Docker compiles its own demo artifacts. No chain data or operator keys copied into Git.
+
+- Docker: linux/amd64 image built with Node 22.23.4 and no mdBook installation. Temporary container passed all six demo/API checks plus MDX/search assets and traversal rejection; container removed after verification.
+- Delivery: implementation commit `84d6ef7` pushed to `feat/astro-node-site`. Development preview on localhost:4321 uses the isolated node on 8791; existing node data and explorer checkout are untouched. No main merge or Render deployment performed.
