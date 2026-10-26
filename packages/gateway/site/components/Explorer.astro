@@ -1,0 +1,19 @@
+---
+import { Content as Explorer } from '../content/explorer.mdx';
+import { Content as Apps } from '../content/apps.mdx';
+---
+
+<section data-page="explorer" class="chain-browser" aria-labelledby="explorer-title" hidden>
+  <h1 id="explorer-title" tabindex="-1">
+    Explorer
+  </h1>
+  <Explorer />
+  <div id="explorer-content" class="intro"></div>
+</section>
+<section data-page="apps" class="chain-browser" aria-labelledby="apps-title" hidden>
+  <h1 id="apps-title" tabindex="-1">
+    Apps
+  </h1>
+  <Apps />
+  <div id="apps-content" class="intro"></div>
+</section>

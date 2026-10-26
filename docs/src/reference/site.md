@@ -78,3 +78,15 @@ local links, assets, old Field Guide anchors, and the MDX example. Generated fil
 are ignored by Git. `pnpm build` also compiles packages and account/demo bundles.
 The existing Render container serves everything from one origin without mdBook
 or a second site server.
+
+## Explorer and Apps
+
+The shared navigation exposes `/#/explorer` and `/#/apps`. Both are rendered by
+`packages/gateway/site/components/Explorer.astro`, with editable MDX introductions
+in `site/content/explorer.mdx` and `site/content/apps.mdx`. The browser controller
+in `packages/gateway/web/explorer.js` reads current blocks, receipts, registrations,
+and app-chain data from the gateway. These views work without an account and keep
+an active account in memory when navigating within the node page.
+
+The [gateway guide](../apps/gateway.md) describes the explorer routes, pagination,
+peer availability, and the distinction between live app heads and settlement anchors.

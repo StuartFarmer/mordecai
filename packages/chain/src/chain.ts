@@ -283,6 +283,29 @@ export class Chain {
     return raw === undefined ? undefined : decodeAppEntry(raw);
   }
 
+  async listApps(options: { after?: string; limit?: number } = {}): Promise<{
+    apps: { appId: string; entry: AppEntry }[];
+    nextAfter: string | null;
+  }> {
+    const prefix = appKey('');
+    const after = options.after === undefined ? undefined : appKey(options.after);
+    const limit = options.limit ?? 50;
+    const apps: { appId: string; entry: AppEntry }[] = [];
+    // shortcut: scans preceding state keys, use range iteration when registry scans become costly.
+    for await (const [key, value] of this.stateStore.entries()) {
+      const order = Buffer.compare(key.subarray(0, prefix.length), prefix);
+      if (order < 0) continue;
+      if (order > 0) break;
+      if (after !== undefined && Buffer.compare(key, after) <= 0) continue;
+      if (apps.length === limit) return { apps, nextAfter: apps[apps.length - 1]!.appId };
+      apps.push({
+        appId: new TextDecoder().decode(key.subarray(prefix.length)),
+        entry: decodeAppEntry(value),
+      });
+    }
+    return { apps, nextAfter: null };
+  }
+
   /** The last accepted app-chain anchor for `appId`, if any. */
   async getAnchor(appId: string): Promise<AnchorRecord | undefined> {
     const raw = await this.stateStore.get(anchorKey(appId));
