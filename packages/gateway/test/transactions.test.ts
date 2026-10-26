@@ -89,7 +89,7 @@ it('rejects missing wallets, malformed/oversized payloads and invalid fees befor
   const { client, wallet, to, state } = setup();
   const prepared = await client.prepareTransfer(wallet, to, '100');
   const payload = Buffer.from(encodePayload(prepared.tx.payload)).toString('hex');
-  await expect(client.prepareTransaction(null, payload, '1000')).rejects.toThrow(/wallet/);
+  await expect(client.prepareTransaction(null, payload, '1000')).rejects.toThrow(/account/);
   for (const input of ['xx', '0', 'ff', '01'.repeat(32), prepared.hex]) {
     await expect(client.prepareTransaction(wallet, input, '1000')).rejects.toThrow();
   }

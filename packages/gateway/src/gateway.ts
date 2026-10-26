@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { NodeRpcClient, RpcError } from '@mordecai/rpc';
 import type { Wallet } from '@mordecai/wallet';
 import { Faucet, FaucetError } from './faucet.js';
-import { clientIp } from './request-context.js';
+import { assertSameOrigin, clientIp } from './request-context.js';
+import { Accounts } from './accounts.js';
 
 /**
  * Browser-facing edge of the network (web tier of the frontend-flow design):
@@ -34,6 +35,8 @@ export interface GatewayOptions {
   faucet?: Wallet;
   /** Operator-selected fixed grant; defaults to 10,000 base units. */
   faucetAmount?: bigint;
+  /** Enables durable one-time account grants and disables every public faucet route. */
+  accountsDir?: string;
   /** RPC public key of the chain node to bridge to. */
   nodeKey: Uint8Array;
   bootstrap?: { host: string; port: number }[];
@@ -89,6 +92,7 @@ const LANDING_PATHS = new Set([
 ]);
 
 const WALLET_FILES: Record<string, string> = {
+  '/account.html': '/wallet.html',
   '/wallet.html': '/wallet.html',
   '/wallet-assets/wallet.js': '/wallet-assets/wallet.js',
   '/wallet-assets/mordecai.css': '/mordecai.css',
@@ -159,6 +163,26 @@ export class Gateway {
       }),
     );
     const networkClients = [...networks.values()].map((network) => network.rpc);
+    if (options.accountsDir && !options.faucet)
+      throw new Error('Account registration requires a funding key');
+    const accounts =
+      options.accountsDir && options.faucet
+        ? new Accounts(options.accountsDir, (await rpc.getHead()).chainId, {
+            l1: { rpc, wallet: options.faucet, amount: 1_000_000n },
+            ...Object.fromEntries(
+              Object.entries(options.networks ?? {})
+                .filter(([, n]) => n.faucet)
+                .map(([name, n]) => [
+                  name,
+                  {
+                    rpc: networks.get(name)!.rpc,
+                    wallet: n.faucet!,
+                    amount: n.faucetAmount ?? 1_000_000_000n,
+                  },
+                ]),
+            ),
+          })
+        : undefined;
 
     const server = createServer((req, res) => {
       handle(req, res).catch((err) => {
@@ -182,6 +206,42 @@ export class Gateway {
       const url = new URL(req.url ?? '/', 'http://gateway');
       const path = url.pathname;
 
+      if (path === '/api/accounts' || path.startsWith('/api/accounts/')) {
+        if (!accounts)
+          return json(res, 503, {
+            enabled: false,
+            error: 'New account registration is unavailable on this node.',
+          });
+        try {
+          if (path === '/api/accounts' && req.method === 'GET')
+            return json(res, 200, accounts.info(clientIp(req, options)));
+          if (path === '/api/accounts' && req.method === 'POST') {
+            assertSameOrigin(req, options.trustRailwayProxy);
+            return json(
+              res,
+              200,
+              await accounts.register(
+                JSON.parse(await readBody(req, 1024)),
+                clientIp(req, options),
+              ),
+            );
+          }
+          const address = path.match(/^\/api\/accounts\/([a-z0-9]{52})$/)?.[1];
+          const status = address && req.method === 'GET' ? accounts.status(address) : null;
+          return json(
+            res,
+            status ? 200 : 404,
+            status ?? { error: 'Account registration not found' },
+          );
+        } catch (error) {
+          if (error instanceof FaucetError && error.retryAfter)
+            res.setHeader('retry-after', error.retryAfter);
+          return json(res, error instanceof FaucetError ? error.status : 400, {
+            error: error instanceof Error ? error.message : 'Invalid registration',
+          });
+        }
+      }
+
       if (
         (path === '/api/demos/chess/rooms' ||
           path.startsWith('/api/demos/chess/rooms/') ||
@@ -199,8 +259,8 @@ export class Gateway {
       }
       if (path.startsWith('/api/')) return handleApi(req, res, path, url, rpc, faucet);
       if (req.method === 'GET' || req.method === 'HEAD') {
-        if (path === '/wallet') {
-          res.writeHead(308, { location: './wallet.html' });
+        if (path === '/wallet' || path === '/account') {
+          res.writeHead(308, { location: './account.html' });
           res.end();
           return;
         }
@@ -247,6 +307,12 @@ export class Gateway {
       faucet: Faucet | undefined,
     ): Promise<void> => {
       try {
+        if (accounts && path === '/api/faucet')
+          return json(res, req.method === 'GET' ? 200 : 403, {
+            enabled: false,
+            error:
+              'Public faucet access is disabled. New accounts receive a one-time registration grant.',
+          });
         if (path === '/api/faucet' && req.method === 'GET') {
           return json(res, 200, faucet?.info() ?? { enabled: false });
         }

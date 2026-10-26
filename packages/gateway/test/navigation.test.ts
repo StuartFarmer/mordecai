@@ -3,12 +3,12 @@ import { initNavigation } from '../web/navigation.js';
 
 it('switches persistent views, supports deep links/back, and marks the active navigation item', () => {
   let change!: () => void;
-  const views = ['home', 'wallet', 'faucet', 'demos/hex'].map((name) => ({
+  const views = ['home', 'account', 'about/design', 'demos/hex'].map((name) => ({
     dataset: { page: name },
     hidden: false,
     querySelector: () => ({ focus() {} }),
   }));
-  const links = ['home', 'wallet', 'faucet', 'demos/hex'].map((name) => ({
+  const links = ['home', 'account', 'about/design', 'demos/hex'].map((name) => ({
     dataset: { route: name },
     attrs: {} as Record<string, string>,
     setAttribute(key: string, value: string) {
@@ -42,9 +42,9 @@ it('switches persistent views, supports deep links/back, and marks the active na
   expect(views[1]!.hidden).toBe(false);
   win.location.hash = '#/faucet';
   change();
-  expect(views.map((v) => v.hidden)).toEqual([true, true, false, true]);
-  expect(links[2]!.attrs['aria-current']).toBe('page');
-  expect(doc.title).toContain('Faucet');
+  expect(views.map((v) => v.hidden)).toEqual([true, false, true, true]);
+  expect(links[1]!.attrs['aria-current']).toBe('page');
+  expect(doc.title).toContain('Account');
   win.location.hash = '#/demos/hex?room=test';
   change();
   expect(views[3]!.hidden).toBe(false);

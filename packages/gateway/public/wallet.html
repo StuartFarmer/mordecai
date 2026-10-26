@@ -3,29 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mordecai — Wallet</title>
+    <title>Mordecai — Account</title>
     <link rel="stylesheet" href="./wallet-assets/mordecai.css" />
-    <script src="./wallet-assets/faucet.js" defer></script>
     <script src="./wallet-assets/wallet.js" defer></script>
   </head>
   <body>
     <header class="status-bar">
       <nav aria-label="Main navigation">
         <a href="./">Back to node or game</a>
-        <a href="#/wallet" data-route="wallet">Wallet</a>
-        <a href="#/faucet" data-route="faucet">Faucet</a>
+        <a href="#/account" data-route="account">Account</a>
       </nav>
     </header>
     <main>
-      <section id="wallet" data-page="wallet" aria-labelledby="wallet-title" hidden>
-        <h1 id="wallet-title" tabindex="-1">Wallet</h1>
-        <p class="tagline">Create or load a wallet to get started.</p>
+      <section id="wallet" data-page="account" aria-labelledby="wallet-title" hidden>
+        <h1 id="wallet-title" tabindex="-1">Account</h1>
+        <p class="tagline">Create or load an account to get started.</p>
         <p id="wallet-notice" hidden>
           Keys stay in this tab and clear on reload. Download your backup before leaving; it is
           unencrypted, so keep it private and use test tokens only.
         </p>
         <div id="wallet-start" class="intro">
-          <button id="wallet-generate" type="button">Create wallet</button>
+          <p id="account-registration-info">Checking account registration…</p>
+          <button id="wallet-generate" type="button" disabled>Create account</button>
           <form id="wallet-load" class="intro">
             <label for="wallet-key">Load a private key (hexadecimal)</label>
             <div class="faucet-controls">
@@ -40,10 +39,10 @@
               <button type="submit">Load key</button>
             </div>
           </form>
-          <label for="wallet-file" class="intro">Or load a web wallet backup</label>
+          <label for="wallet-file" class="intro">Or load an account backup</label>
           <input id="wallet-file" type="file" accept=".json,.txt,application/json,text/plain" />
         </div>
-        <section id="wallet-account" class="intro" aria-label="Loaded wallet" hidden>
+        <section id="wallet-account" class="intro" aria-label="Loaded account" hidden>
           <dl class="wallet-details">
             <div>
               <dt>Address</dt>
@@ -61,7 +60,7 @@
           <div class="faucet-controls intro">
             <button id="wallet-copy" type="button">Copy address</button>
             <button id="wallet-download" type="button">Download private key</button>
-            <button id="wallet-close" type="button">Close wallet</button>
+            <button id="wallet-close" type="button">Close account</button>
           </div>
           <label for="wallet-private" class="intro">Private key</label>
           <div class="faucet-controls">
@@ -70,6 +69,9 @@
           </div>
         </section>
         <p id="wallet-message" class="intro" role="status" aria-live="polite"></p>
+        <button id="account-registration-retry" type="button" hidden>
+          Retry account registration
+        </button>
         <section id="wallet-actions" class="faucet" aria-labelledby="transfer-title" hidden>
           <h2 id="transfer-title">Send CAI</h2>
           <p>Amounts are whole CAI base units; the maximum fee is 1,000 units.</p>
@@ -103,7 +105,7 @@
           <details class="intro">
             <summary>Sign and submit a transaction</summary>
             <p>
-              Paste an unsigned transaction payload in hexadecimal. This wallet supplies the
+              Paste an unsigned transaction payload in hexadecimal. This account supplies the
               network, sender, nonce, and signature. Review the decoded details before sending.
             </p>
             <form id="transaction-form">
@@ -152,36 +154,7 @@
           </section>
         </section>
       </section>
-      <section data-page="faucet" aria-labelledby="faucet-title" hidden>
-        <h1 id="faucet-title" tabindex="-1">Faucet</h1>
-        <p class="tagline">
-          Free tokens to try the network. Enter your wallet address to get started.
-        </p>
-        <form id="faucet-form">
-          <fieldset id="faucet-fields" disabled>
-            <label for="faucet-address">Wallet address</label>
-            <div class="faucet-controls">
-              <input
-                id="faucet-address"
-                name="address"
-                type="text"
-                required
-                minlength="52"
-                maxlength="52"
-                autocomplete="off"
-                spellcheck="false"
-                aria-describedby="faucet-message"
-              />
-              <button type="submit">Get test CAI</button>
-            </div>
-          </fieldset>
-        </form>
-        <p id="faucet-message" role="status" aria-live="polite">
-          Enable JavaScript to use the faucet.
-        </p>
-        <a id="faucet-tx" target="_blank" rel="noopener" hidden>View transaction</a>
-      </section>
-      <noscript><p>Enable JavaScript to use the wallet or faucet.</p></noscript>
+      <noscript><p>Enable JavaScript to use your account.</p></noscript>
     </main>
   </body>
 </html>

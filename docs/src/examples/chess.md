@@ -1,8 +1,8 @@
 # Chess: browser rooms and native P2P matches
 
-The node site offers **Demos → Chess**. Load a wallet in Wallet, fund it from
-Faucet, and create a room with a positive integer stake in base units. Copy the
-invitation to another browser with a different wallet. The creator plays white;
+The node site offers **Demos → Chess**. Create an account in Account to receive 1,000,000 test CAI automatically, or load
+an existing funded account, and create a room with a positive integer stake in base units. Copy the
+invitation to another browser with a different account. The creator plays white;
 the joiner matches the stake and plays black. Extra visitors can spectate.
 
 Select a piece and destination to move; choose a promotion piece before moving
@@ -19,7 +19,7 @@ stake, less transaction fees already paid. Keep enough balance for fees.
 
 The browser uses a same-origin signed-message relay, not direct HyperDHT.
 Messages bind the chain, deployed contract, room, sequence, previous hash and
-action to the wallet signature. Host and browser replay the same signatures and
+action to the account signature. Host and browser replay the same signatures and
 rules using [chess.js 1.4.0](https://jhlywa.github.io/chess.js/), distributed under
 its [BSD-2-Clause license](https://github.com/jhlywa/chess.js/blob/master/LICENSE).
 The host verifies confirmed wager membership before accepting play. A room-key
@@ -30,7 +30,7 @@ Room histories survive host restart. Reopen the invitation and load the same
 wallet to resume. Retry an uncertain move with **Retry identical signed message**;
 accepted identical retries do not append again. If registration was interrupted
 after creating the wager, use **Recover room registration** and, if needed, paste
-the confirmed creation hash from Wallet history. Only public receipt hashes are
+the confirmed creation hash from Account history. Only public receipt hashes are
 saved by the game. Closing or replacing a wallet revokes further sends/signatures.
 
 `apps/chess` remains the native Hypercore example. Its transport and `WagerClient`

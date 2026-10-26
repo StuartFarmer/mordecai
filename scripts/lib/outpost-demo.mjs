@@ -106,7 +106,7 @@ export async function bootOutpost({ base, repoRoot, rpc, chainId, nodeKey, boots
         market: Buffer.from(market).toString('hex'),
         outpost: Buffer.from(outpost).toString('hex'),
         appApi: '/api/demos/outpost',
-        appFaucet: '/api/demos/outpost/api/faucet',
+        accountFunding: true,
       },
       networks: {
         outpost: {

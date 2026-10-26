@@ -93,7 +93,7 @@ export class TransactionClient {
   }
 
   async prepareTransaction(wallet, input, feeText) {
-    if (!wallet) throw new Error('Create or load a wallet first.');
+    if (!wallet) throw new Error('Create or load an account first.');
     if (input.length + 9 > 1_048_576) throw new Error('Transaction is too large for this gateway.');
     const text = input.trim();
     if (!/^(?:[a-f\d]{2})+$/i.test(text))
@@ -105,7 +105,7 @@ export class TransactionClient {
   }
 
   async preparePayload(wallet, payload, maxFee) {
-    if (!wallet) throw new Error('Create or load a wallet first.');
+    if (!wallet) throw new Error('Create or load an account first.');
     const [head, account] = await Promise.all([
       this.get('./api/head'),
       this.get(`./api/account/${wallet.address}`),

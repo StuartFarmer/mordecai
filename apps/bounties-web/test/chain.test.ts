@@ -66,7 +66,7 @@ it('keeps browsing and public policy visible with Wallet closed', () => {
   const session = { subscribe: () => () => {}, getSnapshot: () => null };
   const html = renderToStaticMarkup(React.createElement(App, { session, initialConfig: config }));
   expect(html).toContain('Information bounties');
-  expect(html).toContain('Open Wallet');
+  expect(html).toContain('Open Account');
   expect(html).toContain('Test CAI only');
   expect(html).toContain('no guaranteed award');
   expect(html).toContain(DISCLOSURE);

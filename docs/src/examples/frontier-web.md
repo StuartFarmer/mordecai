@@ -9,17 +9,17 @@ extension and no backend beyond a [gateway](../apps/gateway.md).
 ## Shared node demo
 
 Start the persistent node with `node scripts/hex-demo.mjs` after building the node
-and demo bundles. Open **Wallet**, load or create a wallet, fund test CAI in
-**Faucet**, then select **Demos → Frontier**. The game uses that wallet without
-another key import. Closing or replacing the wallet revokes its signing facade.
-Each action reserves up to 500,000 base units for fees; the Wallet tab records
+and demo bundles. Open **Account**, create an account for an automatic 1,000,000 test CAI grant or load an existing
+account, then select **Demos → Frontier**. The game uses that account without
+another key import. Closing or replacing the account revokes its signing facade.
+Each action reserves up to 500,000 base units for fees; the Account tab records
 transaction receipts and handles uncertain submission retries.
 
 This is one persistent world of 144 tiles on `mordecai-demo`. Claim wilderness,
 build a farm or lumbermill for 10 wood, and harvest resources. Growth follows
 block height: waiting alone does not produce resources. Trade wood and wheat
 through escrowed orders with a second wallet, or transfer a tile to a complete,
-valid recipient wallet address. A full world remains full; players can trade or
+valid recipient account address. A full world remains full; players can trade or
 transfer land rather than resetting other players' progress.
 
 The shared deployment uses journaled `frontier-deploy` and `frontier-init` steps.

@@ -39,7 +39,7 @@ it('offers a saved legacy wallet without preventing a different import', () => {
   const legacy = createBrowserWallet();
   const onLoad = vi.fn();
   const tree = WalletPicker({ onLoad, legacy });
-  click(find(tree, (node) => node.children.includes('Use saved Hex wallet')));
+  click(find(tree, (node) => node.children.includes('Use saved Hex account')));
   expect(onLoad).toHaveBeenCalledWith(legacy, true);
   expect(find(tree, (node) => node.props?.id === 'hex-wallet-file')).toBeDefined();
 });
@@ -56,7 +56,7 @@ it('does not replace a newly created key when an older file read finishes', asyn
     event: unknown,
   ) => Promise<void>;
   const importFile = change({ target: { files: [{ size: 300, text: () => pending }] } });
-  click(find(tree, (node) => node.children.includes('Create temporary wallet')));
+  click(find(tree, (node) => node.children.includes('Create temporary account')));
   expect(onLoad).toHaveBeenCalledTimes(1);
   finish(exportBrowserWallet(fromFile));
   await importFile;

@@ -155,22 +155,25 @@ pnpm mordecai app connect \
 
 ## Send a payment {#payments}
 
-For a browser-only walkthrough, see [Web Wallet → Faucet → Hex](examples/hex-web.md).
-Every gateway provides `/wallet.html`: generate or load a key, download a private
-backup, read the balance, and claim from the same node's faucet. The wallet uses
-in-memory keys and unencrypted test backups, distinct from the CLI keystore.
+For a browser-only walkthrough, see [Account → Test CAI → Hex](examples/hex-web.md).
+On the node demo, open **Account** to create or load an account, save its private
+key, view balances, and send transactions. New accounts automatically receive
+1,000,000 test CAI and app-chain fees. Registration is limited to one new account
+per minute per visitor IP, and each account receives one grant. These records
+survive restarts. Public faucet requests are disabled on the node demo.
 
-### Get test CAI from a faucet {#faucet}
+The account page uses in-memory keys and unencrypted test backups, distinct from
+the CLI keystore. Other gateways expose `/account.html` for loading an existing
+key and sending transactions; `/wallet.html` remains a compatible address.
 
-On a node with a faucet enabled, open its homepage, enter your **public wallet
-address** in Get test CAI, and submit. You never need to share your mnemonic,
-keystore, or passphrase. Each claim sends 10,000 CAI base units; the faucet pays
-the fee. Follow View transaction and wait for confirmation before spending.
+### Operator-enabled test faucet API {#faucet}
 
-Claims are limited to one per address and IP per minute, and 100 per hour per
-gateway. A node without a configured faucet shows a disabled form. If a claim
-is submitted but confirmation is unavailable, check the transaction or your
-balance before requesting again.
+Other gateways can explicitly enable the legacy `POST /api/faucet` endpoint,
+which accepts `{"address":"<public-address>"}`. It never needs a private key or
+passphrase. Its default grant is 10,000 CAI base units, with a one-minute
+address/IP cooldown and 100 claims per hour. Check the returned transaction
+receipt before spending or requesting again if confirmation is uncertain.
+This API is separate from node-demo account registration.
 
 **Node operators:** create a separate wallet with the wallet CLI, fund its address
 on your network, set `MORDECAI_FAUCET_PASSPHRASE` to that wallet's passphrase, then
@@ -183,7 +186,7 @@ keys and other spending wallets. Never place its secret in the public node confi
 For this MVP, limits reset on restart and one faucet gateway must own the wallet.
 The IP limit uses the socket address, so users behind the same reverse proxy
 share a cooldown. Run `node apps/devnet/devnet.mjs` for a temporary funded faucet
-on the first printed node website.
+on the first printed node gateway.
 
 ### Send from your wallet
 

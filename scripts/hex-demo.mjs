@@ -305,7 +305,7 @@ const gateway = await Gateway.start({
   port: L1_PORT,
   ...(nodeSite
     ? {
-        faucetAmount: L1_GRANT,
+        accountsDir: join(base, 'accounts'),
         demoHandler: async (req, res, url) => {
           for (const demo of demos.values()) {
             if (await demo.handleRequest?.(req, res, url)) return true;
@@ -334,7 +334,7 @@ const gateway = await Gateway.start({
             escrow: Buffer.from(escrow).toString('hex'),
             hex: Buffer.from(hex).toString('hex'),
             appApi: '/api/demos/hex',
-            appFaucet: '/api/demos/hex/api/faucet',
+            accountFunding: true,
             manualFunding: true,
           },
         },
@@ -356,11 +356,11 @@ console.log(
   `\n${nodeSite ? 'Node demo' : 'Hex'} is live: http://127.0.0.1:${gateway.port}${nodeSite ? '/#/demos/hex' : ''}`,
 );
 console.log(`   persistent data: ${base}`);
-console.log(`   web wallet:        http://127.0.0.1:${gateway.port}/wallet.html`);
+console.log(`   account:           http://127.0.0.1:${gateway.port}/account.html`);
 if (appGateway) console.log(`   app-chain gateway: http://127.0.0.1:${appGateway.port}`);
 if (!nodeSite) console.log(`   faucet:            http://127.0.0.1:${FAUCET_PORT}`);
 console.log('\nplay: open the site on two machines (or two browsers), agree on a game');
-console.log('code, create on one and join on the other — 1,000,000 🪙 each, winner takes all.');
+console.log('code, create on one and join on the other — 100,000 🪙 each, winner takes all.');
 console.log('Ctrl-C to stop.');
 
 let stopping = false;

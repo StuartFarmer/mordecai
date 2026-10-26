@@ -20,7 +20,7 @@ it('shares a key-free wallet facade and invalidates it after closing or changing
   wallet = null;
   session.refresh();
   expect(session.getSnapshot()).toBeNull();
-  await expect(player.sendTransaction('', 'test', {}, 1000n)).rejects.toThrow(/wallet/i);
+  await expect(player.sendTransaction('', 'test', {}, 1000n)).rejects.toThrow(/account/i);
   expect(send).toHaveBeenCalledOnce();
   expect(changed).toHaveBeenCalledTimes(2);
   unsubscribe();
@@ -37,6 +37,6 @@ it('revokes Chess message signing when the loaded wallet changes', async () => {
   expect(sign).toHaveBeenCalledWith(wallet, message);
   wallet = createBrowserWallet();
   session.refresh();
-  await expect(player.signChessMessage(message)).rejects.toThrow(/wallet/i);
+  await expect(player.signChessMessage(message)).rejects.toThrow(/account/i);
   expect(sign).toHaveBeenCalledOnce();
 });

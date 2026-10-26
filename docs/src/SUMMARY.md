@@ -36,7 +36,7 @@
 
 # Examples
 
-- [Web Wallet, Faucet, and Hex](examples/hex-web.md)
+- [Account, Test CAI, and Hex](examples/hex-web.md)
 - [Chess: A Complete P2P App](examples/chess.md)
 - [The Marketplace Contract](examples/marketplace.md)
 - [Land: State Maps & Config](examples/land.md)

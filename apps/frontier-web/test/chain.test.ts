@@ -49,16 +49,16 @@ it('shows Wallet when disconnected and the supplied wallet instead of developmen
     renderToStaticMarkup(
       React.createElement(App, { session: session(null), initialConfig: config }),
     ),
-  ).toContain('href="#wallet"');
+  ).toContain('href="#/account"');
   const html = renderToStaticMarkup(
     React.createElement(App, {
       session: session({ address: 'wallet-address-123456789' }),
       initialConfig: config,
     }),
   );
-  expect(html).toContain('Manage wallet');
+  expect(html).toContain('Manage account');
   expect(html).not.toContain('player-btn');
-  expect(html).toContain('Faucet');
+  expect(html).not.toContain('Faucet');
   expect(html).toContain('Waiting alone');
 });
 

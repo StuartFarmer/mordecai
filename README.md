@@ -27,7 +27,8 @@ pnpm install && pnpm build
 node scripts/node-demo.mjs           # → http://127.0.0.1:8790
 ```
 
-Create or load a wallet, back it up, claim test CAI from the faucet, and open
+Create an **Account** to receive 1,000,000 test CAI automatically, or load an existing
+account. Save its private-key backup and open
 **Demos**. Hex and Chess offer game rooms; Frontier is a shared land-and-trading
 world; Outpost focuses on goods orders and settlement. The
 [Microblog](docs/src/examples/microblog.md) lets readers tip authors, and

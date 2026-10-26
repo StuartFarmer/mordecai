@@ -106,7 +106,7 @@ export default function App({ session, initialConfig } = {}) {
     setBusy(true);
     try {
       if (!player || (balances[player.address] ?? 0n) < MAX_FEE)
-        throw new Error('Use the Faucet tab to fund transaction fees.');
+        throw new Error('Check your Account balance for transaction fees.');
       const res = await act(player, config, msg);
       if (playerRef.current !== signingPlayer) return;
       addLog({
@@ -127,7 +127,7 @@ export default function App({ session, initialConfig } = {}) {
   if (session && !player)
     return (
       <div className="fatal">
-        Load a wallet to play Frontier. <a href="#wallet">Wallet</a>
+        Load an account to play Frontier. <a href="#/account">Account</a>
       </div>
     );
   if (!config || !player) return <div className="fatal">connecting to gateway…</div>;
@@ -293,7 +293,7 @@ export default function App({ session, initialConfig } = {}) {
           <div className="player-switch">
             {session ? (
               <span>
-                {me.slice(0, 16)}… · <a href="#wallet">Manage wallet</a>
+                {me.slice(0, 16)}… · <a href="#/account">Manage account</a>
               </span>
             ) : (
               <>
@@ -311,7 +311,7 @@ export default function App({ session, initialConfig } = {}) {
           </div>
           {(balances[me] ?? 0n) < MAX_FEE && (
             <p className="hint">
-              Fund CAI fees in the <a href="#faucet">Faucet</a> tab.
+              Check your <a href="#/account">Account</a> for CAI fees.
             </p>
           )}
           {Object.keys(world.tiles).length >= 144 && (
@@ -406,9 +406,9 @@ export default function App({ session, initialConfig } = {}) {
                 {mine && (
                   <>
                     <label>
-                      Recipient wallet address
+                      Recipient account address
                       <input
-                        aria-label="Recipient wallet address"
+                        aria-label="Recipient account address"
                         value={recipient}
                         onChange={(e) => setRecipient(e.target.value.trim())}
                       />

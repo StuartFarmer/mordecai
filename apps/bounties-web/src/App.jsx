@@ -54,7 +54,7 @@ export default function App({ session, initialConfig: config }) {
   function prepare(action, fields, reward = '0', explanation = '') {
     try {
       encodeArgs(action, fields);
-      if (!wallet) throw new Error('Open Wallet to continue.');
+      if (!wallet) throw new Error('Open Account to continue.');
       if (
         action === 'create' &&
         (!/^[1-9][0-9]*$/.test(reward) || BigInt(reward) > 18446744073709551615n)
@@ -71,7 +71,7 @@ export default function App({ session, initialConfig: config }) {
     const draft = review;
     if (!draft || session.getSnapshot() !== draft.wallet || busy) {
       setReview(null);
-      setStatus('Wallet changed. Review the action again.');
+      setStatus('Account changed. Review the action again.');
       return;
     }
     setBusy(true);
@@ -79,12 +79,12 @@ export default function App({ session, initialConfig: config }) {
     setReview(null);
     setStatus(
       draft.action === 'create'
-        ? 'Funding pending. Check Wallet for the transaction hash.'
-        : 'Confirmation pending. Check Wallet for the transaction hash.',
+        ? 'Funding pending. Check Account for the transaction hash.'
+        : 'Confirmation pending. Check Account for the transaction hash.',
     );
     try {
       const result = await act(draft.wallet, config, draft.action, draft.fields, draft.reward);
-      if (!result.success) throw new Error('Transaction did not succeed. Check Wallet history.');
+      if (!result.success) throw new Error('Transaction did not succeed. Check Account history.');
       setReceipt(result);
       let next;
       try {
@@ -132,7 +132,7 @@ export default function App({ session, initialConfig: config }) {
       }
     } catch (e) {
       setStatus(
-        `${e.message} Check Wallet before retrying; an unknown confirmation is not a failed payment.`,
+        `${e.message} Check Account before retrying; an unknown confirmation is not a failed payment.`,
       );
     } finally {
       setBusy(false);
@@ -146,7 +146,7 @@ export default function App({ session, initialConfig: config }) {
           <p className="eyebrow">Public questions · funded rewards</p>
           <h1>Information bounties</h1>
         </div>
-        <a href="#/wallet">{wallet ? 'Manage wallet' : 'Open Wallet'}</a>
+        <a href="#/account">{wallet ? 'Manage account' : 'Open Account'}</a>
       </header>
       <p>
         Fund a question. Share a public answer. The creator selects one response and pays its
@@ -165,11 +165,12 @@ export default function App({ session, initialConfig: config }) {
       <p>
         {wallet ? (
           <>
-            Wallet: <code>{wallet.address}</code>
+            Account: <code>{wallet.address}</code>
           </>
         ) : (
           <>
-            Browse without a wallet. Open <a href="#/wallet">Wallet</a> to fund, respond, or settle.
+            Browse without an account. Open <a href="#/account">Account</a> to fund, respond, or
+            settle.
           </>
         )}
       </p>
@@ -389,7 +390,7 @@ export default function App({ session, initialConfig: config }) {
                       'respond',
                       { bounty_id: bounty.id, text: response },
                       '0',
-                      `Submit to bounty #${bounty.id}. Your wallet address is the immutable payout recipient.`,
+                      `Submit to bounty #${bounty.id}. Your account address is the immutable payout recipient.`,
                     );
                   }}
                 >
@@ -478,15 +479,15 @@ export default function App({ session, initialConfig: config }) {
           </div>
           <button disabled={!available}>Review funding</button>
           <p>
-            Funds stay in your wallet until you confirm. A draft is not a funded request. Get test
-            tokens from <a href="#/faucet">Faucet</a>.
+            Funds stay in your account until you confirm. A draft is not a funded request. New
+            accounts receive 1,000,000 test CAI automatically.
           </p>
         </form>
       </section>
       <footer>
         Plain text and public links only; no private evidence or uploads. Historical funding and
         settlement are recoverable by bounty ID and block height. Transaction hashes appear here for
-        this session and in Wallet history; local history can be lost on reload.
+        this session and in Account history; local history can be lost on reload.
       </footer>
     </main>
   );

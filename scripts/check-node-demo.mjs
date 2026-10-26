@@ -20,14 +20,15 @@ for (const name of names) {
   if (demo.contract) assert.ok(Array.isArray(await get(`/api/contract/${demo.contract}/state`)));
   if (demo.appApi) {
     assert.equal((await get(`${demo.appApi}/api/head`)).chainId, demo.appChainId);
-    assert.equal((await get(demo.appFaucet)).enabled, true);
+    assert.equal((await get(`${demo.appApi}/api/faucet`)).enabled, false);
   }
 }
-assert.equal((await get('/api/faucet')).enabled, true);
+assert.equal((await get('/api/faucet')).enabled, false);
+assert.equal((await get('/api/accounts')).amount, '1000000');
 assert.ok((await get('/wallet-assets/wallet.js', 'text/javascript')).length > 100);
 assert.equal((await get('/api/demos/microblog/feed')).feedId, config.demos.microblog.feedId);
 for (const path of ['/', '/docs/', '/docs/examples/microblog.html', '/docs/examples/bounties.html'])
   assert.ok((await get(path, 'text/html')).length > 1000, `${path}: missing page`);
 console.log(
-  `Healthy: all six demos, both app chains, faucet, wallet site and documentation at ${base.origin}`,
+  `Healthy: all six demos, both app chains, account registration, website and documentation at ${base.origin}`,
 );

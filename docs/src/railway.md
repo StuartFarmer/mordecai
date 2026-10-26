@@ -1,7 +1,6 @@
 # Host the demo on Railway
 
-The root `Dockerfile` builds and serves the website, documentation, wallet,
-faucet and all six demos in one service. It compiles all seven required demo
+The root `Dockerfile` builds and serves the website, documentation, account registration and all six demos in one service. It compiles all seven required demo
 contracts with Rust 1.94.1 and builds the book with mdBook 0.5.2. Only the HTTP
 gateway is public; the demo validators communicate inside the container.
 
@@ -31,8 +30,8 @@ gateway is public; the demo validators communicate inside the container.
 4. Deploy, then select **Networking → Generate Domain**. Match its target port to
    `PORT`. Railway provides HTTPS; a custom domain is optional. The first start
    creates the test network and deploys contracts before the gateway becomes ready.
-5. Open the generated URL. Create a **new demo wallet**, download its backup,
-   claim test CAI, and choose a demo. Check the deployment with:
+5. Open the generated URL. Create a **new account**, download its backup,
+   wait for the automatic 1,000,000 test CAI grant, and choose a demo. Check the deployment with:
 
    ```sh
    node scripts/check-node-demo.mjs https://YOUR-SERVICE.up.railway.app
@@ -46,6 +45,9 @@ balances and worlds are not migrated automatically.
 Railway's older `railway.json`/`railway.toml` format is deprecated for new services.
 This setup uses Docker autodetection and service settings, without adding a
 deployment SDK to the application.
+
+New registrations are limited to one per minute per visitor IP. Public faucet
+access is disabled; Hex and Outpost fees are funded during registration.
 
 ## Persistence and updates
 
@@ -67,7 +69,7 @@ upgrades. Keep the same `HEX_TIMEOUT_MS` for an existing volume.
 ## Railway proxy handling
 
 On Railway the launcher enables `MORDECAI_TRUST_RAILWAY_PROXY=1`. The gateway uses
-Railway's `X-Real-IP` for per-visitor faucet/feed limits, and `X-Forwarded-Host` for
+Railway's `X-Real-IP` for per-visitor registration/feed limits, and `X-Forwarded-Host` for
 same-origin checks on Chess and Microblog writes. API responses are not cached.
 Outside Railway, forwarded headers are ignored unless explicitly enabled.
 
@@ -89,8 +91,7 @@ Once the gateway is ready, open <http://127.0.0.1:8791> or run the check command
 against that URL. `docker restart mordecai-demo` reuses the same data. The image
 forwards termination signals to the launcher for orderly shutdown.
 
-This is a public **test-CAI demo**, with all validators on one host. Faucet limits
-reset on restart, public posts require operator moderation, and the data store is
+This is a public **test-CAI demo**, with all validators on one host. Account grants and registration cooldowns persist across restarts; public posts require operator moderation, and the data store is
 intended for a small demo. Bounty submissions are public and permanent. A public
 demo does not make this a production or independently operated settlement network.
 

@@ -1,6 +1,6 @@
 # Host the demo on Render
 
-The root `render.yaml` Blueprint runs the node website, wallet, faucet, book and
+The root `render.yaml` Blueprint runs the node website, account registration, book and
 all six demos in one Docker web service. It includes a persistent disk at `/data`,
 port `10000`, and the `/api/head` readiness check.
 
@@ -16,8 +16,8 @@ port `10000`, and the `/api/head` readiness check.
 3. Deploy the Blueprint. Leave the Docker start command unchanged. The first
    start creates the network and deploys its contracts before the health check
    passes. The launcher refuses to run on Render without a disk mounted at `/data`.
-4. Open the service's HTTPS `onrender.com` URL. Create a demo wallet, download its
-   backup, claim test CAI, and choose a demo. Verify all endpoints with:
+4. Open the service's HTTPS `onrender.com` URL. Create an account, download its
+   backup, wait for the automatic 1,000,000 test CAI grant, and choose a demo. Verify all endpoints with:
 
    ```sh
    node scripts/check-node-demo.mjs https://YOUR-SERVICE.onrender.com
@@ -27,10 +27,14 @@ The smallest paid instance is a starting point for a small demo, not a measured
 concurrent-player capacity. Watch memory, CPU and disk usage; increase the plan
 or disk size as needed. Review the actual charge shown by Render before deploying.
 
+New registrations are limited to one per minute per visitor IP. The public faucet
+is disabled; Hex and Outpost fee balances are funded during registration.
+
 ## Data and updates
 
 Keep one instance and its disk. `/data` stores node identities, chain history,
-contract deployment receipts, Chess rooms and Microblog posts. The first deploy
+contract deployment receipts, registration grants and cooldowns, Chess rooms and
+Microblog posts. The first deploy
 creates a new network; local wallets and balances are not migrated.
 
 Code auto-deploys are disabled. To update, use **Manual Deploy → Deploy latest

@@ -19,12 +19,12 @@ export function createDemoSession(getWallet, send, signChess, microblog = {}) {
             publicKey: next.publicKey.slice(),
             async sendTransaction(...args) {
               if (getWallet() !== next)
-                throw new Error('Wallet closed or changed. Open the current wallet to continue.');
+                throw new Error('Account closed or changed. Open the current account to continue.');
               return send(next, ...args);
             },
             async signChessMessage(message) {
               if (getWallet() !== next)
-                throw new Error('Wallet closed or changed. Open the current wallet to continue.');
+                throw new Error('Account closed or changed. Open the current account to continue.');
               if (!signChess) throw new Error('Chess signing is unavailable.');
               return signChess(next, message);
             },
@@ -34,7 +34,7 @@ export function createDemoSession(getWallet, send, signChess, microblog = {}) {
                 async (...args) => {
                   if (getWallet() !== next)
                     throw new Error(
-                      'Wallet closed or changed. Open the current wallet to continue.',
+                      'Account closed or changed. Open the current account to continue.',
                     );
                   return action(next, ...args);
                 },

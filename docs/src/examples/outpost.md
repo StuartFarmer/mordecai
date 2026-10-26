@@ -89,9 +89,10 @@ asserted there.
 
 ## On the node site
 
-Open Wallet, then Demos → Outpost. Your wallet signs game moves on the shared
-Outpost app chain and market orders on the node's existing L1. Use the Faucet
-tab for L1 test CAI and **Fund app fees** for the separate game fee balance.
+Create an account in **Account**, then open **Demos → Outpost**. Registration
+automatically grants 1,000,000 test CAI on L1 and funds the separate app-chain
+fee balance. Your account signs game moves on the shared Outpost app chain
+and market orders on the node's existing L1.
 The embedded demo never imports the development accounts or operator seeds.
 World state, validator identities and deployment receipts survive host restarts.
 

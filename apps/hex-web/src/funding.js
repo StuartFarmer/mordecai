@@ -12,7 +12,7 @@ export function watchFunding(player, config, update, funded) {
       const info = await fetchFundingStatus(player, config);
       if (stopped) return;
       update({ balance: info.balance });
-      if (info.needsFunds) {
+      if (info.needsFunds && !config.accountFunding) {
         update({ funding: true });
         try {
           await requestFunds(config, player);

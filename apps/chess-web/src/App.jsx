@@ -112,7 +112,7 @@ export default function App({ session, config }) {
   const current = () => {
     if (!scope.valid()) throw new Error('Room changed. Please retry.');
     if (!player || session.getSnapshot() !== player)
-      throw new Error('Wallet changed. Please retry.');
+      throw new Error('Account changed. Please retry.');
     return player;
   };
   const run = async (fn) => {
@@ -131,7 +131,7 @@ export default function App({ session, config }) {
     const account = await api(`/api/account/${wallet.address}`);
     current();
     if (BigInt(account.balance) < value + 500000n)
-      throw new Error('Insufficient stake plus fee balance. Use the Faucet.');
+      throw new Error('Insufficient stake plus fee balance. Check your Account balance.');
     return wallet;
   };
   const send = async (action, args, value = 0n, fundedWallet) => {
@@ -183,7 +183,7 @@ export default function App({ session, config }) {
     try {
       localStorage.setItem(`chess-create:${config.contract}:${id}`, receipt.hash);
     } catch {
-      /* Wallet history also retains the public receipt. */
+      /* Account history also retains the public receipt. */
     }
     await post('create', receipt.hash, id);
   };
@@ -218,7 +218,7 @@ export default function App({ session, config }) {
     <main>
       <h1>Chess</h1>
       <p>
-        Moves are wallet-signed and relayed by this node. Stakes settle on L1 only after both
+        Moves are account-signed and relayed by this node. Stakes settle on L1 only after both
         players report the same result.
       </p>
       <p className="warning">
@@ -227,9 +227,9 @@ export default function App({ session, config }) {
       </p>
       <p>
         {player
-          ? `Wallet: ${player.address}`
-          : 'Load a wallet to play; spectators can read invitations.'}{' '}
-        <a href="#/wallet">Manage wallet</a> · <a href="#/faucet">Faucet</a>
+          ? `Account: ${player.address}`
+          : 'Load an account to play; spectators can read invitations.'}{' '}
+        <a href="#/account">Manage account</a>
       </p>
       {error && <p role="alert">{error}</p>}
       {pending && (
@@ -279,7 +279,7 @@ export default function App({ session, config }) {
           {!state.white && wager?.creator === player?.address && (
             <div>
               <label>
-                Confirmed creation transaction hash (from Wallet history)
+                Confirmed creation transaction hash (from Account history)
                 <input
                   value={recoveryHash}
                   onChange={(event) => setRecoveryHash(event.target.value)}

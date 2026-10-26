@@ -129,7 +129,7 @@ export default function App({ session, initialConfig }) {
   if (session && !player)
     return (
       <div className="fatal">
-        <a href="#/wallet">Open Wallet to trade on Outpost</a>
+        <a href="#/account">Open Account to trade on Outpost</a>
       </div>
     );
   if (!config || !player) return <div className="fatal">connecting to gateways…</div>;
@@ -170,7 +170,7 @@ export default function App({ session, initialConfig }) {
         </div>
         <span className="chain-meta">
           L1 block {status.l1Height} · app block {status.appHeight} · anchor epoch{' '}
-          {status.anchor?.epoch ?? '—'} · one wallet, two chains
+          {status.anchor?.epoch ?? '—'} · one account, two chains
         </span>
       </header>
 
@@ -260,7 +260,7 @@ export default function App({ session, initialConfig }) {
             </p>
             {orders.length === 0 ? (
               <p className="hint">
-                No orders yet. Place the first buy order, then use another wallet to fulfill it.
+                No orders yet. Place the first buy order, then use another account to fulfill it.
               </p>
             ) : (
               <div className="orders">
@@ -334,14 +334,15 @@ export default function App({ session, initialConfig }) {
           <div className="player-switch">
             {session && (
               <>
-                <a href="#/wallet">Manage wallet</a>
-                <a href="#/faucet">L1 Faucet</a>
-                <button
-                  disabled={busy}
-                  onClick={() => run('fund app fees', () => fundApp(player, config))}
-                >
-                  Fund app fees
-                </button>
+                <a href="#/account">Manage account</a>
+                {!config.accountFunding && (
+                  <button
+                    disabled={busy}
+                    onClick={() => run('fund app fees', () => fundApp(player, config))}
+                  >
+                    Fund app fees
+                  </button>
+                )}
               </>
             )}
             {!session &&

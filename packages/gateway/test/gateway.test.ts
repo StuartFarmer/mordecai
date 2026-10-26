@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Node, initNodeDir } from '@mordecai/node';
 import { Wallet } from '@mordecai/wallet';
 import { NodeRpcServer } from '@mordecai/rpc';
-import { createBrowserWallet } from '@mordecai/wallet/browser';
+import { createBrowserWallet, signAccountRegistration } from '@mordecai/wallet/browser';
 import { encodeTransaction, encodePayload, type Payload } from '@mordecai/protocol';
 import { Gateway } from '../src/gateway.js';
 import { TransactionClient } from '../web/transactions.js';
@@ -68,7 +68,7 @@ beforeAll(async () => {
     chainId: 'mordecai-gw-test',
     allocations: [
       { address: alice.address, balance: 10_000_000n },
-      { address: faucetWallet.address, balance: 1_000_000n },
+      { address: faucetWallet.address, balance: 10_000_000n },
       { address: browserWallet.address, balance: 100_000n },
     ],
   });
@@ -96,6 +96,54 @@ afterAll(async () => {
 }, 60_000);
 
 describe('HTTP gateway to node RPC', () => {
+  it('funds registered accounts once, rate limits the trusted visitor IP, and closes root and mounted faucets', async () => {
+    const gw = await Gateway.start({
+      nodeKey: node.rpcPublicKey,
+      bootstrap: testnet.bootstrap,
+      faucet: faucetWallet,
+      accountsDir: join(dir, 'registrations'),
+      trustRenderProxy: true,
+      networks: { hex: { nodeKey: node.rpcPublicKey, bootstrap: testnet.bootstrap } },
+    });
+    const url = `http://127.0.0.1:${gw.port}`;
+    const account = createBrowserWallet();
+    const post = (proof: unknown) =>
+      fetch(`${url}/api/accounts`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.1' },
+        body: JSON.stringify(proof),
+      });
+    try {
+      for (const path of ['/api/faucet', '/api/demos/hex/api/faucet']) {
+        expect(
+          (
+            await fetch(url + path, {
+              method: 'POST',
+              body: JSON.stringify({ address: account.address }),
+            })
+          ).status,
+        ).toBe(403);
+        expect(await (await fetch(url + path)).json()).toMatchObject({ enabled: false });
+      }
+      expect((await post({})).status).toBe(400);
+      const proof = signAccountRegistration(account, 'mordecai-gw-test');
+      expect(await (await post(proof)).json()).toMatchObject({
+        status: 'confirmed',
+        amount: '1000000',
+      });
+      expect(await (await post(proof)).json()).toMatchObject({ status: 'confirmed' });
+      expect(await (await fetch(`${url}/api/account/${account.address}`)).json()).toMatchObject({
+        balance: '1000000',
+      });
+      const limited = await post(
+        signAccountRegistration(createBrowserWallet(), 'mordecai-gw-test'),
+      );
+      expect(limited.status).toBe(429);
+      expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(0);
+    } finally {
+      await gw.close();
+    }
+  });
   it('mounts demo handlers only at their exact API namespaces', async () => {
     const paths: string[] = [];
     const gw = await Gateway.start({
@@ -285,7 +333,7 @@ describe('HTTP gateway to node RPC', () => {
     expect(html).toContain('<h1');
     // Follow the page's actual asset references, so missing packaged assets fail.
     const assets = [...html.matchAll(/(?:src|href)="([^"#?]+\.(?:css|js|jpg|svg|png))"/g)];
-    expect(assets.length).toBeGreaterThanOrEqual(3);
+    expect(assets.length).toBeGreaterThanOrEqual(2);
     for (const [, path] of assets) {
       const asset = await fetch(new URL(path!, page.url));
       expect(asset.status).toBe(200);
@@ -362,7 +410,7 @@ describe('HTTP gateway to node RPC', () => {
         expect(await res.text()).toBe('<h1>My app</h1>');
       }
       const wallet = await fetch(`http://127.0.0.1:${custom.port}/wallet`);
-      expect(wallet.url).toBe(`http://127.0.0.1:${custom.port}/wallet.html`);
+      expect(wallet.url).toBe(`http://127.0.0.1:${custom.port}/account.html`);
       expect(await wallet.text()).toContain('id="wallet-generate"');
       for (const asset of ['wallet.js', 'mordecai.css', 'faucet.js']) {
         const res = await fetch(`http://127.0.0.1:${custom.port}/wallet-assets/${asset}`);

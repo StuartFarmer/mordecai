@@ -24,7 +24,7 @@ export function createBrowserWallet(): BrowserWallet {
 
 /** Accept a seed, libsodium secret key, or our explicitly unencrypted test backup. */
 export function loadBrowserWallet(input: string): BrowserWallet {
-  if (input.length > 4096) throw new Error('Wallet file is too large.');
+  if (input.length > 4096) throw new Error('Account file is too large.');
   let key = input.trim();
   let expectedAddress: string | undefined;
   if (key.startsWith('{')) {
@@ -36,7 +36,7 @@ export function loadBrowserWallet(input: string): BrowserWallet {
       typeof data.address !== 'string'
     ) {
       throw new Error(
-        'Unsupported wallet format. Use a web wallet backup or a hexadecimal private key.',
+        'Unsupported account format. Use an account backup or a hexadecimal private key.',
       );
     }
     key = data.privateKey;
@@ -49,7 +49,7 @@ export function loadBrowserWallet(input: string): BrowserWallet {
   if (bytes.length === 64 && hex(bytes.slice(32)) !== hex(wallet.publicKey))
     throw new Error('Private key has an inconsistent public key.');
   if (expectedAddress !== undefined && wallet.address !== expectedAddress)
-    throw new Error('Wallet address does not match the private key.');
+    throw new Error('Account address does not match the private key.');
   return wallet;
 }
 
@@ -80,7 +80,7 @@ export function decodeBrowserAddress(address: string): Uint8Array {
     if (bytes.length !== 32 || z32.encode(bytes) !== address) throw new Error();
     return bytes;
   } catch {
-    throw new Error('Enter a valid wallet address.');
+    throw new Error('Enter a valid account address.');
   }
 }
 
@@ -98,4 +98,45 @@ export function verifyBrowserTransaction(tx: Transaction): boolean {
   } catch {
     return false;
   }
+}
+
+function registrationBytes(chainId: string, publicKey: string): Uint8Array {
+  if (!/^[a-zA-Z0-9_.:-]{1,128}$/.test(chainId)) throw new Error('Invalid network');
+  return new TextEncoder().encode(
+    JSON.stringify(['mordecai/account-registration/v1', chainId, publicKey]),
+  );
+}
+
+export function signAccountRegistration(wallet: BrowserWallet, chainId: string) {
+  const publicKey = hex(wallet.publicKey);
+  return {
+    chainId,
+    publicKey,
+    signature: hex(ed25519.sign(registrationBytes(chainId, publicKey), wallet.seed)),
+  };
+}
+
+export function verifyAccountRegistration(input: unknown, chainId: string): string {
+  const proof = input as ReturnType<typeof signAccountRegistration>;
+  if (
+    !proof ||
+    Object.keys(proof).sort().join() !== 'chainId,publicKey,signature' ||
+    proof.chainId !== chainId ||
+    typeof proof.publicKey !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(proof.publicKey) ||
+    typeof proof.signature !== 'string' ||
+    !/^[a-f0-9]{128}$/.test(proof.signature)
+  )
+    throw new Error('Invalid account registration proof');
+  const bytes = (value: string) => Uint8Array.from(value.match(/../g)!, (b) => parseInt(b, 16));
+  if (
+    !ed25519.verify(
+      bytes(proof.signature),
+      registrationBytes(chainId, proof.publicKey),
+      bytes(proof.publicKey),
+      { zip215: false },
+    )
+  )
+    throw new Error('Invalid account registration signature');
+  return browserAddress(bytes(proof.publicKey));
 }

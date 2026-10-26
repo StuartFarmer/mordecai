@@ -3,7 +3,7 @@ import { fetchGame, fetchPot, fetchL1Balance, gameIdFromCode, play, stake } from
 const FEE_RESERVE = 500000n;
 async function requireFunds(player, amount) {
   if ((await fetchL1Balance(player)) < BigInt(amount) + FEE_RESERVE)
-    throw new Error('Insufficient L1 balance for the stake and fee. Use the Faucet tab first.');
+    throw new Error('Insufficient L1 balance for the stake and fee. Check your Account balance.');
 }
 
 // Each chain commits separately; retries finish only the step not yet confirmed.
@@ -30,7 +30,7 @@ export async function joinRoom(player, config, code) {
   if (!game) throw new Error('No game with that code.');
   if (!pot) throw new Error('The creator must finish funding the room stake first.');
   if (game.creator === player.address)
-    throw new Error('Use a different wallet to join your own room.');
+    throw new Error('Use a different account to join your own room.');
   if (game.phase !== 0 && !(game.phase === 1 && game.opponent === player.address))
     throw new Error('That game has already started or finished.');
   if (pot.phase !== 0 && !(pot.phase === 1 && pot.opponent === player.address))

@@ -15,7 +15,7 @@ import {
   winningPath,
 } from './chain.js';
 
-const DEFAULT_STAKE = 1_000_000;
+const DEFAULT_STAKE = 100_000;
 
 // ------------------------------------------------------------ board maths
 
@@ -145,7 +145,7 @@ export default function App({ session, initialConfig } = {}) {
             true,
             config.manualFunding
               ? 'App-chain fee funding requested'
-              : 'faucet funded this wallet on both chains',
+              : 'faucet funded this account on both chains',
           ),
       ),
     [config, player, addLog],
@@ -286,7 +286,7 @@ export default function App({ session, initialConfig } = {}) {
   if (!player && session)
     return (
       <p className="fatal">
-        Open a wallet in the <a href="#/wallet">Wallet tab</a>, then return to Hex.
+        Open an account in the <a href="#/account">Account tab</a>, then return to Hex.
       </p>
     );
   if (!player)
@@ -319,16 +319,17 @@ export default function App({ session, initialConfig } = {}) {
             setBackedUp(true);
           }}
         >
-          Download wallet
+          Download account backup
         </button>
       )}
       {!session && !backedUp && (
         <span className="hint">Download your key before leaving this tab.</span>
       )}
-      {session && <a href="#/wallet">Manage wallet</a>}
+      {session && <a href="#/account">Manage account</a>}
       {config.manualFunding && balance !== null && balance < 2_500_000 && (
         <p className="hint">
-          Claim test CAI in the <a href="#/faucet">Faucet tab</a> before creating or joining a room.
+          New accounts receive test CAI automatically. Check your <a href="#/account">Account</a>{' '}
+          before creating or joining a room.
         </p>
       )}
     </header>
@@ -459,7 +460,7 @@ export default function App({ session, initialConfig } = {}) {
           {game?.phase === 1 && iAmOpponent && pot?.phase === 0 && (
             <>
               <p className="hint">
-                Your game join is recorded, but your stake still needs funding. Use Faucet if
+                Your game join is recorded, but your stake still needs funding. Check Account if
                 needed, then complete it here.
               </p>
               <button disabled={busy || funding} onClick={joinGame}>

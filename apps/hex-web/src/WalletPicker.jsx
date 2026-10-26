@@ -36,16 +36,16 @@ export default function WalletPicker({ onLoad, legacy }) {
   return (
     <div className="app">
       <section className="lobby">
-        <h1>Play Hex with your wallet</h1>
-        {legacy && <button onClick={() => choose(legacy, true)}>Use saved Hex wallet</button>}
+        <h1>Play Hex with your account</h1>
+        {legacy && <button onClick={() => choose(legacy, true)}>Use saved Hex account</button>}
         <p>
-          Load the key you created in the <a href="./wallet.html">web wallet</a>, or create a
-          temporary test wallet here. Hex's demo faucet supplies test funds on both chains.
+          Load the key you created in the <a href="./account.html">Account page</a>, or create a
+          temporary test account here. Hex's demo faucet supplies test funds on both chains.
         </p>
         <p className="hint">
           Keys stay in this tab. Backups are unencrypted and must be kept private.
         </p>
-        <label htmlFor="hex-wallet-file">Load a web wallet backup</label>
+        <label htmlFor="hex-wallet-file">Load an account backup</label>
         <input
           id="hex-wallet-file"
           type="file"
@@ -54,7 +54,7 @@ export default function WalletPicker({ onLoad, legacy }) {
             const file = event.target.files[0];
             if (!file) return;
             try {
-              if (file.size > 4096) throw new Error('Wallet file is too large.');
+              if (file.size > 4096) throw new Error('Account file is too large.');
               load(await file.text(), true);
             } catch (e) {
               setError(e.message);
@@ -78,7 +78,7 @@ export default function WalletPicker({ onLoad, legacy }) {
               value={key}
               onChange={(event) => setKey(event.target.value)}
             />
-            <button type="submit">Load wallet</button>
+            <button type="submit">Load account</button>
           </div>
         </form>
         <button
@@ -90,7 +90,7 @@ export default function WalletPicker({ onLoad, legacy }) {
             }
           }}
         >
-          Create temporary wallet
+          Create temporary account
         </button>
         <p role="status">{error}</p>
       </section>

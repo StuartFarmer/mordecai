@@ -129,7 +129,7 @@ it('reserves a reviewed tip without broadcasting, rejects foreign domains and re
   expect(get('transfer-fields').disabled).toBe(false);
   const next = await player.prepareMicroblogTip(recipient, '50');
   get('wallet-close').events.click();
-  await expect(player.submitMicroblogTip(next)).rejects.toThrow(/Wallet closed/);
+  await expect(player.submitMicroblogTip(next)).rejects.toThrow(/Account closed/);
   expect(submitted).toEqual([]);
 });
 
@@ -180,7 +180,7 @@ it.each(['cancel', 'close'])('revokes an in-flight tip signature on %s', async (
   if (action === 'cancel') await player.cancelMicroblogTip(draft);
   else get('wallet-close').events.click();
   release();
-  await expect(signing).rejects.toThrow(/cancelled|Wallet changed/);
+  await expect(signing).rejects.toThrow(/cancelled|Account changed/);
 });
 
 it('keeps an uncertain tip pending and retries identical bytes from Wallet', async () => {

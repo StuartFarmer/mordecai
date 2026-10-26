@@ -5,7 +5,8 @@ export function initNavigation(doc = document, win = window, onChange = () => {}
   if (!pages.length) return;
   const links = [...doc.querySelectorAll('[data-route]')];
   function render(focus = false) {
-    const requested = win.location.hash.replace(/^#\/?/, '').split('?')[0];
+    const hash = win.location.hash.replace(/^#\/?/, '').split('?')[0];
+    const requested = ['wallet', 'faucet'].includes(hash) ? 'account' : hash;
     const route =
       pages.find((page) => page.dataset.page === requested)?.dataset.page ?? pages[0].dataset.page;
     for (const page of pages) {
@@ -20,8 +21,7 @@ export function initNavigation(doc = document, win = window, onChange = () => {}
       ? DEMOS[route.slice(6)]?.title
       : {
           home: 'Node',
-          wallet: 'Wallet',
-          faucet: 'Faucet',
+          account: 'Account',
           'about/manifesto': 'Manifesto',
           'about/design': 'Design',
         }[route];

@@ -3,6 +3,7 @@ import {
   createBrowserWallet,
   loadBrowserWallet,
   exportBrowserWallet,
+  signAccountRegistration,
 } from '@mordecai/wallet/browser';
 import { signChessMessage } from '@mordecai/wallet/chess';
 import { signMicroblogPost, signMicroblogTip, signMicroblogHide } from '@mordecai/wallet/microblog';
@@ -20,6 +21,9 @@ let backedUp = false;
 const transactions = new TransactionClient();
 let prepared = null;
 let working = false;
+let registrationEnabled = false;
+let creationUntil = 0;
+let registrationPending = false;
 let tipDraft = null;
 const demoClients = new Map();
 const clients = () => [transactions, ...demoClients.values()];
@@ -34,7 +38,7 @@ const demoSession = createDemoSession(() => wallet, sendDemoTransaction, signDem
 });
 const openDemo = createDemoLoader(document, window, demoSession);
 
-function showWallet(next, saved = false) {
+function showWallet(next, saved = false, created = false) {
   wallet = next;
   backedUp = saved;
   byId('wallet-start').hidden = true;
@@ -43,10 +47,11 @@ function showWallet(next, saved = false) {
   byId('wallet-private').value = JSON.parse(exportBrowserWallet(wallet)).privateKey;
   byId('wallet-private').type = 'password';
   byId('wallet-reveal').textContent = 'Show private key';
-  byId('faucet-address').value = wallet.address;
+  registrationPending = false;
+  byId('account-registration-retry').hidden = true;
   keyInput.value = '';
   message.textContent = saved
-    ? 'Wallet loaded. Keys stay in this tab.'
+    ? 'Account loaded. Keys stay in this tab.'
     : 'Download your private key before closing or reloading this tab.';
   byId('wallet-balance').textContent = 'Checking…';
   byId('tx-message').textContent = pendingClient()
@@ -55,12 +60,97 @@ function showWallet(next, saved = false) {
   clearReview();
   demoSession.refresh();
   void refreshBalance();
+  if (created) void registerAccount(next);
+  else void restoreRegistration(next);
 }
 
-byId('wallet-generate').addEventListener('click', () => {
-  if (working || wallet) return;
+async function registrationInfo() {
   try {
-    showWallet(createBrowserWallet());
+    const response = await fetch('./api/accounts', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    const info = await response.json();
+    registrationEnabled = response.ok && info.enabled;
+    creationUntil = Date.now() + (info.retryAfter || 0) * 1000;
+    byId('account-registration-info').textContent = registrationEnabled
+      ? 'New accounts receive 1,000,000 test CAI automatically. One new account per minute per IP.'
+      : 'New account registration is unavailable on this node. You can still load an account.';
+  } catch {
+    registrationEnabled = false;
+    byId('account-registration-info').textContent =
+      'Cannot reach account registration. Reload to try again, or load an account.';
+  }
+  updateControls();
+}
+
+async function restoreRegistration(current) {
+  try {
+    const response = await fetch(`./api/accounts/${current.address}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return;
+    const info = await response.json();
+    if (wallet !== current) return;
+    if (info.status === 'pending') {
+      registrationPending = true;
+      byId('account-registration-retry').hidden = false;
+      message.textContent =
+        'Registration funding is pending. Retry to complete this account without another grant.';
+    }
+  } catch {
+    /* Loading an existing account does not depend on the registration service. */
+  }
+}
+
+async function registerAccount(current) {
+  if (wallet !== current || working) return;
+  working = true;
+  registrationPending = true;
+  byId('account-registration-retry').hidden = true;
+  message.textContent =
+    'Registering account and adding 1,000,000 test CAI. Download your key while you wait.';
+  updateControls();
+  try {
+    const head = await fetch('./api/head', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!head.ok) throw new Error('The node is unavailable.');
+    const { chainId } = await head.json();
+    const response = await fetch('./api/accounts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(signAccountRegistration(current, chainId)),
+      signal: AbortSignal.timeout(45000),
+    });
+    const result = await response.json();
+    if (response.status === 429)
+      creationUntil = Date.now() + Number(response.headers.get('retry-after') || 60) * 1000;
+    if (!response.ok) throw new Error(result.error || 'Registration is not confirmed.');
+    if (result.status !== 'confirmed') throw new Error('Registration funding is still pending.');
+    registrationPending = false;
+    message.textContent =
+      'Account ready. 1,000,000 test CAI added; demo app fees are funded too. Download your private key before leaving.';
+  } catch (error) {
+    message.textContent = `${error.message} Keep your private key and retry this same account.`;
+    byId('account-registration-retry').hidden = false;
+  } finally {
+    working = false;
+    await registrationInfo();
+    updateControls();
+    void refreshBalance();
+  }
+}
+byId('account-registration-retry').addEventListener('click', () => {
+  if (wallet && registrationPending && Date.now() >= creationUntil) void registerAccount(wallet);
+});
+
+byId('wallet-generate').addEventListener('click', () => {
+  if (working || wallet || !registrationEnabled || Date.now() < creationUntil) return;
+  try {
+    showWallet(createBrowserWallet(), false, true);
   } catch {
     message.textContent =
       'Key generation requires a browser with secure randomness. Use HTTPS or localhost.';
@@ -81,7 +171,7 @@ byId('wallet-file').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   try {
-    if (file.size > 4096) throw new Error('Wallet file is too large.');
+    if (file.size > 4096) throw new Error('Account file is too large.');
     const text = await file.text();
     if (wallet || working) return;
     showWallet(loadBrowserWallet(text), true);
@@ -118,7 +208,7 @@ byId('wallet-copy').addEventListener('click', async () => {
   if (!wallet) return;
   try {
     await navigator.clipboard.writeText(wallet.address);
-    message.textContent = 'Wallet address copied.';
+    message.textContent = 'Account address copied.';
   } catch {
     message.textContent = 'Select and copy the address above.';
   }
@@ -128,7 +218,7 @@ byId('wallet-close').addEventListener('click', () => {
   if (working) return;
   if (
     !backedUp &&
-    !window.confirm('This key has not been downloaded. Close the wallet and discard it?')
+    !window.confirm('This key has not been downloaded. Close the account and discard it?')
   )
     return;
   wallet?.seed.fill(0);
@@ -137,10 +227,11 @@ byId('wallet-close').addEventListener('click', () => {
   backedUp = false;
   byId('wallet-private').value = '';
   byId('wallet-address').textContent = '';
-  byId('faucet-address').value = '';
+  registrationPending = false;
+  byId('account-registration-retry').hidden = true;
   account.hidden = true;
   byId('wallet-start').hidden = false;
-  message.textContent = 'Wallet closed. Load your backup to use it again.';
+  message.textContent = 'Account closed. Load your backup to use it again.';
   byId('transfer-form').reset();
   byId('transaction-form').reset();
   clearReview();
@@ -164,7 +255,12 @@ function updateControls() {
   byId('tx-send').disabled = locked;
   byId('tx-cancel').disabled = working;
   byId('wallet-close').disabled = working;
-  byId('wallet-generate').disabled = working;
+  const remaining = Math.max(0, Math.ceil((creationUntil - Date.now()) / 1000));
+  byId('wallet-generate').disabled = working || !registrationEnabled || remaining > 0;
+  byId('wallet-generate').textContent = remaining
+    ? `Create account (${remaining}s)`
+    : 'Create account';
+  byId('account-registration-retry').disabled = working || remaining > 0;
   byId('wallet-file').disabled = working;
   byId('wallet-load').querySelector('button').disabled = working;
   byId('tx-retry').hidden = !pendingClient();
@@ -290,9 +386,9 @@ async function refreshBalance() {
 }
 
 async function sendDemoTransaction(expectedWallet, base, chainId, payload, maxFee) {
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   if (working || pendingClient() || tipDraft)
-    throw new Error('Another transaction is pending. Check Wallet before sending again.');
+    throw new Error('Another transaction is pending. Check Account before sending again.');
   if (base !== '' && !Object.values(DEMOS).some((demo) => demo.network === base))
     throw new Error('Unsupported demo network.');
   let client = transactions;
@@ -326,12 +422,12 @@ async function confirmDemoTransaction(client, draft) {
   }
   const result = client.history[0];
   if (result.status !== 'confirmed')
-    throw new Error(result.error || `Transaction ${result.status}. Check Wallet before retrying.`);
+    throw new Error(result.error || `Transaction ${result.status}. Check Account before retrying.`);
   return { success: true, hash: result.hash, height: Number(result.height), fee: result.fee };
 }
 
 async function microblogConfig(expectedWallet) {
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   const response = await fetch('./api/config', {
     cache: 'no-store',
     signal: AbortSignal.timeout(5000),
@@ -339,7 +435,7 @@ async function microblogConfig(expectedWallet) {
   if (!response.ok) throw new Error('Microblog configuration is unavailable.');
   const config = (await response.json()).demos?.microblog;
   if (!config) throw new Error('Microblog is unavailable on this node.');
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   return config;
 }
 
@@ -365,10 +461,10 @@ async function signDemoMicroblogTip(expectedWallet, input) {
 }
 
 async function prepareMicroblogTip(expectedWallet, recipient, amountText) {
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   if (working || pendingClient() || tipDraft)
     throw new Error(
-      'Another transaction or tip review is pending. Check Wallet or cancel the tip.',
+      'Another transaction or tip review is pending. Check Account or cancel the tip.',
     );
   if (recipient.trim() === expectedWallet.address) throw new Error('Choose another author to tip.');
   working = true;
@@ -412,7 +508,7 @@ async function submitMicroblogTip(expectedWallet, preparedTip) {
     tipDraft.public !== preparedTip
   )
     throw new Error('This tip review expired. Review the tip again.');
-  if (working || pendingClient()) throw new Error('Another transaction is pending. Check Wallet.');
+  if (working || pendingClient()) throw new Error('Another transaction is pending. Check Account.');
   const { draft } = tipDraft;
   tipDraft = null;
   working = true;
@@ -427,7 +523,7 @@ async function submitMicroblogTip(expectedWallet, preparedTip) {
 }
 
 async function signDemoChessMessage(expectedWallet, input) {
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   const response = await fetch('./api/config', {
     cache: 'no-store',
     signal: AbortSignal.timeout(5000),
@@ -436,7 +532,7 @@ async function signDemoChessMessage(expectedWallet, input) {
   const config = (await response.json()).demos?.chess;
   if (!config || input.chainId !== config.chainId || input.contract !== config.contract)
     throw new Error('The Chess message does not match this node.');
-  if (wallet !== expectedWallet) throw new Error('Wallet changed.');
+  if (wallet !== expectedWallet) throw new Error('Account changed.');
   return signChessMessage(expectedWallet, input);
 }
 
@@ -461,7 +557,9 @@ async function poll() {
     }
   }
   setTimeout(poll, 1000);
+  updateControls();
 }
 updateControls();
+void registrationInfo();
 initNavigation(document, window, (route) => void openDemo(route));
 void poll();

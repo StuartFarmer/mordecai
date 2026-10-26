@@ -36,3 +36,16 @@ it('clears funding when switching wallets and ignores the old funding reply', as
     closeNext();
   }
 });
+
+it('never calls a public faucet when account registration funds the demo', async () => {
+  vi.mocked(requestFunds).mockClear();
+  vi.mocked(fetchFundingStatus).mockResolvedValue({ balance: 0, needsFunds: true });
+  const update = vi.fn();
+  const close = watchFunding({ address: 'new' }, { accountFunding: true }, update, vi.fn());
+  try {
+    await vi.waitFor(() => expect(update).toHaveBeenCalledWith({ status: {} }));
+    expect(requestFunds).not.toHaveBeenCalled();
+  } finally {
+    close();
+  }
+});

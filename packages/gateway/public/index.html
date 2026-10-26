@@ -9,15 +9,13 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./mordecai.css" />
     <script src="./mordecai.js" defer></script>
-    <script src="./faucet.js" defer></script>
     <script src="./wallet-assets/wallet.js" defer></script>
   </head>
   <body>
     <header class="status-bar">
       <nav aria-label="Main navigation">
         <a href="#/" data-route="home" aria-current="page">Home</a>
-        <a href="#/wallet" data-route="wallet">Wallet</a>
-        <a href="#/faucet" data-route="faucet">Faucet</a>
+        <a href="#/account" data-route="account">Account</a>
         <details class="nav-menu" name="main-menu">
           <summary>Demos</summary>
           <div class="nav-menu-links">
@@ -87,9 +85,9 @@
         </p>
         <p class="intro">
           Mordecai exists to make that kind of software easier to build. It brings peer-to-peer
-          networking, shared data, wallets, and programmable agreements into one toolkit. Developers
-          can build applications whose participants help run the network, share its data, and verify
-          its rules.
+          networking, shared data, accounts, and programmable agreements into one toolkit.
+          Developers can build applications whose participants help run the network, share its data,
+          and verify its rules.
         </p>
         <p class="intro">
           The idea is simple: keep everyday activity between the people involved, and use shared
@@ -126,14 +124,14 @@
         </p>
         <h2 class="intro">One identity across applications</h2>
         <p>
-          An Ed25519 wallet gives a person a signing identity they can use across apps. The SDK
+          An Ed25519 account gives a person a signing identity they can use across apps. The SDK
           connects that identity to payments, contracts, and peer-to-peer data. Contracts run as
           deterministic WebAssembly, with Rust and a Python-like contract language available to
           developers.
         </p>
         <h2 class="intro">This website is a gateway</h2>
         <p>
-          The browser signs with your wallet and talks to this node over HTTP. The hosted demo runs
+          The browser signs with your account and talks to this node over HTTP. The hosted demo runs
           its validators together on one host and uses test CAI. It lets you explore the toolkit;
           independent peers and validators are part of running a distributed network.
         </p>
@@ -142,15 +140,16 @@
           <a href="./docs/architecture/app-chains.html">app-chain design</a>.
         </p>
       </section>
-      <section id="wallet" data-page="wallet" aria-labelledby="wallet-title" hidden>
-        <h1 id="wallet-title" tabindex="-1">Wallet</h1>
-        <p class="tagline">Create or load a wallet to get started.</p>
+      <section id="wallet" data-page="account" aria-labelledby="wallet-title" hidden>
+        <h1 id="wallet-title" tabindex="-1">Account</h1>
+        <p class="tagline">Create or load an account to get started.</p>
         <p id="wallet-notice" hidden>
           Keys stay in this tab and clear on reload. Download your backup before leaving; it is
           unencrypted, so keep it private and use test tokens only.
         </p>
         <div id="wallet-start" class="intro">
-          <button id="wallet-generate" type="button">Create wallet</button>
+          <p id="account-registration-info">Checking account registration…</p>
+          <button id="wallet-generate" type="button" disabled>Create account</button>
           <form id="wallet-load" class="intro">
             <label for="wallet-key">Load a private key (hexadecimal)</label>
             <div class="faucet-controls">
@@ -165,10 +164,10 @@
               <button type="submit">Load key</button>
             </div>
           </form>
-          <label for="wallet-file" class="intro">Or load a web wallet backup</label>
+          <label for="wallet-file" class="intro">Or load an account backup</label>
           <input id="wallet-file" type="file" accept=".json,.txt,application/json,text/plain" />
         </div>
-        <section id="wallet-account" class="intro" aria-label="Loaded wallet" hidden>
+        <section id="wallet-account" class="intro" aria-label="Loaded account" hidden>
           <dl class="wallet-details">
             <div>
               <dt>Address</dt>
@@ -186,7 +185,7 @@
           <div class="faucet-controls intro">
             <button id="wallet-copy" type="button">Copy address</button>
             <button id="wallet-download" type="button">Download private key</button>
-            <button id="wallet-close" type="button">Close wallet</button>
+            <button id="wallet-close" type="button">Close account</button>
           </div>
           <label for="wallet-private" class="intro">Private key</label>
           <div class="faucet-controls">
@@ -195,6 +194,9 @@
           </div>
         </section>
         <p id="wallet-message" class="intro" role="status" aria-live="polite"></p>
+        <button id="account-registration-retry" type="button" hidden>
+          Retry account registration
+        </button>
         <section id="wallet-actions" class="faucet" aria-labelledby="transfer-title" hidden>
           <h2 id="transfer-title">Send CAI</h2>
           <p>Amounts are whole CAI base units; the maximum fee is 1,000 units.</p>
@@ -228,7 +230,7 @@
           <details class="intro">
             <summary>Sign and submit a transaction</summary>
             <p>
-              Paste an unsigned transaction payload in hexadecimal. This wallet supplies the
+              Paste an unsigned transaction payload in hexadecimal. This account supplies the
               network, sender, nonce, and signature. Review the decoded details before sending.
             </p>
             <form id="transaction-form">
@@ -276,35 +278,6 @@
             <ul id="tx-list"></ul>
           </section>
         </section>
-      </section>
-      <section data-page="faucet" aria-labelledby="faucet-title" hidden>
-        <h1 id="faucet-title" tabindex="-1">Faucet</h1>
-        <p class="tagline">
-          Free tokens to try the network. Enter your wallet address to get started.
-        </p>
-        <form id="faucet-form">
-          <fieldset id="faucet-fields" disabled>
-            <label for="faucet-address">Wallet address</label>
-            <div class="faucet-controls">
-              <input
-                id="faucet-address"
-                name="address"
-                type="text"
-                required
-                minlength="52"
-                maxlength="52"
-                autocomplete="off"
-                spellcheck="false"
-                aria-describedby="faucet-message"
-              />
-              <button type="submit">Get test CAI</button>
-            </div>
-          </fieldset>
-        </form>
-        <p id="faucet-message" role="status" aria-live="polite">
-          Enable JavaScript to use the faucet.
-        </p>
-        <a id="faucet-tx" target="_blank" rel="noopener" hidden>View transaction</a>
       </section>
       <section data-page="demos/hex" aria-labelledby="hex-title" hidden>
         <h1 id="hex-title" tabindex="-1">Hex</h1>

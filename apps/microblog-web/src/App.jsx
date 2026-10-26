@@ -40,7 +40,7 @@ export default function App({ session, config }) {
     reviewRef = useRef(null);
   const current = () => {
     if (!player || session.getSnapshot() !== player)
-      throw new Error('Wallet changed. Open the current wallet to continue.');
+      throw new Error('Account changed. Open the current account to continue.');
     return player;
   };
   const verify = (post) => {
@@ -176,7 +176,7 @@ export default function App({ session, config }) {
       request: api,
       onSubmitting: () => {
         setNotice(
-          `Payment ${review.prepared.hash} is submitted or awaiting confirmation. Check Wallet for its status; an uncertain payment must be retried there using the same bytes.`,
+          `Payment ${review.prepared.hash} is submitted or awaiting confirmation. Check Account for its status; an uncertain payment must be retried there using the same bytes.`,
         );
         reviewRef.current = null;
         setReview(null);
@@ -210,12 +210,12 @@ export default function App({ session, config }) {
       <p className="wallet">
         {player ? (
           <>
-            Wallet <span title={player.address}>{short(player.address)}</span>
+            Account <span title={player.address}>{short(player.address)}</span>
           </>
         ) : (
-          'Read freely. Open a wallet to publish or tip.'
+          'Read freely. Open an account to publish or tip.'
         )}{' '}
-        · <a href="#/wallet">Wallet</a> · <a href="#/faucet">Faucet</a>
+        · <a href="#/account">Account</a>
       </p>
       {error && (
         <p className="error" role="alert">
